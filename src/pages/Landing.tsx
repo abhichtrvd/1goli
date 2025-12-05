@@ -75,7 +75,7 @@ export default function Landing() {
 
               <div className="flex flex-wrap justify-center gap-4 pt-2">
                 <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground bg-white dark:bg-card px-4 py-2 rounded-full shadow-sm border border-border/50">
-                  <span className="h-2 w-2 rounded-full bg-[#A6FF00]" /> Genuine German Remedies
+                  <span className="h-2 w-2 rounded-full bg-[#A6FF00]" /> Genuine Medicines
                 </div>
                 <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground bg-white dark:bg-card px-4 py-2 rounded-full shadow-sm border border-border/50">
                   <span className="h-2 w-2 rounded-full bg-lime-600" /> Certified Homeopaths
