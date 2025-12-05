@@ -42,6 +42,10 @@ const schema = defineSchema(
       description: v.string(),
       imageUrl: v.optional(v.union(v.string(), v.null())), // Allow null for deletion
       imageStorageId: v.optional(v.union(v.id("_storage"), v.null())), // Allow null for deletion
+      images: v.optional(v.array(v.object({ 
+        storageId: v.optional(v.id("_storage")),
+        url: v.string() 
+      }))), // Gallery images
       potencies: v.array(v.string()),
       forms: v.array(v.string()),
       basePrice: v.number(),

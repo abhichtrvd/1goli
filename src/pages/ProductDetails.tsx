@@ -7,7 +7,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useParams, useNavigate } from "react-router";
 import { useState } from "react";
-import { Loader2, ShoppingCart, ArrowLeft } from "lucide-react";
+import { Loader2, ShoppingCart, ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { useAuth } from "@/hooks/use-auth";
@@ -23,6 +23,7 @@ export default function ProductDetails() {
   const [selectedPotency, setSelectedPotency] = useState<string>("");
   const [selectedForm, setSelectedForm] = useState<string>("");
   const [isAdding, setIsAdding] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   if (product === undefined) {
     return (
@@ -35,6 +36,13 @@ export default function ProductDetails() {
   if (product === null) {
     return <div>Product not found</div>;
   }
+
+  const allImages = [
+    ...(product.imageUrl ? [{ url: product.imageUrl, id: 'main' }] : []),
+    ...(product.images || []).map((img: any, i: number) => ({ url: img.url, id: `gallery-${i}` }))
+  ];
+
+  const displayImage = allImages.length > 0 ? allImages[currentImageIndex]?.url : null;
 
   // Dynamic price calculation logic
   const getPrice = () => {
@@ -77,19 +85,56 @@ export default function ProductDetails() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
           {/* Image Section */}
-          <div className="rounded-2xl overflow-hidden bg-white border shadow-sm aspect-square flex items-center justify-center bg-secondary/10">
-            {product.imageUrl ? (
-              <img 
-                src={product.imageUrl} 
-                alt={product.name} 
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="text-muted-foreground flex flex-col items-center gap-2">
-                <div className="h-12 w-12 rounded-full bg-secondary flex items-center justify-center">
-                  <ShoppingCart className="h-6 w-6 opacity-50" />
+          <div className="space-y-4">
+            <div className="rounded-2xl overflow-hidden bg-white border shadow-sm aspect-square flex items-center justify-center bg-secondary/10 relative group">
+              {displayImage ? (
+                <img 
+                  src={displayImage} 
+                  alt={product.name} 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="text-muted-foreground flex flex-col items-center gap-2">
+                  <div className="h-12 w-12 rounded-full bg-secondary flex items-center justify-center">
+                    <ShoppingCart className="h-6 w-6 opacity-50" />
+                  </div>
+                  <span>No image available</span>
                 </div>
-                <span>No image available</span>
+              )}
+              
+              {allImages.length > 1 && (
+                <>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/20 hover:bg-black/40 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => setCurrentImageIndex(prev => prev === 0 ? allImages.length - 1 : prev - 1)}
+                  >
+                    <ChevronLeft className="h-6 w-6" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/20 hover:bg-black/40 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => setCurrentImageIndex(prev => prev === allImages.length - 1 ? 0 : prev + 1)}
+                  >
+                    <ChevronRight className="h-6 w-6" />
+                  </Button>
+                </>
+              )}
+            </div>
+            
+            {allImages.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {allImages.map((img, idx) => (
+                  <button 
+                    key={img.id}
+                    onClick={() => setCurrentImageIndex(idx)}
+                    className={`h-16 w-16 rounded-lg border-2 overflow-hidden flex-shrink-0 transition-all ${currentImageIndex === idx ? 'border-primary ring-2 ring-primary/20' : 'border-transparent opacity-70 hover:opacity-100'}`}
+                  >
+                    <img src={img.url} alt="Thumbnail" className="w-full h-full object-cover" />
+                  </button>
+                ))}
               </div>
             )}
           </div>

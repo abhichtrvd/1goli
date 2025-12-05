@@ -45,6 +45,11 @@ export default function AdminProducts() {
   const [tagsInput, setTagsInput] = useState("");
   const [imagePreview, setImagePreview] = useState("");
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  
+  // Gallery state
+  const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
+  const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
+  const [existingGallery, setExistingGallery] = useState<any[]>([]);
 
   const itemsPerPage = 5;
 
@@ -82,6 +87,36 @@ export default function AdminProducts() {
     currentPage * itemsPerPage
   );
 
+  // Compression Utility
+  const compressImage = async (file: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.src = URL.createObjectURL(file);
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        const maxWidth = 1200; 
+        const scale = maxWidth / img.width;
+        const width = scale < 1 ? maxWidth : img.width;
+        const height = scale < 1 ? img.height * scale : img.height;
+        
+        canvas.width = width;
+        canvas.height = height;
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", { type: "image/webp" });
+            resolve(newFile);
+          } else {
+            reject(new Error("Compression failed"));
+          }
+        }, "image/webp", 0.8);
+      };
+      img.onerror = reject;
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -91,57 +126,65 @@ export default function AdminProducts() {
     let imageStorageId: Id<"_storage"> | null | undefined = undefined;
     let imageUrl: string | null | undefined = formData.get("imageUrl") as string | null;
 
-    // Handle Image Upload
+    // Handle Main Image Upload
     if (selectedImage) {
       try {
+        const compressed = await compressImage(selectedImage);
         const postUrl = await generateUploadUrl();
         
-        // Upload with progress
         const uploadResult = await new Promise<{ storageId: Id<"_storage"> }>((resolve, reject) => {
           const xhr = new XMLHttpRequest();
           xhr.open("POST", postUrl);
-          xhr.setRequestHeader("Content-Type", selectedImage.type);
-          
+          xhr.setRequestHeader("Content-Type", compressed.type);
           xhr.upload.onprogress = (event) => {
             if (event.lengthComputable) {
-              const percentComplete = (event.loaded / event.total) * 100;
-              setUploadProgress(percentComplete);
+              setUploadProgress((event.loaded / event.total) * 50); // First 50% for main image
             }
           };
-
-          xhr.onload = () => {
-            if (xhr.status === 200) {
-              resolve(JSON.parse(xhr.responseText));
-            } else {
-              reject(new Error("Upload failed"));
-            }
-          };
-
+          xhr.onload = () => xhr.status === 200 ? resolve(JSON.parse(xhr.responseText)) : reject(new Error("Upload failed"));
           xhr.onerror = () => reject(new Error("Upload failed"));
-          xhr.send(selectedImage);
+          xhr.send(compressed);
         });
 
         imageStorageId = uploadResult.storageId;
-        imageUrl = null; // Clear manual URL if uploading
+        imageUrl = null;
       } catch (error) {
-        toast.error("Failed to upload image");
+        toast.error("Failed to upload main image");
         setIsSubmitting(false);
-        setUploadProgress(0);
         return;
       }
     } else if (!imageUrl && !imagePreview) {
-      // If no selected image, no manual URL, and no preview (cleared), explicitly remove it
       imageUrl = null;
       imageStorageId = null;
     } else if (!imageUrl && imagePreview && editingProduct?.imageStorageId) {
-      // Keeping existing storage image (preview shows it, but input is empty)
-      // We don't need to send anything if we are just keeping it, 
-      // BUT if we want to be safe or if logic requires it:
-      // If we are updating, undefined means "no change".
-      // If we cleared it, imagePreview would be empty.
-      // So if imagePreview is there, we leave it undefined to keep existing.
       imageStorageId = undefined;
       imageUrl = undefined;
+    }
+
+    // Handle Gallery Uploads
+    const newGalleryImages: { storageId?: Id<"_storage">, url: string }[] = [...existingGallery];
+    
+    if (galleryFiles.length > 0) {
+      try {
+        for (let i = 0; i < galleryFiles.length; i++) {
+          const file = galleryFiles[i];
+          const compressed = await compressImage(file);
+          const postUrl = await generateUploadUrl();
+          
+          const uploadResult = await new Promise<{ storageId: Id<"_storage"> }>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open("POST", postUrl);
+            xhr.setRequestHeader("Content-Type", compressed.type);
+            xhr.onload = () => xhr.status === 200 ? resolve(JSON.parse(xhr.responseText)) : reject(new Error("Upload failed"));
+            xhr.send(compressed);
+          });
+          
+          newGalleryImages.push({ storageId: uploadResult.storageId, url: "" });
+          setUploadProgress(50 + ((i + 1) / galleryFiles.length) * 50);
+        }
+      } catch (error) {
+        toast.error("Failed to upload gallery images");
+      }
     }
 
     const productData = {
@@ -149,6 +192,7 @@ export default function AdminProducts() {
       description: formData.get("description") as string,
       imageUrl: imageUrl,
       imageStorageId: imageStorageId,
+      images: newGalleryImages,
       basePrice: parseFloat(formData.get("basePrice") as string),
       category: formData.get("category") as string,
       availability: formData.get("availability") as string,
@@ -159,21 +203,21 @@ export default function AdminProducts() {
 
     try {
       if (editingProduct) {
-        // If we are explicitly clearing (null), we pass null. 
-        // If undefined, it's ignored by patch (kept).
         await updateProduct({
           id: editingProduct._id,
           ...productData,
         });
         toast.success("Product updated successfully");
       } else {
-        // For create, undefined is fine (optional), null is also fine.
         await createProduct(productData as any);
         toast.success("Product created successfully");
       }
       setIsDialogOpen(false);
       setEditingProduct(null);
       setSelectedImage(null);
+      setGalleryFiles([]);
+      setGalleryPreviews([]);
+      setExistingGallery([]);
       setUploadProgress(0);
     } catch (error) {
       console.error(error);
@@ -190,6 +234,9 @@ export default function AdminProducts() {
     setFormsInput(product.forms.join(", "));
     setTagsInput(product.symptomsTags.join(", "));
     setImagePreview(product.imageUrl || "");
+    setExistingGallery(product.images || []);
+    setGalleryPreviews([]);
+    setGalleryFiles([]);
     setSelectedImage(null);
     setUploadProgress(0);
     setIsDialogOpen(true);
@@ -201,9 +248,37 @@ export default function AdminProducts() {
     setFormsInput("");
     setTagsInput("");
     setImagePreview("");
+    setExistingGallery([]);
+    setGalleryPreviews([]);
+    setGalleryFiles([]);
     setSelectedImage(null);
     setUploadProgress(0);
     setIsDialogOpen(true);
+  };
+
+  const handleGallerySelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      const validFiles = files.filter(f => f.type.startsWith("image/"));
+      setGalleryFiles(prev => [...prev, ...validFiles]);
+      
+      validFiles.forEach(file => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setGalleryPreviews(prev => [...prev, reader.result as string]);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  const removeGalleryItem = (index: number, isExisting: boolean) => {
+    if (isExisting) {
+      setExistingGallery(prev => prev.filter((_, i) => i !== index));
+    } else {
+      setGalleryFiles(prev => prev.filter((_, i) => i !== index));
+      setGalleryPreviews(prev => prev.filter((_, i) => i !== index));
+    }
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -374,7 +449,6 @@ export default function AdminProducts() {
                           onClick={() => {
                             setImagePreview("");
                             setSelectedImage(null);
-                            // Reset file input if possible, or just rely on state
                             const fileInput = document.getElementById('imageFile') as HTMLInputElement;
                             if (fileInput) fileInput.value = '';
                           }}
@@ -387,6 +461,45 @@ export default function AdminProducts() {
                     ) : (
                       <span className="text-[10px] text-muted-foreground">No Image</span>
                     )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Gallery Images</Label>
+                  <div className="space-y-3">
+                    <Input 
+                      type="file" 
+                      accept="image/*"
+                      multiple
+                      onChange={handleGallerySelect}
+                      className="cursor-pointer"
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      {existingGallery.map((img, i) => (
+                        <div key={`exist-${i}`} className="h-20 w-20 rounded-md border bg-secondary/20 overflow-hidden relative group">
+                          <img src={img.url} alt={`Gallery ${i}`} className="h-full w-full object-cover" />
+                          <button 
+                            type="button"
+                            onClick={() => removeGalleryItem(i, true)}
+                            className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                      {galleryPreviews.map((preview, i) => (
+                        <div key={`new-${i}`} className="h-20 w-20 rounded-md border bg-secondary/20 overflow-hidden relative group">
+                          <img src={preview} alt={`New ${i}`} className="h-full w-full object-cover" />
+                          <button 
+                            type="button"
+                            onClick={() => removeGalleryItem(i, false)}
+                            className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>

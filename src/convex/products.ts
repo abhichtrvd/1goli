@@ -7,12 +7,20 @@ export const getProducts = query({
   handler: async (ctx) => {
     const products = await ctx.db.query("products").collect();
     return await Promise.all(
-      products.map(async (p) => ({
-        ...p,
-        imageUrl: p.imageStorageId
-          ? (await ctx.storage.getUrl(p.imageStorageId)) || p.imageUrl || ""
-          : p.imageUrl || "",
-      }))
+      products.map(async (p) => {
+        const gallery = p.images ? await Promise.all(p.images.map(async (img) => ({
+          ...img,
+          url: img.storageId ? (await ctx.storage.getUrl(img.storageId)) || img.url : img.url
+        }))) : [];
+
+        return {
+          ...p,
+          imageUrl: p.imageStorageId
+            ? (await ctx.storage.getUrl(p.imageStorageId)) || p.imageUrl || ""
+            : p.imageUrl || "",
+          images: gallery,
+        };
+      })
     );
   },
 });
@@ -22,11 +30,18 @@ export const getProduct = query({
   handler: async (ctx, args) => {
     const product = await ctx.db.get(args.id);
     if (!product) return null;
+    
+    const gallery = product.images ? await Promise.all(product.images.map(async (img) => ({
+      ...img,
+      url: img.storageId ? (await ctx.storage.getUrl(img.storageId)) || img.url : img.url
+    }))) : [];
+
     return {
       ...product,
       imageUrl: product.imageStorageId
         ? (await ctx.storage.getUrl(product.imageStorageId)) || product.imageUrl || ""
         : product.imageUrl || "",
+      images: gallery,
     };
   },
 });
@@ -58,6 +73,7 @@ export const searchProducts = query({
         imageUrl: p.imageStorageId
           ? (await ctx.storage.getUrl(p.imageStorageId)) || p.imageUrl || ""
           : p.imageUrl || "",
+        // We don't need gallery for search results usually, keeping it light
       }))
     );
   },
@@ -77,6 +93,10 @@ export const createProduct = mutation({
     description: v.string(),
     imageUrl: v.optional(v.union(v.string(), v.null())),
     imageStorageId: v.optional(v.union(v.id("_storage"), v.null())),
+    images: v.optional(v.array(v.object({ 
+      storageId: v.optional(v.id("_storage")),
+      url: v.string() 
+    }))),
     potencies: v.array(v.string()),
     forms: v.array(v.string()),
     basePrice: v.number(),
@@ -90,6 +110,7 @@ export const createProduct = mutation({
       ...args,
       category: args.category || "Classical",
       availability: args.availability || "in_stock",
+      images: args.images || [],
     });
   },
 });
@@ -101,6 +122,10 @@ export const updateProduct = mutation({
     description: v.optional(v.string()),
     imageUrl: v.optional(v.union(v.string(), v.null())),
     imageStorageId: v.optional(v.union(v.id("_storage"), v.null())),
+    images: v.optional(v.array(v.object({ 
+      storageId: v.optional(v.id("_storage")),
+      url: v.string() 
+    }))),
     potencies: v.optional(v.array(v.string())),
     forms: v.optional(v.array(v.string())),
     basePrice: v.optional(v.number()),
