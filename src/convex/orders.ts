@@ -56,3 +56,18 @@ export const getOrders = query({
       .collect();
   },
 });
+
+export const getAllOrders = query({
+  args: {},
+  handler: async (ctx) => {
+    // In a real app, check for admin role
+    return await ctx.db.query("orders").order("desc").collect();
+  },
+});
+
+export const updateOrderStatus = mutation({
+  args: { orderId: v.id("orders"), status: v.string() },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.orderId, { status: args.status });
+  },
+});

@@ -18,6 +18,12 @@ const ProductDetails = lazy(() => import("./pages/ProductDetails.tsx"));
 const Cart = lazy(() => import("./pages/Cart.tsx"));
 const UploadPrescription = lazy(() => import("./pages/UploadPrescription.tsx"));
 
+// Admin Pages
+const AdminLayout = lazy(() => import("./components/AdminLayout.tsx"));
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard.tsx"));
+const AdminProducts = lazy(() => import("./pages/admin/AdminProducts.tsx"));
+const AdminOrders = lazy(() => import("./pages/admin/AdminOrders.tsx"));
+
 // Simple loading fallback for route transitions
 function RouteLoading() {
   return (
@@ -70,6 +76,14 @@ createRoot(document.getElementById("root")!).render(
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/upload" element={<UploadPrescription />} />
               </Route>
+              
+              {/* Admin Routes */}
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<AdminDashboard />} />
+                <Route path="products" element={<AdminProducts />} />
+                <Route path="orders" element={<AdminOrders />} />
+              </Route>
+
               <Route path="/auth" element={<AuthPage redirectAfterAuth="/" />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

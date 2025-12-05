@@ -38,6 +38,46 @@ export const searchProducts = query({
   },
 });
 
+export const createProduct = mutation({
+  args: {
+    name: v.string(),
+    description: v.string(),
+    imageUrl: v.string(),
+    potencies: v.array(v.string()),
+    forms: v.array(v.string()),
+    basePrice: v.number(),
+    symptomsTags: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // In a real app, check for admin role here
+    await ctx.db.insert("products", args);
+  },
+});
+
+export const updateProduct = mutation({
+  args: {
+    id: v.id("products"),
+    name: v.optional(v.string()),
+    description: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
+    potencies: v.optional(v.array(v.string())),
+    forms: v.optional(v.array(v.string())),
+    basePrice: v.optional(v.number()),
+    symptomsTags: v.optional(v.array(v.string())),
+  },
+  handler: async (ctx, args) => {
+    const { id, ...updates } = args;
+    await ctx.db.patch(id, updates);
+  },
+});
+
+export const deleteProduct = mutation({
+  args: { id: v.id("products") },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.id);
+  },
+});
+
 export const seedProducts = mutation({
   args: {},
   handler: async (ctx) => {
