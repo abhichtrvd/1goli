@@ -26,6 +26,7 @@ export default function AdminProducts() {
   const [potencyFilter, setPotencyFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [availabilityFilter, setAvailabilityFilter] = useState<string>("all");
+  const [tagFilter, setTagFilter] = useState<string>("all");
   const [minPrice, setMinPrice] = useState<string>("");
   const [maxPrice, setMaxPrice] = useState<string>("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -43,6 +44,12 @@ export default function AdminProducts() {
 
   const itemsPerPage = 5;
 
+  // Derive unique options from data for dynamic filters
+  const uniqueCategories = Array.from(new Set(products?.map(p => p.category).filter(Boolean))).sort();
+  const uniqueForms = Array.from(new Set(products?.flatMap(p => p.forms).filter(Boolean))).sort();
+  const uniquePotencies = Array.from(new Set(products?.flatMap(p => p.potencies).filter(Boolean))).sort();
+  const uniqueTags = Array.from(new Set(products?.flatMap(p => p.symptomsTags).filter(Boolean))).sort();
+
   const filteredProducts = products?.filter(p => {
     const searchLower = search.toLowerCase();
     const matchesSearch = (
@@ -54,13 +61,14 @@ export default function AdminProducts() {
     const matchesPotency = potencyFilter === "all" || p.potencies.some(pot => pot.toLowerCase() === potencyFilter.toLowerCase());
     const matchesCategory = categoryFilter === "all" || (p.category && p.category.toLowerCase() === categoryFilter.toLowerCase());
     const matchesAvailability = availabilityFilter === "all" || p.availability === availabilityFilter;
+    const matchesTag = tagFilter === "all" || p.symptomsTags.some(t => t.toLowerCase() === tagFilter.toLowerCase());
     
     const price = p.basePrice;
     const min = minPrice ? parseFloat(minPrice) : 0;
     const max = maxPrice ? parseFloat(maxPrice) : Infinity;
     const matchesPrice = price >= min && price <= max;
     
-    return matchesSearch && matchesForm && matchesPotency && matchesCategory && matchesPrice && matchesAvailability;
+    return matchesSearch && matchesForm && matchesPotency && matchesCategory && matchesPrice && matchesAvailability && matchesTag;
   });
 
   // Pagination
@@ -382,17 +390,9 @@ export default function AdminProducts() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="Classical">Classical</SelectItem>
-                  <SelectItem value="Patent">Patent</SelectItem>
-                  <SelectItem value="Biochemic">Biochemic</SelectItem>
-                  <SelectItem value="Personal Care">Personal Care</SelectItem>
-                  <SelectItem value="Mother Tincture">Mother Tincture</SelectItem>
-                  <SelectItem value="Bach Flower">Bach Flower</SelectItem>
-                  <SelectItem value="Bio-Combinations">Bio-Combinations</SelectItem>
-                  <SelectItem value="Triturations">Triturations</SelectItem>
-                  <SelectItem value="Drops">Drops</SelectItem>
-                  <SelectItem value="Syrups">Syrups</SelectItem>
-                  <SelectItem value="Ointments">Ointments</SelectItem>
+                  {uniqueCategories.map((cat: any) => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 
@@ -414,11 +414,9 @@ export default function AdminProducts() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Forms</SelectItem>
-                  <SelectItem value="dilution">Dilution</SelectItem>
-                  <SelectItem value="globules">Globules</SelectItem>
-                  <SelectItem value="mother tincture">Mother Tincture</SelectItem>
-                  <SelectItem value="ointment">Ointment</SelectItem>
-                  <SelectItem value="drops">Drops</SelectItem>
+                  {uniqueForms.map((form: any) => (
+                    <SelectItem key={form} value={form}>{form}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 
@@ -428,12 +426,21 @@ export default function AdminProducts() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Potencies</SelectItem>
-                  <SelectItem value="30C">30C</SelectItem>
-                  <SelectItem value="200C">200C</SelectItem>
-                  <SelectItem value="1M">1M</SelectItem>
-                  <SelectItem value="Mother Tincture">Mother Tincture</SelectItem>
-                  <SelectItem value="6X">6X</SelectItem>
-                  <SelectItem value="12X">12X</SelectItem>
+                  {uniquePotencies.map((pot: any) => (
+                    <SelectItem key={pot} value={pot}>{pot}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={tagFilter} onValueChange={setTagFilter}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Filter by Tag" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Tags</SelectItem>
+                  {uniqueTags.map((tag: any) => (
+                    <SelectItem key={tag} value={tag}>{tag}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               
