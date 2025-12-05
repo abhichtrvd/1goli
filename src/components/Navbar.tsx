@@ -127,6 +127,19 @@ export function Navbar() {
           )}
         </div>
       </div>
+
+      <div className="border-t border-border/40 bg-background/50 backdrop-blur-md">
+        <div className="container max-w-7xl mx-auto px-4">
+          <div className="flex items-center gap-6 md:gap-8 h-10 text-sm font-medium text-muted-foreground overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <Link to="#" className="hover:text-primary transition-colors whitespace-nowrap">Dilutions</Link>
+            <Link to="#" className="hover:text-primary transition-colors whitespace-nowrap">Mother Tincture</Link>
+            <Link to="#" className="hover:text-primary transition-colors whitespace-nowrap">Biochemics</Link>
+            <Link to="#" className="hover:text-primary transition-colors whitespace-nowrap">Triturations</Link>
+            <Link to="#" className="hover:text-primary transition-colors whitespace-nowrap">Bio Combinations</Link>
+            <Link to="#" className="hover:text-primary transition-colors whitespace-nowrap">Patent</Link>
+          </div>
+        </div>
+      </div>
     </nav>
   );
 }
