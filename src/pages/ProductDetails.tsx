@@ -69,9 +69,7 @@ export default function ProductDetails() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col pb-20 md:pb-0">
-      <Navbar />
-      
+    <div className="pb-20 md:pb-0">
       <div className="container mx-auto px-4 py-8">
         <Button variant="ghost" className="mb-6 pl-0 hover:bg-transparent hover:text-primary" onClick={() => navigate(-1)}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Back

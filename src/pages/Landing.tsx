@@ -23,9 +23,7 @@ export default function Landing() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
-      
+    <>
       {/* Hero Section */}
       <section className="bg-secondary/30 py-12 md:py-20">
         <div className="container px-4 mx-auto text-center">
@@ -109,8 +107,6 @@ export default function Landing() {
           </div>
         )}
       </section>
-
-      <AIWidget />
-    </div>
+    </>
   );
 }

@@ -8,6 +8,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router";
 import "./index.css";
 import "./types/global.d.ts";
+import Layout from "@/components/Layout";
 
 // Lazy load route components for better code splitting
 const Landing = lazy(() => import("./pages/Landing.tsx"));
@@ -63,11 +64,13 @@ createRoot(document.getElementById("root")!).render(
           <RouteSyncer />
           <Suspense fallback={<RouteLoading />}>
             <Routes>
-              <Route path="/" element={<Landing />} />
+              <Route element={<Layout />}>
+                <Route path="/" element={<Landing />} />
+                <Route path="/product/:id" element={<ProductDetails />} />
+                <Route path="/cart" element={<Cart />} />
+                <Route path="/upload" element={<UploadPrescription />} />
+              </Route>
               <Route path="/auth" element={<AuthPage redirectAfterAuth="/" />} />
-              <Route path="/product/:id" element={<ProductDetails />} />
-              <Route path="/cart" element={<Cart />} />
-              <Route path="/upload" element={<UploadPrescription />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
