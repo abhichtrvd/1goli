@@ -81,13 +81,17 @@ const schema = defineSchema(
         })
       ),
       total: v.number(),
-      status: v.string(), // "pending", "processing", "shipped", "delivered"
-      statusHistory: v.optional(v.array(v.object({
-        status: v.string(),
-        timestamp: v.number(),
-        note: v.optional(v.string())
-      }))),
+      status: v.string(),
       shippingAddress: v.string(),
+      statusHistory: v.optional(
+        v.array(
+          v.object({
+            status: v.string(),
+            timestamp: v.number(),
+            note: v.optional(v.string()),
+          })
+        )
+      ),
     }).index("by_user", ["userId"]),
   },
   {

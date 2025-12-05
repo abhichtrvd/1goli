@@ -198,29 +198,29 @@ export default function AdminOrders() {
                             
                             <h3 className="font-semibold mt-6 mb-2">Order Status</h3>
                             <div className="flex items-center gap-2">
-                              {getStatusBadge(order.status)}
-                              <span className="text-xs text-muted-foreground">
-                                Updated: {new Date(order._creationTime).toLocaleString()}
-                              </span>
+                                {getStatusBadge(order.status)}
+                                <span className="text-xs text-muted-foreground">
+                                    Updated: {new Date(order._creationTime).toLocaleString()}
+                                </span>
                             </div>
 
                             {order.statusHistory && order.statusHistory.length > 0 && (
-                              <div className="mt-4">
-                                <h4 className="text-sm font-medium mb-2">Status History</h4>
-                                <div className="space-y-3 relative pl-2 border-l border-border/50 ml-1">
+                              <div className="mt-6">
+                                <h4 className="text-sm font-medium mb-3">Status History</h4>
+                                <div className="relative pl-2 border-l-2 border-muted ml-2 space-y-6">
                                   {order.statusHistory.map((history: any, idx: number) => (
                                     <div key={idx} className="relative pl-4">
-                                      <div className="absolute -left-[5px] top-1.5 h-2.5 w-2.5 rounded-full bg-secondary border border-border" />
+                                      <div className="absolute -left-[9px] top-1 h-4 w-4 rounded-full bg-background border-2 border-primary" />
                                       <div className="flex flex-col">
                                         <div className="flex items-center gap-2">
-                                          <span className="text-xs font-medium capitalize">{history.status}</span>
-                                          <span className="text-[10px] text-muted-foreground">
+                                          <span className="text-sm font-semibold capitalize">{history.status}</span>
+                                          <span className="text-xs text-muted-foreground">
                                             {new Date(history.timestamp).toLocaleString()}
                                           </span>
                                         </div>
                                         {history.note && (
-                                          <p className="text-xs text-muted-foreground mt-0.5 italic">
-                                            "{history.note}"
+                                          <p className="text-sm text-muted-foreground mt-1 bg-muted/50 p-2 rounded-md">
+                                            {history.note}
                                           </p>
                                         )}
                                       </div>

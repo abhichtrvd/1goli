@@ -13,6 +13,7 @@ export default function AdminDashboard() {
   const users = useQuery(api.users.getUsers);
 
   const [dateRange, setDateRange] = useState("7d");
+  const [chartMetric, setChartMetric] = useState<"revenue" | "orders">("revenue");
 
   const dateRangeDays = useMemo(() => {
     switch (dateRange) {
@@ -69,7 +70,7 @@ export default function AdminDashboard() {
 
   // --- Analytics Data Preparation ---
   
-  // 1. Revenue Over Time
+  // 1. Revenue/Orders Over Time
   const revenueData = useMemo(() => {
     if (!orders) return [];
     const days = dateRangeDays;
@@ -84,6 +85,7 @@ export default function AdminDashboard() {
       return {
         date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         revenue: dayOrders.reduce((acc, o) => acc + o.total, 0),
+        orders: dayOrders.length,
       };
     });
   }, [orders, dateRangeDays]);
@@ -216,6 +218,7 @@ export default function AdminDashboard() {
 
   const chartConfig = {
     revenue: { label: "Revenue", color: "hsl(var(--primary))" },
+    orders: { label: "Orders", color: "hsl(var(--chart-2))" },
     users: { label: "New Users", color: "hsl(var(--chart-2))" },
   } satisfies ChartConfig;
 
@@ -302,16 +305,31 @@ export default function AdminDashboard() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="col-span-4">
           <CardHeader>
-            <CardTitle>Revenue Overview</CardTitle>
-            <CardDescription>Daily revenue for the past {dateRangeDays} days</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>{chartMetric === "revenue" ? "Revenue Overview" : "Orders Overview"}</CardTitle>
+                <CardDescription>
+                  {chartMetric === "revenue" ? "Daily revenue" : "Daily order volume"} for the past {dateRangeDays} days
+                </CardDescription>
+              </div>
+              <Select value={chartMetric} onValueChange={(v: any) => setChartMetric(v)}>
+                <SelectTrigger className="w-[120px] h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="revenue">Revenue</SelectItem>
+                  <SelectItem value="orders">Orders</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </CardHeader>
           <CardContent className="pl-2">
             <ChartContainer config={chartConfig} className="h-[300px] w-full">
               <AreaChart data={revenueData}>
                 <defs>
-                  <linearGradient id="fillRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--color-revenue)" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="var(--color-revenue)" stopOpacity={0.1}/>
+                  <linearGradient id="fillMetric" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={chartMetric === "revenue" ? "var(--color-revenue)" : "var(--color-orders)"} stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor={chartMetric === "revenue" ? "var(--color-revenue)" : "var(--color-orders)"} stopOpacity={0.1}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid vertical={false} strokeDasharray="3 3" />
@@ -325,15 +343,15 @@ export default function AdminDashboard() {
                 <YAxis 
                   tickLine={false} 
                   axisLine={false} 
-                  tickFormatter={(value) => `$${value}`} 
+                  tickFormatter={(value) => chartMetric === "revenue" ? `$${value}` : value.toString()} 
                 />
                 <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
                 <Area 
-                  dataKey="revenue" 
+                  dataKey={chartMetric} 
                   type="natural" 
-                  fill="url(#fillRevenue)" 
+                  fill="url(#fillMetric)" 
                   fillOpacity={0.4} 
-                  stroke="var(--color-revenue)" 
+                  stroke={chartMetric === "revenue" ? "var(--color-revenue)" : "var(--color-orders)"} 
                   stackId="a" 
                 />
               </AreaChart>

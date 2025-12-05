@@ -29,6 +29,13 @@ export const createOrder = mutation({
       total: args.total,
       status: "pending",
       shippingAddress: args.shippingAddress,
+      statusHistory: [
+        {
+          status: "pending",
+          timestamp: Date.now(),
+          note: "Order placed",
+        },
+      ],
     });
 
     // Clear cart after order
