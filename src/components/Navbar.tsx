@@ -45,14 +45,14 @@ export function Navbar() {
                 <Link to="/" className="text-lg font-medium hover:text-primary transition-colors flex items-center gap-3">
                   <ShoppingBag className="h-5 w-5" /> Homeopathy
                 </Link>
-                <Link to="#" className="text-lg font-medium hover:text-primary transition-colors flex items-center gap-3">
-                  <Package className="h-5 w-5" /> Wholesale
-                </Link>
                 <Link to="/upload" className="text-lg font-medium hover:text-primary transition-colors flex items-center gap-3">
                   <FileText className="h-5 w-5" /> Upload Prescription
                 </Link>
                 <Link to="#" className="text-lg font-medium hover:text-primary transition-colors flex items-center gap-3">
                   <Stethoscope className="h-5 w-5" /> Consult Homeopaths
+                </Link>
+                <Link to="#" className="text-lg font-medium hover:text-primary transition-colors flex items-center gap-3">
+                  <Package className="h-5 w-5" /> Wholesale
                 </Link>
                 <div className="h-px bg-border/50 my-2" />
                 {isAuthenticated ? (
@@ -80,6 +80,11 @@ export function Navbar() {
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
             <Link to="/" className="hover:text-primary transition-colors text-foreground">Homeopathy</Link>
             <Link to="#" className="hover:text-primary transition-colors">Consult Homeopaths</Link>
+            <Link to="#">
+              <Button size="sm" className="text-xs font-medium bg-black text-white hover:bg-black/90 rounded-full px-5 h-8">
+                Wholesale
+              </Button>
+            </Link>
           </div>
         </div>
 
@@ -91,12 +96,6 @@ export function Navbar() {
                placeholder="Search for remedies..."
              />
           </div>
-
-          <Link to="#" className="hidden sm:flex">
-            <Button size="sm" className="text-xs font-medium bg-black text-white hover:bg-black/90 rounded-full px-5 h-8">
-              Wholesale
-            </Button>
-          </Link>
 
           <Link to="/upload" className="hidden sm:flex">
             <Button variant="ghost" size="sm" className="text-xs font-medium">
