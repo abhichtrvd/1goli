@@ -23,7 +23,7 @@ export const getCart = query({
       })
     );
 
-    return itemsWithDetails;
+    return itemsWithDetails.filter((item) => item.product !== null);
   },
 });
 

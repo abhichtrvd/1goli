@@ -25,7 +25,11 @@ export default function Cart() {
     );
   }
 
-  const calculateItemPrice = (item: any) => {
+  // Filter out any items where the product might be missing
+  const validCartItems = cartItems.filter((item) => item.product !== null);
+
+  const calculateItemPrice = (item: typeof validCartItems[0]) => {
+    if (!item.product) return 0;
     let price = item.product.basePrice;
     if (item.potency === "Mother Tincture") price += 5;
     if (item.potency === "1M") price += 2;
@@ -33,21 +37,24 @@ export default function Cart() {
     return price;
   };
 
-  const subtotal = cartItems.reduce((acc, item) => {
+  const subtotal = validCartItems.reduce((acc, item) => {
     return acc + (calculateItemPrice(item) * item.quantity);
   }, 0);
 
   const handleCheckout = async () => {
     setIsCheckingOut(true);
     try {
-      const orderItems = cartItems.map(item => ({
-        productId: item.productId,
-        name: item.product.name,
-        potency: item.potency,
-        form: item.form,
-        quantity: item.quantity,
-        price: calculateItemPrice(item)
-      }));
+      const orderItems = validCartItems.map(item => {
+        if (!item.product) throw new Error("Product not found");
+        return {
+          productId: item.productId,
+          name: item.product.name,
+          potency: item.potency,
+          form: item.form,
+          quantity: item.quantity,
+          price: calculateItemPrice(item)
+        };
+      });
 
       await createOrder({
         shippingAddress: "123 Homeopathy Lane, Wellness City", // Mock address
@@ -72,7 +79,7 @@ export default function Cart() {
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-8">Your Cart</h1>
 
-        {cartItems.length === 0 ? (
+        {validCartItems.length === 0 ? (
           <div className="text-center py-12">
             <div className="bg-muted h-24 w-24 rounded-full flex items-center justify-center mx-auto mb-4">
               <ShoppingBag className="h-10 w-10 text-muted-foreground" />
@@ -84,19 +91,19 @@ export default function Cart() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-4">
-              {cartItems.map((item) => (
+              {validCartItems.map((item) => (
                 <Card key={item._id} className="flex flex-col sm:flex-row overflow-hidden">
                   <div className="w-full sm:w-32 h-32 bg-secondary/20 shrink-0">
                     <img 
-                      src={item.product.imageUrl} 
-                      alt={item.product.name} 
+                      src={item.product!.imageUrl} 
+                      alt={item.product!.name} 
                       className="w-full h-full object-cover"
                     />
                   </div>
                   <div className="flex-1 p-4 flex flex-col justify-between">
                     <div className="flex justify-between items-start">
                       <div>
-                        <h3 className="font-semibold text-lg">{item.product.name}</h3>
+                        <h3 className="font-semibold text-lg">{item.product!.name}</h3>
                         <p className="text-sm text-muted-foreground">
                           {item.potency} • {item.form}
                         </p>
