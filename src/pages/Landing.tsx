@@ -102,27 +102,13 @@ export default function Landing() {
                 </Card>
                 <Card className="bg-white dark:bg-card border-none shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
                   <CardContent className="p-6 flex flex-col items-center text-center gap-4">
-                    <div className="h-12 w-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center">
-                      <FlaskConical className="h-6 w-6" />
+                    <div className="h-12 w-12 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center">
+                      <Stethoscope className="h-6 w-6" />
                     </div>
                     <div>
-                      <h3 className="font-semibold">Book Lab Tests</h3>
-                      <p className="text-xs text-muted-foreground mt-1">Home sample collection</p>
+                      <h3 className="font-semibold">Consult a Homeopath</h3>
+                      <p className="text-xs text-muted-foreground mt-1">Chat with experts 24/7</p>
                     </div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-white dark:bg-card border-none shadow-lg hover:shadow-xl transition-shadow cursor-pointer col-span-2">
-                  <CardContent className="p-6 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center">
-                        <Stethoscope className="h-6 w-6" />
-                      </div>
-                      <div className="text-left">
-                        <h3 className="font-semibold">Consult a Homeopath</h3>
-                        <p className="text-xs text-muted-foreground mt-1">Chat with experts 24/7</p>
-                      </div>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
                   </CardContent>
                 </Card>
               </motion.div>
@@ -186,7 +172,7 @@ export default function Landing() {
       </section>
 
       {/* Products Grid - Bento Style */}
-      <section id="products" className="py-20 bg-background">
+      <section id="products" className="py-20 bg-secondary/30">
         <div className="container max-w-6xl mx-auto px-4">
           <div className="mb-12 text-center md:text-left">
             <h3 className="text-3xl md:text-4xl font-semibold tracking-tight mb-2">

@@ -46,7 +46,7 @@ export function Navbar() {
                   <ShoppingBag className="h-5 w-5" /> Homeopathy
                 </Link>
                 <Link to="/upload" className="text-lg font-medium hover:text-primary transition-colors flex items-center gap-3">
-                  <FileText className="h-5 w-5" /> Lab Tests
+                  <FileText className="h-5 w-5" /> Upload Prescription
                 </Link>
                 <Link to="#" className="text-lg font-medium hover:text-primary transition-colors flex items-center gap-3">
                   <Stethoscope className="h-5 w-5" /> Consult Homeopaths
@@ -79,7 +79,6 @@ export function Navbar() {
 
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
             <Link to="/" className="hover:text-primary transition-colors text-foreground">Homeopathy</Link>
-            <Link to="#" className="hover:text-primary transition-colors">Lab Tests</Link>
             <Link to="#" className="hover:text-primary transition-colors">Consult Homeopaths</Link>
             <Link to="#" className="hover:text-primary transition-colors">Mother Tinctures</Link>
             <Link to="#" className="hover:text-primary transition-colors">Biochemics</Link>
