@@ -61,10 +61,10 @@ export const updateUserRole = mutation({
 });
 
 export const updateCurrentUser = mutation({
-  args: { name: v.string() },
+  args: { name: v.string(), address: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const user = await getCurrentUser(ctx);
     if (!user) throw new Error("Not authenticated");
-    await ctx.db.patch(user._id, { name: args.name });
+    await ctx.db.patch(user._id, { name: args.name, address: args.address });
   },
 });

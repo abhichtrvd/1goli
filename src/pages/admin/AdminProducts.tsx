@@ -13,6 +13,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function AdminProducts() {
   const products = useQuery(api.products.getProducts);
@@ -21,6 +22,7 @@ export default function AdminProducts() {
   const deleteProduct = useMutation(api.products.deleteProduct);
   
   const [search, setSearch] = useState("");
+  const [formFilter, setFormFilter] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -37,11 +39,14 @@ export default function AdminProducts() {
 
   const filteredProducts = products?.filter(p => {
     const searchLower = search.toLowerCase();
-    return (
+    const matchesSearch = (
       p.name.toLowerCase().includes(searchLower) ||
       p.description.toLowerCase().includes(searchLower) ||
       p.symptomsTags.some(tag => tag.toLowerCase().includes(searchLower))
     );
+    const matchesForm = formFilter === "all" || p.forms.some(f => f.toLowerCase() === formFilter.toLowerCase());
+    
+    return matchesSearch && matchesForm;
   });
 
   // Pagination
@@ -286,14 +291,29 @@ export default function AdminProducts() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>All Products</CardTitle>
-            <div className="relative w-64">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input 
-                placeholder="Search products..." 
-                className="pl-8" 
-                value={search}
-                onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
-              />
+            <div className="flex items-center gap-2">
+              <Select value={formFilter} onValueChange={setFormFilter}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Filter by Form" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Forms</SelectItem>
+                  <SelectItem value="dilution">Dilution</SelectItem>
+                  <SelectItem value="globules">Globules</SelectItem>
+                  <SelectItem value="mother tincture">Mother Tincture</SelectItem>
+                  <SelectItem value="ointment">Ointment</SelectItem>
+                  <SelectItem value="drops">Drops</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="relative w-64">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  placeholder="Search products..." 
+                  className="pl-8" 
+                  value={search}
+                  onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+                />
+              </div>
             </div>
           </div>
         </CardHeader>

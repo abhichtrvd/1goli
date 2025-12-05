@@ -86,6 +86,18 @@ export const updateOrderStatus = mutation({
   args: { orderId: v.id("orders"), status: v.string() },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
-    await ctx.db.patch(args.orderId, { status: args.status });
+    const order = await ctx.db.get(args.orderId);
+    if (!order) throw new Error("Order not found");
+
+    const history = order.statusHistory || [];
+    history.push({
+      status: args.status,
+      timestamp: Date.now(),
+    });
+
+    await ctx.db.patch(args.orderId, { 
+      status: args.status,
+      statusHistory: history
+    });
   },
 });

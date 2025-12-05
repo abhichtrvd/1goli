@@ -30,6 +30,7 @@ const schema = defineSchema(
       phone: v.optional(v.string()), // phone of the user
       phoneVerificationTime: v.optional(v.number()), // phone verification time
       isAnonymous: v.optional(v.boolean()), // is the user anonymous. do not remove
+      address: v.optional(v.string()), // Added address field
 
       role: v.optional(roleValidator), // role of the user. do not remove
     })
@@ -72,6 +73,11 @@ const schema = defineSchema(
       ),
       total: v.number(),
       status: v.string(), // "pending", "processing", "shipped", "delivered"
+      statusHistory: v.optional(v.array(v.object({
+        status: v.string(),
+        timestamp: v.number(),
+        note: v.optional(v.string())
+      }))),
       shippingAddress: v.string(),
     }).index("by_user", ["userId"]),
   },

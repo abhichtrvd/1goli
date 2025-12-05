@@ -183,6 +183,25 @@ export default function AdminOrders() {
                                 Updated: {new Date(order._creationTime).toLocaleString()}
                               </span>
                             </div>
+
+                            {order.statusHistory && order.statusHistory.length > 0 && (
+                              <div className="mt-4">
+                                <h4 className="text-sm font-medium mb-2">Status History</h4>
+                                <div className="space-y-3 relative pl-2 border-l border-border/50 ml-1">
+                                  {order.statusHistory.map((history: any, idx: number) => (
+                                    <div key={idx} className="relative pl-4">
+                                      <div className="absolute -left-[5px] top-1.5 h-2.5 w-2.5 rounded-full bg-secondary border border-border" />
+                                      <div className="flex flex-col">
+                                        <span className="text-xs font-medium capitalize">{history.status}</span>
+                                        <span className="text-[10px] text-muted-foreground">
+                                          {new Date(history.timestamp).toLocaleString()}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
                           
                           <div>

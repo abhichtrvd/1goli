@@ -46,9 +46,10 @@ export function Navbar() {
     setIsUpdatingProfile(true);
     const formData = new FormData(e.currentTarget);
     const name = formData.get("name") as string;
+    const address = formData.get("address") as string;
 
     try {
-      await updateProfile({ name });
+      await updateProfile({ name, address });
       toast.success("Profile updated successfully");
       setIsProfileOpen(false);
     } catch (error) {
@@ -223,6 +224,18 @@ export function Navbar() {
                   defaultValue={user?.name || ""}
                   className="col-span-3"
                   required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="address" className="text-right">
+                  Address
+                </Label>
+                <Input
+                  id="address"
+                  name="address"
+                  defaultValue={user?.address || ""}
+                  className="col-span-3"
+                  placeholder="Your shipping address"
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
