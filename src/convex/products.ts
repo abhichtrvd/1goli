@@ -48,10 +48,16 @@ export const createProduct = mutation({
     forms: v.array(v.string()),
     basePrice: v.number(),
     symptomsTags: v.array(v.string()),
+    category: v.optional(v.string()),
+    availability: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
-    await ctx.db.insert("products", args);
+    await ctx.db.insert("products", {
+      ...args,
+      category: args.category || "Classical",
+      availability: args.availability || "in_stock",
+    });
   },
 });
 
@@ -65,6 +71,8 @@ export const updateProduct = mutation({
     forms: v.optional(v.array(v.string())),
     basePrice: v.optional(v.number()),
     symptomsTags: v.optional(v.array(v.string())),
+    category: v.optional(v.string()),
+    availability: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
@@ -99,6 +107,8 @@ export const seedProducts = mutation({
         forms: ["Dilution", "Globules", "Ointment"],
         basePrice: 12.99,
         symptomsTags: ["injury", "bruise", "trauma", "muscle pain", "swelling"],
+        category: "Classical",
+        availability: "in_stock",
       },
       {
         name: "Nux Vomica",
@@ -108,6 +118,8 @@ export const seedProducts = mutation({
         forms: ["Dilution", "Globules", "Drops"],
         basePrice: 14.50,
         symptomsTags: ["indigestion", "stress", "hangover", "irritability", "constipation"],
+        category: "Classical",
+        availability: "in_stock",
       },
       {
         name: "Oscillococcinum",
@@ -117,6 +129,8 @@ export const seedProducts = mutation({
         forms: ["Tube"],
         basePrice: 29.99,
         symptomsTags: ["flu", "body ache", "fever", "chills"],
+        category: "Patent",
+        availability: "in_stock",
       },
       {
         name: "Rhus Toxicodendron",
@@ -126,6 +140,8 @@ export const seedProducts = mutation({
         forms: ["Dilution", "Globules"],
         basePrice: 13.50,
         symptomsTags: ["joint pain", "arthritis", "stiffness", "back pain"],
+        category: "Classical",
+        availability: "in_stock",
       },
       {
         name: "Belladonna",
@@ -135,6 +151,8 @@ export const seedProducts = mutation({
         forms: ["Dilution", "Globules", "Drops"],
         basePrice: 12.99,
         symptomsTags: ["fever", "headache", "inflammation", "sore throat"],
+        category: "Classical",
+        availability: "in_stock",
       },
       {
         name: "Calendula Officinalis",
@@ -144,6 +162,8 @@ export const seedProducts = mutation({
         forms: ["Ointment", "Dilution", "Spray"],
         basePrice: 15.00,
         symptomsTags: ["wounds", "cuts", "burns", "skin", "antiseptic"],
+        category: "Personal Care",
+        availability: "in_stock",
       },
     ];
 

@@ -45,6 +45,8 @@ const schema = defineSchema(
       forms: v.array(v.string()),
       basePrice: v.number(),
       symptomsTags: v.array(v.string()),
+      category: v.optional(v.string()), // e.g., "Classical", "Patent", "Personal Care"
+      availability: v.optional(v.string()), // "in_stock", "out_of_stock"
     })
       .searchIndex("search_body", {
         searchField: "description",

@@ -23,6 +23,7 @@ export default function AdminProducts() {
   
   const [search, setSearch] = useState("");
   const [formFilter, setFormFilter] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [minPrice, setMinPrice] = useState<string>("");
   const [maxPrice, setMaxPrice] = useState<string>("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -47,13 +48,14 @@ export default function AdminProducts() {
       p.symptomsTags.some(tag => tag.toLowerCase().includes(searchLower))
     );
     const matchesForm = formFilter === "all" || p.forms.some(f => f.toLowerCase() === formFilter.toLowerCase());
+    const matchesCategory = categoryFilter === "all" || (p.category && p.category.toLowerCase() === categoryFilter.toLowerCase());
     
     const price = p.basePrice;
     const min = minPrice ? parseFloat(minPrice) : 0;
     const max = maxPrice ? parseFloat(maxPrice) : Infinity;
     const matchesPrice = price >= min && price <= max;
     
-    return matchesSearch && matchesForm && matchesPrice;
+    return matchesSearch && matchesForm && matchesCategory && matchesPrice;
   });
 
   // Pagination
@@ -73,6 +75,8 @@ export default function AdminProducts() {
       description: formData.get("description") as string,
       imageUrl: formData.get("imageUrl") as string,
       basePrice: parseFloat(formData.get("basePrice") as string),
+      category: formData.get("category") as string,
+      availability: formData.get("availability") as string,
       potencies: (formData.get("potencies") as string).split(",").map(s => s.trim()).filter(Boolean),
       forms: (formData.get("forms") as string).split(",").map(s => s.trim()).filter(Boolean),
       symptomsTags: (formData.get("symptomsTags") as string).split(",").map(s => s.trim()).filter(Boolean),
@@ -161,6 +165,37 @@ export default function AdminProducts() {
                   <Input id="basePrice" name="basePrice" type="number" step="0.01" required defaultValue={editingProduct?.basePrice} placeholder="12.99" />
                 </div>
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="category">Category</Label>
+                  <Select name="category" defaultValue={editingProduct?.category || "Classical"}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Classical">Classical</SelectItem>
+                      <SelectItem value="Patent">Patent</SelectItem>
+                      <SelectItem value="Biochemic">Biochemic</SelectItem>
+                      <SelectItem value="Personal Care">Personal Care</SelectItem>
+                      <SelectItem value="Mother Tincture">Mother Tincture</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="availability">Availability</Label>
+                  <Select name="availability" defaultValue={editingProduct?.availability || "in_stock"}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="in_stock">In Stock</SelectItem>
+                      <SelectItem value="out_of_stock">Out of Stock</SelectItem>
+                      <SelectItem value="discontinued">Discontinued</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
               
               <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>
@@ -247,7 +282,15 @@ export default function AdminProducts() {
                 <div className="space-y-6">
                   <div>
                     <h2 className="text-2xl font-bold">{viewingProduct.name}</h2>
-                    <p className="text-2xl font-semibold text-primary mt-2">${viewingProduct.basePrice}</p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <p className="text-2xl font-semibold text-primary">${viewingProduct.basePrice}</p>
+                      {viewingProduct.availability === "out_of_stock" && (
+                        <Badge variant="destructive">Out of Stock</Badge>
+                      )}
+                      {viewingProduct.category && (
+                        <Badge variant="outline">{viewingProduct.category}</Badge>
+                      )}
+                    </div>
                   </div>
                   
                   <div>
@@ -301,6 +344,20 @@ export default function AdminProducts() {
               <CardTitle>All Products</CardTitle>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="Classical">Classical</SelectItem>
+                  <SelectItem value="Patent">Patent</SelectItem>
+                  <SelectItem value="Biochemic">Biochemic</SelectItem>
+                  <SelectItem value="Personal Care">Personal Care</SelectItem>
+                  <SelectItem value="Mother Tincture">Mother Tincture</SelectItem>
+                </SelectContent>
+              </Select>
+
               <Select value={formFilter} onValueChange={setFormFilter}>
                 <SelectTrigger className="w-[150px]">
                   <SelectValue placeholder="Filter by Form" />
@@ -350,9 +407,10 @@ export default function AdminProducts() {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
+                <TableHead>Category</TableHead>
                 <TableHead>Price</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Potencies</TableHead>
-                <TableHead>Tags</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -370,17 +428,20 @@ export default function AdminProducts() {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>${product.basePrice}</TableCell>
-                  <TableCell>{product.potencies.join(", ")}</TableCell>
                   <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {product.symptomsTags.slice(0, 3).map(tag => (
-                        <span key={tag} className="text-xs bg-secondary px-2 py-0.5 rounded-full text-muted-foreground">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
+                    <Badge variant="outline" className="font-normal">{product.category || "Classical"}</Badge>
                   </TableCell>
+                  <TableCell>${product.basePrice}</TableCell>
+                  <TableCell>
+                    {product.availability === "out_of_stock" ? (
+                      <Badge variant="destructive" className="text-[10px]">Out of Stock</Badge>
+                    ) : product.availability === "discontinued" ? (
+                      <Badge variant="secondary" className="text-[10px]">Discontinued</Badge>
+                    ) : (
+                      <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-[10px]">In Stock</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>{product.potencies.join(", ")}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <Button variant="ghost" size="icon" onClick={() => openViewDialog(product)}>
