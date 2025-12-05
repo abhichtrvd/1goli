@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 export function AIWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<{ role: "user" | "bot"; content: string }[]>([
-    { role: "bot", content: "Hello. I'm your AI Homeopath. How can I help you today?" }
+    { role: "bot", content: "Hello. I'm your 1goli AI Assistant. How can I help you today?" }
   ]);
   const [input, setInput] = useState("");
 
@@ -57,7 +57,7 @@ export function AIWidget() {
                     <Sparkles className="h-4 w-4 text-white" />
                   </div>
                   <div>
-                    <CardTitle className="text-sm font-semibold">AI Homeopath</CardTitle>
+                    <CardTitle className="text-sm font-semibold">1goli Assistant</CardTitle>
                     <p className="text-xs text-muted-foreground">Always here to help.</p>
                   </div>
                 </div>

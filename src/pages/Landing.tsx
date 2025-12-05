@@ -29,7 +29,7 @@ export default function Landing() {
           className="max-w-4xl mx-auto"
         >
           <h1 className="text-5xl md:text-7xl font-semibold tracking-tight text-foreground mb-4">
-            HomeoCure Pharmacy.
+            1goli.
           </h1>
           <h2 className="text-3xl md:text-5xl font-medium text-muted-foreground mb-8 tracking-tight">
             Pure. Potent. Personalized.

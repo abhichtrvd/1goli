@@ -37,7 +37,7 @@ export function Navbar() {
             </SheetTrigger>
             <SheetContent side="left" className="w-[300px] sm:w-[400px]">
               <SheetHeader>
-                <SheetTitle className="text-left font-semibold">HomeoCure</SheetTitle>
+                <SheetTitle className="text-left font-semibold">1goli</SheetTitle>
               </SheetHeader>
               <div className="flex flex-col gap-4 mt-8">
                 <Link to="/" className="text-xl font-medium hover:text-primary transition-colors">
@@ -64,7 +64,7 @@ export function Navbar() {
           
           <Link to="/" className="flex items-center gap-2 transition-opacity hover:opacity-80">
             <span className="font-semibold text-lg tracking-tight">
-              HomeoCure
+              1goli
             </span>
           </Link>
 
