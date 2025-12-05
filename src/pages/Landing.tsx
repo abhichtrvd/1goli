@@ -51,7 +51,7 @@ export default function Landing() {
             >
               <h1 className="text-4xl md:text-6xl font-semibold tracking-tight text-foreground leading-tight">
                 Homoeopathy, <br/>
-                <span className="text-[#84cc16]">Simplified.</span>
+                <span className="text-[#84cc16]">Simplified.</span> by 1goli
               </h1>
               <p className="text-lg md:text-xl text-muted-foreground max-w-lg mx-auto pt-8">
                 India's trusted Homeopathic Pharmacy. Authentic remedies, expert guidance, and doorstep delivery.
