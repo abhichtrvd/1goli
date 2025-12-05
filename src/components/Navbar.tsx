@@ -51,9 +51,6 @@ export function Navbar() {
                 <Link to="#" className="text-lg font-medium hover:text-primary transition-colors flex items-center gap-3">
                   <Stethoscope className="h-5 w-5" /> Consult Homeopaths
                 </Link>
-                <Link to="#" className="text-lg font-medium hover:text-primary transition-colors flex items-center gap-3">
-                  <Activity className="h-5 w-5" /> Mother Tinctures
-                </Link>
                 <div className="h-px bg-border/50 my-2" />
                 {isAuthenticated ? (
                   <button
@@ -80,8 +77,6 @@ export function Navbar() {
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
             <Link to="/" className="hover:text-primary transition-colors text-foreground">Homeopathy</Link>
             <Link to="#" className="hover:text-primary transition-colors">Consult Homeopaths</Link>
-            <Link to="#" className="hover:text-primary transition-colors">Mother Tinctures</Link>
-            <Link to="#" className="hover:text-primary transition-colors">Biochemics</Link>
           </div>
         </div>
 
