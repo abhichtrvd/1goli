@@ -28,6 +28,15 @@ export default function Landing() {
     { title: "Female Care", icon: <Stethoscope className="h-6 w-6" />, color: "bg-teal-100 text-teal-600" },
   ];
 
+  const featuredBrands = [
+    "Dr. Reckeweg", 
+    "SBL World Class", 
+    "Schwabe India", 
+    "Adel Pekana", 
+    "Bakson's", 
+    "Bjain Pharma"
+  ];
+
   return (
     <div className="bg-background min-h-screen">
       {/* Hero Section - 1mg Style but Apple Aesthetic */}
@@ -130,6 +139,24 @@ export default function Landing() {
                   {concern.icon}
                 </div>
                 <span className="font-medium text-sm">{concern.title}</span>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Featured Brands */}
+      <section className="py-12 bg-secondary/30 border-y border-border/50">
+        <div className="container max-w-6xl mx-auto px-4">
+          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-8">Featured Brands</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+            {featuredBrands.map((brand, index) => (
+              <motion.div
+                key={index}
+                whileHover={{ scale: 1.05 }}
+                className="bg-white dark:bg-card p-6 rounded-2xl shadow-sm border border-border/50 flex items-center justify-center text-center hover:shadow-md transition-all cursor-pointer h-24"
+              >
+                <span className="font-semibold text-muted-foreground hover:text-[#84cc16] transition-colors">{brand}</span>
               </motion.div>
             ))}
           </div>
