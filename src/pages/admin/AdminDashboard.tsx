@@ -1,23 +1,34 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Package, ShoppingCart, DollarSign, TrendingUp, Activity, Users, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Package, ShoppingCart, DollarSign, TrendingUp, Activity, Users, ArrowUpRight, ArrowDownRight, AlertCircle, Calendar } from "lucide-react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis, Pie, PieChart, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function AdminDashboard() {
   const products = useQuery(api.products.getProducts);
   const orders = useQuery(api.orders.getAllOrders);
   const users = useQuery(api.users.getUsers);
 
+  const [dateRange, setDateRange] = useState("7d");
+
+  const dateRangeDays = useMemo(() => {
+    switch (dateRange) {
+      case "30d": return 30;
+      case "90d": return 90;
+      case "7d": default: return 7;
+    }
+  }, [dateRange]);
+
   // --- Key Metrics Calculations with Comparison ---
   const metrics = useMemo(() => {
     if (!orders || !products || !users) return null;
 
     const now = new Date();
-    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+    const pastDate = new Date(now.getTime() - dateRangeDays * 24 * 60 * 60 * 1000);
+    const prevDate = new Date(now.getTime() - dateRangeDays * 2 * 24 * 60 * 60 * 1000);
 
     // Helper to filter by date range
     const filterByRange = (data: any[], start: Date, end: Date) => 
@@ -26,15 +37,15 @@ export default function AdminDashboard() {
         return date >= start && date < end;
       });
 
-    // Current Period (Last 7 Days)
-    const currentOrders = filterByRange(orders, sevenDaysAgo, now);
+    // Current Period
+    const currentOrders = filterByRange(orders, pastDate, now);
     const currentRevenue = currentOrders.reduce((acc, o) => acc + o.total, 0);
-    const currentNewUsers = filterByRange(users, sevenDaysAgo, now).length;
+    const currentNewUsers = filterByRange(users, pastDate, now).length;
 
-    // Previous Period (7-14 Days ago)
-    const prevOrders = filterByRange(orders, fourteenDaysAgo, sevenDaysAgo);
+    // Previous Period
+    const prevOrders = filterByRange(orders, prevDate, pastDate);
     const prevRevenue = prevOrders.reduce((acc, o) => acc + o.total, 0);
-    const prevNewUsers = filterByRange(users, fourteenDaysAgo, sevenDaysAgo).length;
+    const prevNewUsers = filterByRange(users, prevDate, pastDate).length;
 
     // Calculate Changes
     const calculateChange = (current: number, prev: number) => {
@@ -43,73 +54,82 @@ export default function AdminDashboard() {
     };
 
     return {
-      totalRevenue: orders.reduce((acc, o) => acc + o.total, 0),
+      totalRevenue: currentRevenue,
       revenueChange: calculateChange(currentRevenue, prevRevenue),
-      totalOrders: orders.length,
+      totalOrders: currentOrders.length,
       ordersChange: calculateChange(currentOrders.length, prevOrders.length),
       totalProducts: products.length,
-      totalUsers: users.length,
+      totalUsers: users.length, // Total users is usually all-time, but we can show new users in period
+      newUsers: currentNewUsers,
       usersChange: calculateChange(currentNewUsers, prevNewUsers),
-      avgOrderValue: orders.length > 0 ? orders.reduce((acc, o) => acc + o.total, 0) / orders.length : 0,
+      avgOrderValue: currentOrders.length > 0 ? currentRevenue / currentOrders.length : 0,
       pendingOrders: orders.filter(o => o.status === "pending").length,
     };
-  }, [orders, products, users]);
+  }, [orders, products, users, dateRangeDays]);
 
   // --- Analytics Data Preparation ---
   
-  // 1. Revenue Over Time (Existing)
+  // 1. Revenue Over Time
   const revenueData = useMemo(() => {
     if (!orders) return [];
-    const last7Days = [...Array(7)].map((_, i) => {
+    const days = dateRangeDays;
+    const data = [...Array(days)].map((_, i) => {
       const d = new Date();
-      d.setDate(d.getDate() - (6 - i));
+      d.setDate(d.getDate() - (days - 1 - i));
       return d.toISOString().split('T')[0];
     });
 
-    return last7Days.map(date => {
+    return data.map(date => {
       const dayOrders = orders.filter(o => new Date(o._creationTime).toISOString().split('T')[0] === date);
       return {
-        date: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
+        date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         revenue: dayOrders.reduce((acc, o) => acc + o.total, 0),
       };
     });
-  }, [orders]);
+  }, [orders, dateRangeDays]);
 
   // 2. User Growth (New Users per Day)
   const userGrowthData = useMemo(() => {
     if (!users) return [];
-    const last7Days = [...Array(7)].map((_, i) => {
+    const days = dateRangeDays;
+    const data = [...Array(days)].map((_, i) => {
       const d = new Date();
-      d.setDate(d.getDate() - (6 - i));
+      d.setDate(d.getDate() - (days - 1 - i));
       return d.toISOString().split('T')[0];
     });
 
-    return last7Days.map(date => {
+    return data.map(date => {
       const count = users.filter(u => new Date(u._creationTime).toISOString().split('T')[0] === date).length;
       return {
-        date: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
+        date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         users: count,
       };
     });
-  }, [users]);
+  }, [users, dateRangeDays]);
 
-  // 3. Sales by Category
+  // 3. Sales by Category (Filtered by Date Range)
   const categoryData = useMemo(() => {
     if (!orders || !products) return [];
     const categorySales: Record<string, number> = {};
     
-    // Create a map for quick product lookup
     const productMap = new Map(products.map(p => [p._id, p]));
+    
+    const now = new Date();
+    const pastDate = new Date(now.getTime() - dateRangeDays * 24 * 60 * 60 * 1000);
 
-    orders.forEach(order => {
-      order.items.forEach(item => {
-        const product = productMap.get(item.productId);
-        const category = product?.category || "Uncategorized";
-        categorySales[category] = (categorySales[category] || 0) + item.quantity;
+    orders
+      .filter(o => {
+        const d = new Date(o._creationTime);
+        return d >= pastDate && d <= now;
+      })
+      .forEach(order => {
+        order.items.forEach(item => {
+          const product = productMap.get(item.productId);
+          const category = product?.category || "Uncategorized";
+          categorySales[category] = (categorySales[category] || 0) + item.quantity;
+        });
       });
-    });
 
-    // Colors for categories
     const COLORS = [
       "hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", 
       "hsl(var(--chart-4))", "hsl(var(--chart-5))", "#84cc16"
@@ -121,10 +141,10 @@ export default function AdminDashboard() {
         value,
         fill: COLORS[index % COLORS.length]
       }))
-      .sort((a, b) => b.value - a.value); // Sort by highest sales
-  }, [orders, products]);
+      .sort((a, b) => b.value - a.value);
+  }, [orders, products, dateRangeDays]);
 
-  // 4. Order Status (Existing)
+  // 4. Order Status (Existing - All Time or Filtered? Usually Pipeline is current state, so All Time Pending/Processing is better, but let's keep it all time for status pipeline)
   const statusData = useMemo(() => {
     if (!orders) return [];
     const counts: Record<string, number> = {};
@@ -147,25 +167,52 @@ export default function AdminDashboard() {
     }));
   }, [orders]);
 
+  // 5. Inventory Data
+  const inventoryData = useMemo(() => {
+    if (!products) return [];
+    const inStock = products.filter(p => p.availability === "in_stock").length;
+    const outOfStock = products.filter(p => p.availability === "out_of_stock").length;
+    const discontinued = products.filter(p => p.availability === "discontinued").length;
+    
+    return [
+      { name: "In Stock", value: inStock, fill: "hsl(var(--chart-2))" },
+      { name: "Out of Stock", value: outOfStock, fill: "hsl(var(--destructive))" },
+      { name: "Discontinued", value: discontinued, fill: "hsl(var(--muted))" },
+    ];
+  }, [products]);
+
+  const outOfStockProducts = useMemo(() => {
+    if (!products) return [];
+    return products.filter(p => p.availability === "out_of_stock");
+  }, [products]);
+
   // 5. Top Products (Existing)
   const topProducts = useMemo(() => {
     if (!orders) return [];
     const productSales: Record<string, {name: string, sales: number, revenue: number, id: string}> = {};
     
-    orders.forEach(order => {
-      order.items.forEach(item => {
-        if (!productSales[item.productId]) {
-          productSales[item.productId] = { name: item.name, sales: 0, revenue: 0, id: item.productId };
-        }
-        productSales[item.productId].sales += item.quantity;
-        productSales[item.productId].revenue += item.price * item.quantity;
+    const now = new Date();
+    const pastDate = new Date(now.getTime() - dateRangeDays * 24 * 60 * 60 * 1000);
+
+    orders
+      .filter(o => {
+        const d = new Date(o._creationTime);
+        return d >= pastDate && d <= now;
+      })
+      .forEach(order => {
+        order.items.forEach(item => {
+          if (!productSales[item.productId]) {
+            productSales[item.productId] = { name: item.name, sales: 0, revenue: 0, id: item.productId };
+          }
+          productSales[item.productId].sales += item.quantity;
+          productSales[item.productId].revenue += item.price * item.quantity;
+        });
       });
-    });
 
     return Object.values(productSales)
       .sort((a, b) => b.sales - a.sales)
       .slice(0, 5);
-  }, [orders]);
+  }, [orders, dateRangeDays]);
 
   const chartConfig = {
     revenue: { label: "Revenue", color: "hsl(var(--primary))" },
@@ -178,16 +225,31 @@ export default function AdminDashboard() {
     return (
       <div className={`text-xs flex items-center ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
         {isPositive ? <ArrowUpRight className="h-3 w-3 mr-1" /> : <ArrowDownRight className="h-3 w-3 mr-1" />}
-        {Math.abs(value).toFixed(1)}% from last week
+        {Math.abs(value).toFixed(1)}% from previous period
       </div>
     );
   };
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">Overview of your store's performance.</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground">Overview of your store's performance.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Calendar className="h-4 w-4 text-muted-foreground" />
+          <Select value={dateRange} onValueChange={setDateRange}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select range" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7d">Last 7 Days</SelectItem>
+              <SelectItem value="30d">Last 30 Days</SelectItem>
+              <SelectItem value="90d">Last 90 Days</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Key Metrics Cards */}
@@ -214,11 +276,11 @@ export default function AdminDashboard() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <CardTitle className="text-sm font-medium">New Users</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics?.totalUsers || 0}</div>
+            <div className="text-2xl font-bold">+{metrics?.newUsers || 0}</div>
             {metrics && <PercentBadge value={metrics.usersChange} />}
           </CardContent>
         </Card>
@@ -241,7 +303,7 @@ export default function AdminDashboard() {
         <Card className="col-span-4">
           <CardHeader>
             <CardTitle>Revenue Overview</CardTitle>
-            <CardDescription>Daily revenue for the past 7 days</CardDescription>
+            <CardDescription>Daily revenue for the past {dateRangeDays} days</CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
             <ChartContainer config={chartConfig} className="h-[300px] w-full">
@@ -282,7 +344,7 @@ export default function AdminDashboard() {
         <Card className="col-span-3">
           <CardHeader>
             <CardTitle>User Growth</CardTitle>
-            <CardDescription>New user registrations (Last 7 Days)</CardDescription>
+            <CardDescription>New user registrations</CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="h-[300px] w-full">
@@ -306,12 +368,12 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
-      {/* Charts Section Row 2: Sales by Category & Order Status */}
+      {/* Charts Section Row 2: Sales by Category & Inventory */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="col-span-4">
           <CardHeader>
             <CardTitle>Sales by Category</CardTitle>
-            <CardDescription>Distribution of items sold by product category</CardDescription>
+            <CardDescription>Distribution of items sold</CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">
              <ChartContainer config={{}} className="h-[300px] w-full">
@@ -338,30 +400,54 @@ export default function AdminDashboard() {
 
         <Card className="col-span-3">
           <CardHeader>
-            <CardTitle>Order Status</CardTitle>
-            <CardDescription>Current order pipeline</CardDescription>
+            <CardTitle>Inventory Health</CardTitle>
+            <CardDescription>Stock status overview</CardDescription>
           </CardHeader>
-          <CardContent className="flex justify-center">
-            <ChartContainer config={{}} className="h-[300px] w-full">
-              <PieChart>
-                <Pie
-                  data={statusData}
-                  dataKey="count"
-                  nameKey="status"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}
-                >
-                  {statusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
+          <CardContent className="flex flex-col gap-4">
+            <div className="h-[200px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={inventoryData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                  >
+                    {inventoryData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                  <Legend verticalAlign="bottom" height={36}/>
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            
+            {outOfStockProducts.length > 0 && (
+              <div className="mt-2 space-y-2">
+                <h4 className="text-sm font-semibold flex items-center text-destructive">
+                  <AlertCircle className="h-4 w-4 mr-2" />
+                  Out of Stock ({outOfStockProducts.length})
+                </h4>
+                <div className="max-h-[100px] overflow-y-auto space-y-1 pr-2">
+                  {outOfStockProducts.map(p => (
+                    <div key={p._id} className="text-xs flex justify-between items-center bg-destructive/10 p-2 rounded">
+                      <span className="truncate max-w-[150px]">{p.name}</span>
+                      <span className="font-mono text-destructive">${p.basePrice}</span>
+                    </div>
                   ))}
-                </Pie>
-                <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                <ChartLegend content={<ChartLegendContent nameKey="status" />} className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center" />
-              </PieChart>
-            </ChartContainer>
+                </div>
+              </div>
+            )}
+            {outOfStockProducts.length === 0 && (
+              <div className="text-sm text-muted-foreground text-center py-4">
+                All products are in stock.
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -402,7 +488,7 @@ export default function AdminDashboard() {
         <Card className="col-span-3">
           <CardHeader>
             <CardTitle>Top Selling Products</CardTitle>
-            <CardDescription>By quantity sold</CardDescription>
+            <CardDescription>By quantity sold (Selected Period)</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -419,7 +505,7 @@ export default function AdminDashboard() {
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-muted-foreground">No sales data yet.</p>
+                <p className="text-sm text-muted-foreground">No sales data for this period.</p>
               )}
             </div>
           </CardContent>
