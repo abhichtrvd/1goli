@@ -100,6 +100,18 @@ export default function Landing() {
                     </div>
                   </CardContent>
                 </Card>
+
+                <Card className="bg-white dark:bg-card border-none shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+                  <CardContent className="p-6 flex flex-col items-center text-center gap-4">
+                    <div className="h-12 w-12 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center">
+                      <Stethoscope className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">Consult Homeopath</h3>
+                      <p className="text-xs text-muted-foreground mt-1">Expert guidance</p>
+                    </div>
+                  </CardContent>
+                </Card>
               </motion.div>
             </div>
           </div>
