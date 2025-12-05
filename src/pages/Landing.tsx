@@ -28,13 +28,6 @@ export default function Landing() {
     { title: "Female Care", icon: <Stethoscope className="h-6 w-6" />, color: "bg-teal-100 text-teal-600" },
   ];
 
-  const labTests = [
-    { title: "Comprehensive Full Body Checkup", price: "$49", tests: "75+ Tests included" },
-    { title: "Vitamin D & B12 Profile", price: "$29", tests: "3 Tests included" },
-    { title: "Thyroid Profile (Total)", price: "$19", tests: "3 Tests included" },
-    { title: "Diabetes Screening", price: "$15", tests: "2 Tests included" },
-  ];
-
   return (
     <div className="bg-background min-h-screen">
       {/* Hero Section - 1mg Style but Apple Aesthetic */}
@@ -138,35 +131,6 @@ export default function Landing() {
                 </div>
                 <span className="font-medium text-sm">{concern.title}</span>
               </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Featured Lab Tests */}
-      <section className="py-16 bg-secondary/30">
-        <div className="container max-w-6xl mx-auto px-4">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">Featured Health Checkups</h2>
-              <p className="text-muted-foreground mt-1">Top booked diagnostic tests</p>
-            </div>
-            <Button variant="link" className="text-[#84cc16]">View All <ChevronRight className="h-4 w-4 ml-1" /></Button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {labTests.map((test, index) => (
-              <Card key={index} className="border-none shadow-sm hover:shadow-md transition-shadow cursor-pointer overflow-hidden">
-                <div className="h-2 bg-[#A6FF00]" />
-                <CardContent className="p-6">
-                  <h3 className="font-semibold text-lg mb-2 line-clamp-2">{test.title}</h3>
-                  <p className="text-sm text-muted-foreground mb-4">{test.tests}</p>
-                  <div className="flex items-center justify-between mt-4">
-                    <span className="font-bold text-xl text-[#84cc16]">{test.price}</span>
-                    <Button size="sm" variant="outline" className="rounded-full">Book</Button>
-                  </div>
-                </CardContent>
-              </Card>
             ))}
           </div>
         </div>
