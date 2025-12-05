@@ -44,71 +44,73 @@
 
 /* CHANGE VALUES FOR THEME */
 :root {
-  --radius: 0.625rem;
-  --primary: #3A6B35; 
+  --radius: 1rem; /* More rounded, like Apple's UI */
+  
+  /* Apple-like Color Palette */
+  --primary: #0071e3; /* Apple Blue */
   --primary-foreground: #ffffff;
   
-  --secondary: #CBD5C0;
-  --secondary-foreground: #3A6B35;
+  --secondary: #f5f5f7; /* Apple Light Gray Background */
+  --secondary-foreground: #1d1d1f;
 
-  --background: #f8f9fa; /* Off-white/Clean white */
-  --foreground: #1a1a1a;
+  --background: #ffffff;
+  --foreground: #1d1d1f; /* Apple Dark Gray Text */
   
   --card: #ffffff;
-  --card-foreground: #1a1a1a;
+  --card-foreground: #1d1d1f;
   
   --popover: #ffffff;
-  --popover-foreground: #1a1a1a;
+  --popover-foreground: #1d1d1f;
   
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
+  --muted: #f5f5f7;
+  --muted-foreground: #86868b; /* Apple Secondary Text */
   
-  --accent: #CBD5C0; /* Using Soft Sage as accent too */
-  --accent-foreground: #3A6B35;
+  --accent: #f5f5f7;
+  --accent-foreground: #1d1d1f;
   
-  --destructive: #ef4444;
+  --destructive: #ff3b30; /* Apple Red */
   --destructive-foreground: #ffffff;
   
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #3A6B35;
+  --border: #d2d2d7;
+  --input: #d2d2d7;
+  --ring: #0071e3;
   
-  --chart-1: #3A6B35;
-  --chart-2: #CBD5C0;
-  --chart-3: #2c5229;
-  --chart-4: #e2e8f0;
-  --chart-5: #64748b;
+  --chart-1: #0071e3;
+  --chart-2: #5e5ce6;
+  --chart-3: #bf5af2;
+  --chart-4: #ff375f;
+  --chart-5: #ff9f0a;
   
-  --sidebar: #ffffff;
-  --sidebar-foreground: #1a1a1a;
-  --sidebar-primary: #3A6B35;
+  --sidebar: #f5f5f7;
+  --sidebar-foreground: #1d1d1f;
+  --sidebar-primary: #0071e3;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f1f5f9;
-  --sidebar-accent-foreground: #1a1a1a;
-  --sidebar-border: #e2e8f0;
-  --sidebar-ring: #3A6B35;
+  --sidebar-accent: #ffffff;
+  --sidebar-accent-foreground: #1d1d1f;
+  --sidebar-border: #d2d2d7;
+  --sidebar-ring: #0071e3;
 }
 
 .dark {
-  --background: #0f172a;
-  --foreground: #f8fafc;
-  --card: #1e293b;
-  --card-foreground: #f8fafc;
-  --popover: #1e293b;
-  --popover-foreground: #f8fafc;
-  --primary: #3A6B35;
+  --background: #000000;
+  --foreground: #f5f5f7;
+  --card: #1d1d1f;
+  --card-foreground: #f5f5f7;
+  --popover: #1d1d1f;
+  --popover-foreground: #f5f5f7;
+  --primary: #2997ff; /* Lighter Blue for Dark Mode */
   --primary-foreground: #ffffff;
-  --secondary: #2c5229;
-  --secondary-foreground: #ffffff;
-  --muted: #1e293b;
-  --muted-foreground: #94a3b8;
-  --accent: #1e293b;
-  --accent-foreground: #f8fafc;
-  --destructive: #7f1d1d;
-  --destructive-foreground: #f8fafc;
-  --border: #1e293b;
-  --input: #1e293b;
-  --ring: #3A6B35;
+  --secondary: #1d1d1f;
+  --secondary-foreground: #f5f5f7;
+  --muted: #1d1d1f;
+  --muted-foreground: #86868b;
+  --accent: #1d1d1f;
+  --accent-foreground: #f5f5f7;
+  --destructive: #ff453a;
+  --destructive-foreground: #ffffff;
+  --border: #424245;
+  --input: #424245;
+  --ring: #2997ff;
 }
 
 @layer base {
@@ -116,10 +118,15 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
   }
   button:not([disabled]),
   [role="button"]:not([disabled]) {
     cursor: pointer;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply tracking-tight font-semibold;
   }
 }

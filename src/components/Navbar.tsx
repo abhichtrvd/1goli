@@ -1,6 +1,5 @@
 import { useAuth } from "@/hooks/use-auth";
-import { Menu, ShoppingCart, User, LogOut, Upload } from "lucide-react";
-import { useState } from "react";
+import { Menu, ShoppingBag, User, LogOut, Search } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import { Button } from "./ui/button";
 import {
@@ -26,65 +25,69 @@ export function Navbar() {
   const cartCount = cartItems?.reduce((acc, item) => acc + item.quantity, 0) || 0;
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
-      <div className="container flex h-16 items-center justify-between px-4">
-        <div className="flex items-center gap-2">
+    <nav className="sticky top-0 z-50 w-full bg-background/80 backdrop-blur-md border-b border-border/40">
+      <div className="container max-w-5xl mx-auto flex h-12 items-center justify-between px-4">
+        <div className="flex items-center gap-4 md:gap-8">
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden">
-                <Menu className="h-5 w-5" />
+              <Button variant="ghost" size="icon" className="md:hidden text-foreground/80 hover:text-foreground">
+                <Menu className="h-4 w-4" />
                 <span className="sr-only">Toggle menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left">
+            <SheetContent side="left" className="w-[300px] sm:w-[400px]">
               <SheetHeader>
-                <SheetTitle className="text-left text-primary font-bold">HomeoCure AI</SheetTitle>
+                <SheetTitle className="text-left font-semibold">HomeoCure</SheetTitle>
               </SheetHeader>
               <div className="flex flex-col gap-4 mt-8">
-                <Link to="/" className="text-lg font-medium hover:text-primary">
-                  Home
+                <Link to="/" className="text-xl font-medium hover:text-primary transition-colors">
+                  Store
                 </Link>
-                <Link to="/upload" className="text-lg font-medium hover:text-primary">
-                  Upload Prescription
+                <Link to="/upload" className="text-xl font-medium hover:text-primary transition-colors">
+                  Prescription
                 </Link>
                 {isAuthenticated ? (
                   <button
                     onClick={() => signOut()}
-                    className="text-lg font-medium text-left hover:text-primary"
+                    className="text-xl font-medium text-left hover:text-primary transition-colors"
                   >
                     Sign Out
                   </button>
                 ) : (
-                  <Link to="/auth" className="text-lg font-medium hover:text-primary">
+                  <Link to="/auth" className="text-xl font-medium hover:text-primary transition-colors">
                     Sign In
                   </Link>
                 )}
               </div>
             </SheetContent>
           </Sheet>
-          <Link to="/" className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-white font-bold">
-              H
-            </div>
-            <span className="hidden font-bold text-xl text-primary md:inline-block">
-              HomeoCure AI
+          
+          <Link to="/" className="flex items-center gap-2 transition-opacity hover:opacity-80">
+            <span className="font-semibold text-lg tracking-tight">
+              HomeoCure
             </span>
           </Link>
+
+          <div className="hidden md:flex items-center gap-6 text-xs font-medium text-muted-foreground">
+            <Link to="/" className="hover:text-foreground transition-colors">Store</Link>
+            <Link to="/upload" className="hover:text-foreground transition-colors">Prescription</Link>
+            <Link to="#" className="hover:text-foreground transition-colors">Mac</Link>
+            <Link to="#" className="hover:text-foreground transition-colors">iPad</Link>
+            <Link to="#" className="hover:text-foreground transition-colors">iPhone</Link>
+            <Link to="#" className="hover:text-foreground transition-colors">Support</Link>
+          </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          <Link to="/upload">
-             <Button variant="ghost" size="sm" className="hidden md:flex gap-2">
-                <Upload className="h-4 w-4" />
-                Upload Rx
-             </Button>
-          </Link>
+        <div className="flex items-center gap-2 md:gap-4">
+          <Button variant="ghost" size="icon" className="text-foreground/80 hover:text-foreground hidden md:flex">
+            <Search className="h-4 w-4" />
+          </Button>
 
           <Link to="/cart">
-            <Button variant="ghost" size="icon" className="relative">
-              <ShoppingCart className="h-5 w-5" />
+            <Button variant="ghost" size="icon" className="relative text-foreground/80 hover:text-foreground">
+              <ShoppingBag className="h-4 w-4" />
               {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] font-bold text-white flex items-center justify-center">
+                <span className="absolute top-1 right-1 h-3 w-3 rounded-full bg-primary text-[8px] font-bold text-white flex items-center justify-center ring-2 ring-background">
                   {cartCount}
                 </span>
               )}
@@ -94,11 +97,11 @@ export function Navbar() {
           {isAuthenticated ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <User className="h-5 w-5" />
+                <Button variant="ghost" size="icon" className="text-foreground/80 hover:text-foreground">
+                  <User className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem onClick={() => signOut()}>
                   <LogOut className="mr-2 h-4 w-4" />
                   Sign Out
@@ -106,7 +109,7 @@ export function Navbar() {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button onClick={() => navigate("/auth")} size="sm" className="hidden md:flex">
+            <Button onClick={() => navigate("/auth")} size="sm" className="hidden md:flex rounded-full px-4 h-7 text-xs">
               Sign In
             </Button>
           )}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MessageCircle, X, Send } from "lucide-react";
+import { MessageCircle, X, Send, Sparkles } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 export function AIWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<{ role: "user" | "bot"; content: string }[]>([
-    { role: "bot", content: "Hello! I'm your AI Homeopath assistant. Describe your symptoms, and I'll suggest a remedy." }
+    { role: "bot", content: "Hello. I'm your AI Homeopath. How can I help you today?" }
   ]);
   const [input, setInput] = useState("");
 
@@ -26,17 +26,15 @@ export function AIWidget() {
       const lowerInput = userMsg.toLowerCase();
 
       if (lowerInput.includes("fever")) {
-        response = "For fever, commonly indicated remedies are Belladonna (sudden onset) or Ferrum Phos. Please consult a doctor for high temperatures.";
+        response = "For fever, Belladonna (sudden onset) or Ferrum Phos are often indicated. Please consult a doctor for high temperatures.";
       } else if (lowerInput.includes("stress") || lowerInput.includes("anxiety")) {
-        response = "For stress, Nux Vomica or Ignatia are often considered depending on the cause. Nux Vomica is good for work-related stress.";
+        response = "For stress, Nux Vomica or Ignatia are often considered. Nux Vomica is excellent for work-related stress.";
       } else if (lowerInput.includes("injury") || lowerInput.includes("bruise")) {
         response = "Arnica Montana is the premier remedy for injuries, bruising, and trauma.";
       } else if (lowerInput.includes("flu")) {
         response = "Oscillococcinum is widely used for flu-like symptoms, especially in the early stages.";
       }
 
-      // Connect OpenAI API here for real-time diagnosis
-      
       setMessages((prev) => [...prev, { role: "bot", content: response }]);
     }, 1000);
   };
@@ -49,23 +47,32 @@ export function AIWidget() {
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-20 right-4 z-50 w-[350px] max-w-[calc(100vw-2rem)] shadow-xl"
+            transition={{ duration: 0.2 }}
+            className="fixed bottom-24 right-6 z-50 w-[380px] max-w-[calc(100vw-2rem)] shadow-2xl"
           >
-            <Card className="border-primary/20">
-              <CardHeader className="bg-primary text-primary-foreground rounded-t-lg p-4 flex flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-base">AI Homeopath</CardTitle>
+            <Card className="border-none shadow-2xl rounded-3xl overflow-hidden bg-white/80 backdrop-blur-xl">
+              <CardHeader className="bg-primary/5 p-4 flex flex-row items-center justify-between space-y-0 border-b border-primary/5">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center">
+                    <Sparkles className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-sm font-semibold">AI Homeopath</CardTitle>
+                    <p className="text-xs text-muted-foreground">Always here to help.</p>
+                  </div>
+                </div>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6 text-primary-foreground hover:bg-primary-foreground/20"
+                  className="h-8 w-8 rounded-full hover:bg-black/5"
                   onClick={() => setIsOpen(false)}
                 >
                   <X className="h-4 w-4" />
                 </Button>
               </CardHeader>
               <CardContent className="p-0">
-                <ScrollArea className="h-[300px] p-4">
-                  <div className="flex flex-col gap-3">
+                <ScrollArea className="h-[350px] p-4">
+                  <div className="flex flex-col gap-4">
                     {messages.map((msg, i) => (
                       <div
                         key={i}
@@ -74,10 +81,10 @@ export function AIWidget() {
                         }`}
                       >
                         <div
-                          className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
+                          className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                             msg.role === "user"
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted text-foreground"
+                              ? "bg-primary text-primary-foreground rounded-br-sm"
+                              : "bg-secondary text-secondary-foreground rounded-bl-sm"
                           }`}
                         >
                           {msg.content}
@@ -87,22 +94,27 @@ export function AIWidget() {
                   </div>
                 </ScrollArea>
               </CardContent>
-              <CardFooter className="p-3 pt-0">
+              <CardFooter className="p-3 bg-white/50">
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
                     handleSend();
                   }}
-                  className="flex w-full gap-2"
+                  className="flex w-full gap-2 relative"
                 >
                   <Input
-                    placeholder="Type your symptoms..."
+                    placeholder="Describe your symptoms..."
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    className="flex-1"
+                    className="flex-1 rounded-full border-none bg-secondary/50 focus-visible:ring-0 pl-4 pr-12 h-10"
                   />
-                  <Button type="submit" size="icon" disabled={!input.trim()}>
-                    <Send className="h-4 w-4" />
+                  <Button 
+                    type="submit" 
+                    size="icon" 
+                    disabled={!input.trim()} 
+                    className="absolute right-1 top-1 h-8 w-8 rounded-full bg-primary hover:bg-primary/90"
+                  >
+                    <Send className="h-3 w-3" />
                   </Button>
                 </form>
               </CardFooter>
@@ -113,7 +125,7 @@ export function AIWidget() {
 
       <Button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-4 right-4 z-50 h-14 w-14 rounded-full shadow-lg"
+        className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-lg bg-black text-white hover:bg-black/90 transition-transform hover:scale-105"
         size="icon"
       >
         {isOpen ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}
