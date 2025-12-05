@@ -98,6 +98,7 @@ export const createProduct = mutation({
       url: v.string() 
     }))),
     videoUrl: v.optional(v.string()),
+    videoThumbnail: v.optional(v.string()),
     potencies: v.array(v.string()),
     forms: v.array(v.string()),
     basePrice: v.number(),
@@ -128,6 +129,7 @@ export const updateProduct = mutation({
       url: v.string() 
     }))),
     videoUrl: v.optional(v.string()),
+    videoThumbnail: v.optional(v.string()),
     potencies: v.optional(v.array(v.string())),
     forms: v.optional(v.array(v.string())),
     basePrice: v.optional(v.number()),

@@ -47,6 +47,7 @@ const schema = defineSchema(
         url: v.string() 
       }))), // Gallery images
       videoUrl: v.optional(v.string()), // Video URL (YouTube, Vimeo, etc.)
+      videoThumbnail: v.optional(v.string()), // Auto-generated or custom thumbnail
       potencies: v.array(v.string()),
       forms: v.array(v.string()),
       basePrice: v.number(),

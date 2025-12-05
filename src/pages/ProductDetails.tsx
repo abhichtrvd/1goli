@@ -7,7 +7,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useParams, useNavigate } from "react-router";
 import { useState } from "react";
-import { Loader2, ShoppingCart, ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, ShoppingCart, ArrowLeft, ChevronLeft, ChevronRight, Play } from "lucide-react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { useAuth } from "@/hooks/use-auth";
@@ -24,6 +24,7 @@ export default function ProductDetails() {
   const [selectedForm, setSelectedForm] = useState<string>("");
   const [isAdding, setIsAdding] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   if (product === undefined) {
     return (
@@ -37,13 +38,25 @@ export default function ProductDetails() {
     return <div>Product not found</div>;
   }
 
-  const allImages = [
-    ...(product.imageUrl ? [{ url: product.imageUrl, id: 'main', type: 'image' }] : []),
-    ...(product.images || []).map((img: any, i: number) => ({ url: img.url, id: `gallery-${i}`, type: 'image' })),
-    ...(product.videoUrl ? [{ url: product.videoUrl, id: 'video', type: 'video' }] : [])
+  type MediaItem = {
+    url: string;
+    id: string;
+    type: 'image' | 'video';
+    thumbnail?: string;
+  };
+
+  const allImages: MediaItem[] = [
+    ...(product.imageUrl ? [{ url: product.imageUrl, id: 'main', type: 'image' } as MediaItem] : []),
+    ...(product.images || []).map((img: any, i: number) => ({ url: img.url, id: `gallery-${i}`, type: 'image' } as MediaItem)),
+    ...(product.videoUrl ? [{ url: product.videoUrl, thumbnail: product.videoThumbnail, id: 'video', type: 'video' } as MediaItem] : [])
   ];
 
   const currentItem = allImages[currentImageIndex];
+
+  // Reset playing state when changing items
+  if (currentItem?.type !== 'video' && isPlaying) {
+    setIsPlaying(false);
+  }
 
   // Dynamic price calculation logic
   const getPrice = () => {
@@ -89,16 +102,37 @@ export default function ProductDetails() {
           <div className="space-y-4">
             <div className="rounded-2xl overflow-hidden bg-white border shadow-sm aspect-square flex items-center justify-center bg-secondary/10 relative group">
               {currentItem?.type === 'video' ? (
-                <div className="w-full h-full bg-black flex items-center justify-center">
-                  {currentItem.url.includes('youtube.com') || currentItem.url.includes('youtu.be') ? (
-                    <iframe 
-                      src={currentItem.url.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')} 
-                      className="w-full h-full" 
-                      allowFullScreen
-                      title="Product Video"
-                    />
+                <div className="w-full h-full bg-black flex items-center justify-center relative">
+                  {!isPlaying ? (
+                    <>
+                      {currentItem.thumbnail ? (
+                        <img src={currentItem.thumbnail} alt="Video Thumbnail" className="w-full h-full object-cover opacity-80" />
+                      ) : (
+                        <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-black" />
+                      )}
+                      <button 
+                        onClick={() => setIsPlaying(true)}
+                        className="absolute inset-0 flex items-center justify-center group/play"
+                      >
+                        <div className="h-16 w-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center group-hover/play:bg-white/30 transition-all group-hover/play:scale-110">
+                          <div className="h-12 w-12 rounded-full bg-[#84cc16] flex items-center justify-center shadow-lg">
+                            <Play className="h-6 w-6 text-white fill-white ml-1" />
+                          </div>
+                        </div>
+                      </button>
+                    </>
                   ) : (
-                    <video src={currentItem.url} controls className="w-full h-full" />
+                    currentItem.url.includes('youtube.com') || currentItem.url.includes('youtu.be') ? (
+                      <iframe 
+                        src={currentItem.url.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/') + "?autoplay=1"} 
+                        className="w-full h-full" 
+                        allowFullScreen
+                        allow="autoplay; encrypted-media"
+                        title="Product Video"
+                      />
+                    ) : (
+                      <video src={currentItem.url} controls autoPlay className="w-full h-full" />
+                    )
                   )}
                 </div>
               ) : currentItem?.url ? (
@@ -139,16 +173,26 @@ export default function ProductDetails() {
             </div>
             
             {allImages.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto pb-2">
+              <div className="flex gap-2 overflow-x-auto pb-2 px-1">
                 {allImages.map((item, idx) => (
                   <button 
                     key={item.id}
-                    onClick={() => setCurrentImageIndex(idx)}
+                    onClick={() => {
+                      setCurrentImageIndex(idx);
+                      setIsPlaying(false);
+                    }}
                     className={`h-16 w-16 rounded-lg border-2 overflow-hidden flex-shrink-0 transition-all relative ${currentImageIndex === idx ? 'border-primary ring-2 ring-primary/20' : 'border-transparent opacity-70 hover:opacity-100'}`}
                   >
                     {item.type === 'video' ? (
-                      <div className="w-full h-full bg-black flex items-center justify-center text-white">
-                        <div className="w-0 h-0 border-t-[6px] border-t-transparent border-l-[10px] border-l-white border-b-[6px] border-b-transparent ml-1" />
+                      <div className="w-full h-full bg-black flex items-center justify-center text-white relative">
+                        {item.thumbnail && (
+                          <img src={item.thumbnail} alt="Thumbnail" className="w-full h-full object-cover opacity-70" />
+                        )}
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-6 h-6 rounded-full bg-black/50 flex items-center justify-center backdrop-blur-sm">
+                            <Play className="h-3 w-3 text-white fill-white ml-0.5" />
+                          </div>
+                        </div>
                       </div>
                     ) : (
                       <img src={item.url} alt="Thumbnail" className="w-full h-full object-cover" />

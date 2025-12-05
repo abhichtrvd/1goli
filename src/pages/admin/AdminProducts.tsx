@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Plus, Search, Trash2, Edit, Loader2, ChevronLeft, ChevronRight, ExternalLink, Eye, Upload, X, ArrowLeft, ArrowRight, Video } from "lucide-react";
+import { Plus, Search, Trash2, Edit, Loader2, ChevronLeft, ChevronRight, ExternalLink, Eye, Upload, X, ArrowLeft, ArrowRight, Video, GripVertical } from "lucide-react";
 import { Link } from "react-router";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -15,6 +15,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
+import { Reorder, useDragControls } from "framer-motion";
 
 export default function AdminProducts() {
   const products = useQuery(api.products.getProducts);
@@ -45,6 +46,8 @@ export default function AdminProducts() {
   const [tagsInput, setTagsInput] = useState("");
   const [imagePreview, setImagePreview] = useState("");
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [videoUrlInput, setVideoUrlInput] = useState("");
+  const [videoThumbnail, setVideoThumbnail] = useState("");
   
   // Gallery state - Unified for reordering
   type GalleryItem = {
@@ -206,7 +209,8 @@ export default function AdminProducts() {
       imageUrl: imageUrl,
       imageStorageId: imageStorageId,
       images: finalGalleryImages,
-      videoUrl: formData.get("videoUrl") as string,
+      videoUrl: videoUrlInput,
+      videoThumbnail: videoThumbnail,
       basePrice: parseFloat(formData.get("basePrice") as string),
       category: formData.get("category") as string,
       availability: formData.get("availability") as string,
@@ -230,6 +234,8 @@ export default function AdminProducts() {
       setEditingProduct(null);
       setSelectedImage(null);
       setGalleryItems([]);
+      setVideoUrlInput("");
+      setVideoThumbnail("");
       setUploadProgress(0);
     } catch (error) {
       console.error(error);
@@ -246,6 +252,8 @@ export default function AdminProducts() {
     setFormsInput(product.forms.join(", "));
     setTagsInput(product.symptomsTags.join(", "));
     setImagePreview(product.imageUrl || "");
+    setVideoUrlInput(product.videoUrl || "");
+    setVideoThumbnail(product.videoThumbnail || "");
     
     // Initialize gallery items
     const items: GalleryItem[] = (product.images || []).map((img: any, index: number) => ({
@@ -267,11 +275,29 @@ export default function AdminProducts() {
     setFormsInput("");
     setTagsInput("");
     setImagePreview("");
+    setVideoUrlInput("");
+    setVideoThumbnail("");
     setGalleryItems([]);
     setSelectedImage(null);
     setUploadProgress(0);
     setIsDialogOpen(true);
   };
+
+  // Auto-generate thumbnail from YouTube URL
+  useEffect(() => {
+    if (!videoUrlInput) {
+      setVideoThumbnail("");
+      return;
+    }
+    
+    // Simple YouTube ID extraction
+    const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const match = videoUrlInput.match(youtubeRegex);
+    
+    if (match && match[1]) {
+      setVideoThumbnail(`https://img.youtube.com/vi/${match[1]}/0.jpg`);
+    }
+  }, [videoUrlInput]);
 
   const handleGallerySelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -298,22 +324,8 @@ export default function AdminProducts() {
     setGalleryItems(prev => prev.filter((_, i) => i !== index));
   };
 
-  const moveGalleryItem = (index: number, direction: 'left' | 'right') => {
-    if (direction === 'left' && index > 0) {
-      setGalleryItems(prev => {
-        const newItems = [...prev];
-        [newItems[index - 1], newItems[index]] = [newItems[index], newItems[index - 1]];
-        return newItems;
-      });
-    } else if (direction === 'right' && index < galleryItems.length - 1) {
-      setGalleryItems(prev => {
-        const newItems = [...prev];
-        [newItems[index], newItems[index + 1]] = [newItems[index + 1], newItems[index]];
-        return newItems;
-      });
-    }
-  };
-
+  // Replaced moveGalleryItem with Reorder component logic
+  
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -498,7 +510,7 @@ export default function AdminProducts() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Gallery Images</Label>
+                  <Label>Gallery Images (Drag to Reorder)</Label>
                   <div className="space-y-3">
                     <Input 
                       type="file" 
@@ -507,56 +519,70 @@ export default function AdminProducts() {
                       onChange={handleGallerySelect}
                       className="cursor-pointer"
                     />
-                    <div className="flex flex-wrap gap-2">
+                    <Reorder.Group 
+                      axis="x" 
+                      values={galleryItems} 
+                      onReorder={setGalleryItems} 
+                      className="flex flex-wrap gap-2 list-none p-0"
+                    >
                       {galleryItems.map((item, i) => (
-                        <div key={item.id} className="h-24 w-24 rounded-md border bg-secondary/20 overflow-hidden relative group flex flex-col">
-                          <div className="h-16 w-full relative">
-                            <img src={item.url} alt={`Gallery ${i}`} className="h-full w-full object-cover" />
+                        <Reorder.Item 
+                          key={item.id} 
+                          value={item}
+                          className="h-24 w-24 rounded-md border bg-secondary/20 overflow-hidden relative group flex flex-col cursor-move touch-none"
+                          whileDrag={{ scale: 1.1, zIndex: 10, boxShadow: "0 5px 15px rgba(0,0,0,0.15)" }}
+                        >
+                          <div className="h-full w-full relative">
+                            <img src={item.url} alt={`Gallery ${i}`} className="h-full w-full object-cover pointer-events-none" />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                               <GripVertical className="text-white drop-shadow-md" />
+                            </div>
                             <button 
                               type="button"
-                              onClick={() => removeGalleryItem(i)}
-                              className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
+                              onClick={(e) => {
+                                e.stopPropagation(); // Prevent drag start
+                                removeGalleryItem(i);
+                              }}
+                              className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive cursor-pointer"
                             >
                               <X className="h-3 w-3" />
                             </button>
                           </div>
-                          <div className="flex-1 bg-background flex items-center justify-center border-t gap-1">
-                            <button
-                              type="button"
-                              onClick={() => moveGalleryItem(i, 'left')}
-                              disabled={i === 0}
-                              className="p-1 hover:bg-secondary rounded disabled:opacity-30"
-                            >
-                              <ChevronLeft className="h-3 w-3" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => moveGalleryItem(i, 'right')}
-                              disabled={i === galleryItems.length - 1}
-                              className="p-1 hover:bg-secondary rounded disabled:opacity-30"
-                            >
-                              <ChevronRight className="h-3 w-3" />
-                            </button>
-                          </div>
-                        </div>
+                        </Reorder.Item>
                       ))}
-                    </div>
+                    </Reorder.Group>
+                    {galleryItems.length === 0 && (
+                      <p className="text-xs text-muted-foreground italic">No gallery images added.</p>
+                    )}
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="videoUrl">Video URL (Optional)</Label>
-                  <div className="relative">
-                    <Video className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      id="videoUrl" 
-                      name="videoUrl" 
-                      defaultValue={editingProduct?.videoUrl} 
-                      placeholder="https://youtube.com/..." 
-                      className="pl-8"
-                    />
+                  <div className="flex gap-4">
+                    <div className="flex-1 space-y-2">
+                      <div className="relative">
+                        <Video className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input 
+                          id="videoUrl" 
+                          name="videoUrl" 
+                          value={videoUrlInput}
+                          onChange={(e) => setVideoUrlInput(e.target.value)}
+                          placeholder="https://youtube.com/..." 
+                          className="pl-8"
+                        />
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">Supports YouTube. Thumbnail auto-generated.</p>
+                    </div>
+                    {videoThumbnail && (
+                      <div className="h-16 w-24 bg-black rounded overflow-hidden relative flex-shrink-0 border">
+                        <img src={videoThumbnail} alt="Video Thumbnail" className="w-full h-full object-cover opacity-80" />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-0 h-0 border-t-[6px] border-t-transparent border-l-[10px] border-l-white border-b-[6px] border-b-transparent ml-1 drop-shadow-md" />
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <p className="text-[10px] text-muted-foreground">Supports YouTube, Vimeo, or direct MP4 links.</p>
                 </div>
               </div>
 
