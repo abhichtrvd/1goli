@@ -29,7 +29,7 @@ export default function Landing() {
           className="max-w-4xl mx-auto"
         >
           <h1 className="text-5xl md:text-7xl font-semibold tracking-tight text-foreground mb-4">
-            1g<span className="relative inline-block"><span className="absolute inset-0 flex items-center justify-center pointer-events-none select-none"><span className="w-[0.45em] h-[0.45em] bg-[#A6FF00] rounded-full translate-y-[0.1em]" /></span><span className="relative z-10">o</span></span>li.
+            1g<span className="relative inline-block"><span className="absolute inset-0 flex items-center justify-center pointer-events-none select-none"><span className="w-[0.35em] h-[0.35em] bg-[#A6FF00] rounded-full translate-y-[0.1em]" /></span><span className="relative z-10">o</span></span>li.
           </h1>
           <h2 className="text-3xl md:text-5xl font-medium text-muted-foreground mb-8 tracking-tight">
             Pure. Potent. Personalized.
