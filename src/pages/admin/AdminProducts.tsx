@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Plus, Search, Trash2, Edit, Loader2, ChevronLeft, ChevronRight, ExternalLink, Eye } from "lucide-react";
+import { Plus, Search, Trash2, Edit, Loader2, ChevronLeft, ChevronRight, ExternalLink, Eye, Upload, X } from "lucide-react";
 import { Link } from "react-router";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -20,6 +20,7 @@ export default function AdminProducts() {
   const createProduct = useMutation(api.products.createProduct);
   const updateProduct = useMutation(api.products.updateProduct);
   const deleteProduct = useMutation(api.products.deleteProduct);
+  const generateUploadUrl = useMutation(api.products.generateUploadUrl);
   
   const [search, setSearch] = useState("");
   const [formFilter, setFormFilter] = useState<string>("all");
@@ -41,6 +42,7 @@ export default function AdminProducts() {
   const [formsInput, setFormsInput] = useState("");
   const [tagsInput, setTagsInput] = useState("");
   const [imagePreview, setImagePreview] = useState("");
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
 
   const itemsPerPage = 5;
 
@@ -83,10 +85,29 @@ export default function AdminProducts() {
     setIsSubmitting(true);
     const formData = new FormData(e.currentTarget);
     
+    let imageStorageId = undefined;
+    if (selectedImage) {
+      try {
+        const postUrl = await generateUploadUrl();
+        const result = await fetch(postUrl, {
+          method: "POST",
+          headers: { "Content-Type": selectedImage.type },
+          body: selectedImage,
+        });
+        const { storageId } = await result.json();
+        imageStorageId = storageId;
+      } catch (error) {
+        toast.error("Failed to upload image");
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
     const productData = {
       name: formData.get("name") as string,
       description: formData.get("description") as string,
       imageUrl: formData.get("imageUrl") as string,
+      imageStorageId: imageStorageId,
       basePrice: parseFloat(formData.get("basePrice") as string),
       category: formData.get("category") as string,
       availability: formData.get("availability") as string,
@@ -108,7 +129,9 @@ export default function AdminProducts() {
       }
       setIsDialogOpen(false);
       setEditingProduct(null);
+      setSelectedImage(null);
     } catch (error) {
+      console.error(error);
       toast.error(editingProduct ? "Failed to update product" : "Failed to create product");
     } finally {
       setIsSubmitting(false);
@@ -120,7 +143,8 @@ export default function AdminProducts() {
     setPotenciesInput(product.potencies.join(", "));
     setFormsInput(product.forms.join(", "));
     setTagsInput(product.symptomsTags.join(", "));
-    setImagePreview(product.imageUrl);
+    setImagePreview(product.imageUrl || "");
+    setSelectedImage(null);
     setIsDialogOpen(true);
   };
 
@@ -130,7 +154,20 @@ export default function AdminProducts() {
     setFormsInput("");
     setTagsInput("");
     setImagePreview("");
+    setSelectedImage(null);
     setIsDialogOpen(true);
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const openViewDialog = (product: any) => {
@@ -224,22 +261,53 @@ export default function AdminProducts() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="imageUrl">Image URL</Label>
+                <Label>Product Image</Label>
                 <div className="flex gap-4 items-start">
-                  <div className="flex-1">
+                  <div className="flex-1 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Input 
+                        id="imageFile" 
+                        type="file" 
+                        accept="image/*"
+                        onChange={handleImageSelect}
+                        className="cursor-pointer"
+                      />
+                    </div>
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t" />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-background px-2 text-muted-foreground">Or use URL</span>
+                      </div>
+                    </div>
                     <Input 
                       id="imageUrl" 
                       name="imageUrl" 
-                      required 
-                      value={imagePreview}
-                      onChange={(e) => setImagePreview(e.target.value)}
+                      value={selectedImage ? "" : imagePreview}
+                      onChange={(e) => {
+                        setImagePreview(e.target.value);
+                        setSelectedImage(null);
+                      }}
                       placeholder="https://..." 
+                      disabled={!!selectedImage}
                     />
-                    <p className="text-[10px] text-muted-foreground mt-1">Enter a valid image URL to see a preview.</p>
                   </div>
-                  <div className="h-16 w-16 rounded-md border bg-secondary/20 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                  <div className="h-24 w-24 rounded-md border bg-secondary/20 overflow-hidden flex-shrink-0 flex items-center justify-center relative group">
                     {imagePreview ? (
-                      <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                      <>
+                        <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            setImagePreview("");
+                            setSelectedImage(null);
+                          }}
+                          className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </>
                     ) : (
                       <span className="text-[10px] text-muted-foreground">No Image</span>
                     )}

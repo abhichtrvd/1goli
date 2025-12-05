@@ -5,14 +5,29 @@ import { requireAdmin } from "./users";
 export const getProducts = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("products").collect();
+    const products = await ctx.db.query("products").collect();
+    return await Promise.all(
+      products.map(async (p) => ({
+        ...p,
+        imageUrl: p.imageStorageId
+          ? (await ctx.storage.getUrl(p.imageStorageId)) || p.imageUrl || ""
+          : p.imageUrl || "",
+      }))
+    );
   },
 });
 
 export const getProduct = query({
   args: { id: v.id("products") },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.id);
+    const product = await ctx.db.get(args.id);
+    if (!product) return null;
+    return {
+      ...product,
+      imageUrl: product.imageStorageId
+        ? (await ctx.storage.getUrl(product.imageStorageId)) || product.imageUrl || ""
+        : product.imageUrl || "",
+    };
   },
 });
 
@@ -26,16 +41,33 @@ export const searchProducts = query({
     
     const products = await ctx.db.query("products").collect();
     
-    if (!args.query) return products;
+    let filtered = products;
+    if (args.query) {
+      const lowerQuery = args.query.toLowerCase();
+      filtered = products.filter((product) => {
+        const nameMatch = product.name.toLowerCase().includes(lowerQuery);
+        const tagMatch = product.symptomsTags.some(tag => tag.toLowerCase().includes(lowerQuery));
+        const descMatch = product.description.toLowerCase().includes(lowerQuery);
+        return nameMatch || tagMatch || descMatch;
+      });
+    }
 
-    const lowerQuery = args.query.toLowerCase();
-    
-    return products.filter((product) => {
-      const nameMatch = product.name.toLowerCase().includes(lowerQuery);
-      const tagMatch = product.symptomsTags.some(tag => tag.toLowerCase().includes(lowerQuery));
-      const descMatch = product.description.toLowerCase().includes(lowerQuery);
-      return nameMatch || tagMatch || descMatch;
-    });
+    return await Promise.all(
+      filtered.map(async (p) => ({
+        ...p,
+        imageUrl: p.imageStorageId
+          ? (await ctx.storage.getUrl(p.imageStorageId)) || p.imageUrl || ""
+          : p.imageUrl || "",
+      }))
+    );
+  },
+});
+
+export const generateUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    return await ctx.storage.generateUploadUrl();
   },
 });
 
@@ -43,7 +75,8 @@ export const createProduct = mutation({
   args: {
     name: v.string(),
     description: v.string(),
-    imageUrl: v.string(),
+    imageUrl: v.optional(v.string()),
+    imageStorageId: v.optional(v.id("_storage")),
     potencies: v.array(v.string()),
     forms: v.array(v.string()),
     basePrice: v.number(),
@@ -67,6 +100,7 @@ export const updateProduct = mutation({
     name: v.optional(v.string()),
     description: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
+    imageStorageId: v.optional(v.id("_storage")),
     potencies: v.optional(v.array(v.string())),
     forms: v.optional(v.array(v.string())),
     basePrice: v.optional(v.number()),

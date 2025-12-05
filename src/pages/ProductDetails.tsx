@@ -77,12 +77,21 @@ export default function ProductDetails() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
           {/* Image Section */}
-          <div className="rounded-2xl overflow-hidden bg-white border shadow-sm">
-            <img 
-              src={product.imageUrl} 
-              alt={product.name} 
-              className="w-full h-full object-cover aspect-square"
-            />
+          <div className="rounded-2xl overflow-hidden bg-white border shadow-sm aspect-square flex items-center justify-center bg-secondary/10">
+            {product.imageUrl ? (
+              <img 
+                src={product.imageUrl} 
+                alt={product.name} 
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="text-muted-foreground flex flex-col items-center gap-2">
+                <div className="h-12 w-12 rounded-full bg-secondary flex items-center justify-center">
+                  <ShoppingCart className="h-6 w-6 opacity-50" />
+                </div>
+                <span>No image available</span>
+              </div>
+            )}
           </div>
 
           {/* Details Section */}
