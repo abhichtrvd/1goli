@@ -10,6 +10,8 @@ import { ChevronLeft, ChevronRight, Filter, Clock, Package, Truck, CheckCircle }
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Eye } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 export default function AdminOrders() {
   const orders = useQuery(api.orders.getAllOrders);
@@ -17,15 +19,39 @@ export default function AdminOrders() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  
+  // State for status update dialog
+  const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
+  const [orderToUpdate, setOrderToUpdate] = useState<any>(null);
+  const [newStatus, setNewStatus] = useState<string>("");
+  const [statusNote, setStatusNote] = useState("");
+
   const itemsPerPage = 10;
 
-  const handleStatusChange = async (orderId: Id<"orders">, newStatus: string) => {
+  const handleStatusUpdateSubmit = async () => {
+    if (!orderToUpdate || !newStatus) return;
+    
     try {
-      await updateStatus({ orderId, status: newStatus });
+      await updateStatus({ 
+        orderId: orderToUpdate._id, 
+        status: newStatus,
+        note: statusNote 
+      });
       toast.success("Order status updated");
+      setIsStatusDialogOpen(false);
+      setOrderToUpdate(null);
+      setNewStatus("");
+      setStatusNote("");
     } catch (error) {
       toast.error("Failed to update status");
     }
+  };
+
+  const openStatusDialog = (order: any) => {
+    setOrderToUpdate(order);
+    setNewStatus(order.status);
+    setStatusNote("");
+    setIsStatusDialogOpen(true);
   };
 
   const getStatusBadge = (status: string) => {
@@ -135,21 +161,15 @@ export default function AdminOrders() {
                   <TableCell>
                     <div className="flex items-center gap-2">
                       {getStatusBadge(order.status)}
-                      <Select 
-                        defaultValue={order.status} 
-                        onValueChange={(val) => handleStatusChange(order._id, val)}
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-6 w-6 rounded-full hover:bg-secondary"
+                        onClick={() => openStatusDialog(order)}
                       >
-                        <SelectTrigger className="w-[24px] h-[24px] p-0 border-none shadow-none hover:bg-secondary/50 rounded-full flex items-center justify-center">
-                          <span className="sr-only">Change status</span>
-                          <Filter className="h-3 w-3 text-muted-foreground" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="processing">Processing</SelectItem>
-                          <SelectItem value="shipped">Shipped</SelectItem>
-                          <SelectItem value="delivered">Delivered</SelectItem>
-                        </SelectContent>
-                      </Select>
+                        <Filter className="h-3 w-3 text-muted-foreground" />
+                        <span className="sr-only">Update Status</span>
+                      </Button>
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
@@ -192,10 +212,17 @@ export default function AdminOrders() {
                                     <div key={idx} className="relative pl-4">
                                       <div className="absolute -left-[5px] top-1.5 h-2.5 w-2.5 rounded-full bg-secondary border border-border" />
                                       <div className="flex flex-col">
-                                        <span className="text-xs font-medium capitalize">{history.status}</span>
-                                        <span className="text-[10px] text-muted-foreground">
-                                          {new Date(history.timestamp).toLocaleString()}
-                                        </span>
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-xs font-medium capitalize">{history.status}</span>
+                                          <span className="text-[10px] text-muted-foreground">
+                                            {new Date(history.timestamp).toLocaleString()}
+                                          </span>
+                                        </div>
+                                        {history.note && (
+                                          <p className="text-xs text-muted-foreground mt-0.5 italic">
+                                            "{history.note}"
+                                          </p>
+                                        )}
                                       </div>
                                     </div>
                                   ))}
@@ -271,6 +298,42 @@ export default function AdminOrders() {
           )}
         </CardContent>
       </Card>
+
+      {/* Status Update Dialog */}
+      <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Order Status</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select value={newStatus} onValueChange={setNewStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="processing">Processing</SelectItem>
+                  <SelectItem value="shipped">Shipped</SelectItem>
+                  <SelectItem value="delivered">Delivered</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Note (Optional)</Label>
+              <Textarea 
+                placeholder="Add a note about this status change..."
+                value={statusNote}
+                onChange={(e) => setStatusNote(e.target.value)}
+              />
+            </div>
+            <Button onClick={handleStatusUpdateSubmit} className="w-full">
+              Update Status
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

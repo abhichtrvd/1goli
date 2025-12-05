@@ -23,6 +23,8 @@ export default function AdminProducts() {
   
   const [search, setSearch] = useState("");
   const [formFilter, setFormFilter] = useState<string>("all");
+  const [minPrice, setMinPrice] = useState<string>("");
+  const [maxPrice, setMaxPrice] = useState<string>("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,7 +48,12 @@ export default function AdminProducts() {
     );
     const matchesForm = formFilter === "all" || p.forms.some(f => f.toLowerCase() === formFilter.toLowerCase());
     
-    return matchesSearch && matchesForm;
+    const price = p.basePrice;
+    const min = minPrice ? parseFloat(minPrice) : 0;
+    const max = maxPrice ? parseFloat(maxPrice) : Infinity;
+    const matchesPrice = price >= min && price <= max;
+    
+    return matchesSearch && matchesForm && matchesPrice;
   });
 
   // Pagination
@@ -289,9 +296,11 @@ export default function AdminProducts() {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>All Products</CardTitle>
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <CardTitle>All Products</CardTitle>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
               <Select value={formFilter} onValueChange={setFormFilter}>
                 <SelectTrigger className="w-[150px]">
                   <SelectValue placeholder="Filter by Form" />
@@ -305,7 +314,26 @@ export default function AdminProducts() {
                   <SelectItem value="drops">Drops</SelectItem>
                 </SelectContent>
               </Select>
-              <div className="relative w-64">
+              
+              <div className="flex items-center gap-2">
+                <Input 
+                  type="number" 
+                  placeholder="Min Price" 
+                  className="w-24"
+                  value={minPrice}
+                  onChange={(e) => setMinPrice(e.target.value)}
+                />
+                <span className="text-muted-foreground">-</span>
+                <Input 
+                  type="number" 
+                  placeholder="Max Price" 
+                  className="w-24"
+                  value={maxPrice}
+                  onChange={(e) => setMaxPrice(e.target.value)}
+                />
+              </div>
+
+              <div className="relative flex-1 min-w-[200px]">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input 
                   placeholder="Search products..." 

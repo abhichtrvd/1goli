@@ -83,7 +83,11 @@ export const getAllOrders = query({
 });
 
 export const updateOrderStatus = mutation({
-  args: { orderId: v.id("orders"), status: v.string() },
+  args: { 
+    orderId: v.id("orders"), 
+    status: v.string(),
+    note: v.optional(v.string())
+  },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
     const order = await ctx.db.get(args.orderId);
@@ -93,6 +97,7 @@ export const updateOrderStatus = mutation({
     history.push({
       status: args.status,
       timestamp: Date.now(),
+      note: args.note
     });
 
     await ctx.db.patch(args.orderId, { 
