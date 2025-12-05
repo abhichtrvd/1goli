@@ -53,7 +53,7 @@ export default function Landing() {
                 Holistic Health, <br/>
                 <span className="text-[#84cc16]">Simplified.</span>
               </h1>
-              <p className="text-lg md:text-xl text-muted-foreground max-w-lg mx-auto">
+              <p className="text-lg md:text-xl text-muted-foreground max-w-lg mx-auto pt-8">
                 India's trusted Homeopathic Pharmacy. Authentic remedies, expert guidance, and doorstep delivery.
               </p>
 
