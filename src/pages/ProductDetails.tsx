@@ -38,11 +38,12 @@ export default function ProductDetails() {
   }
 
   const allImages = [
-    ...(product.imageUrl ? [{ url: product.imageUrl, id: 'main' }] : []),
-    ...(product.images || []).map((img: any, i: number) => ({ url: img.url, id: `gallery-${i}` }))
+    ...(product.imageUrl ? [{ url: product.imageUrl, id: 'main', type: 'image' }] : []),
+    ...(product.images || []).map((img: any, i: number) => ({ url: img.url, id: `gallery-${i}`, type: 'image' })),
+    ...(product.videoUrl ? [{ url: product.videoUrl, id: 'video', type: 'video' }] : [])
   ];
 
-  const displayImage = allImages.length > 0 ? allImages[currentImageIndex]?.url : null;
+  const currentItem = allImages[currentImageIndex];
 
   // Dynamic price calculation logic
   const getPrice = () => {
@@ -87,9 +88,22 @@ export default function ProductDetails() {
           {/* Image Section */}
           <div className="space-y-4">
             <div className="rounded-2xl overflow-hidden bg-white border shadow-sm aspect-square flex items-center justify-center bg-secondary/10 relative group">
-              {displayImage ? (
+              {currentItem?.type === 'video' ? (
+                <div className="w-full h-full bg-black flex items-center justify-center">
+                  {currentItem.url.includes('youtube.com') || currentItem.url.includes('youtu.be') ? (
+                    <iframe 
+                      src={currentItem.url.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')} 
+                      className="w-full h-full" 
+                      allowFullScreen
+                      title="Product Video"
+                    />
+                  ) : (
+                    <video src={currentItem.url} controls className="w-full h-full" />
+                  )}
+                </div>
+              ) : currentItem?.url ? (
                 <img 
-                  src={displayImage} 
+                  src={currentItem.url} 
                   alt={product.name} 
                   className="w-full h-full object-cover"
                 />
@@ -126,13 +140,19 @@ export default function ProductDetails() {
             
             {allImages.length > 1 && (
               <div className="flex gap-2 overflow-x-auto pb-2">
-                {allImages.map((img, idx) => (
+                {allImages.map((item, idx) => (
                   <button 
-                    key={img.id}
+                    key={item.id}
                     onClick={() => setCurrentImageIndex(idx)}
-                    className={`h-16 w-16 rounded-lg border-2 overflow-hidden flex-shrink-0 transition-all ${currentImageIndex === idx ? 'border-primary ring-2 ring-primary/20' : 'border-transparent opacity-70 hover:opacity-100'}`}
+                    className={`h-16 w-16 rounded-lg border-2 overflow-hidden flex-shrink-0 transition-all relative ${currentImageIndex === idx ? 'border-primary ring-2 ring-primary/20' : 'border-transparent opacity-70 hover:opacity-100'}`}
                   >
-                    <img src={img.url} alt="Thumbnail" className="w-full h-full object-cover" />
+                    {item.type === 'video' ? (
+                      <div className="w-full h-full bg-black flex items-center justify-center text-white">
+                        <div className="w-0 h-0 border-t-[6px] border-t-transparent border-l-[10px] border-l-white border-b-[6px] border-b-transparent ml-1" />
+                      </div>
+                    ) : (
+                      <img src={item.url} alt="Thumbnail" className="w-full h-full object-cover" />
+                    )}
                   </button>
                 ))}
               </div>

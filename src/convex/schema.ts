@@ -46,6 +46,7 @@ const schema = defineSchema(
         storageId: v.optional(v.id("_storage")),
         url: v.string() 
       }))), // Gallery images
+      videoUrl: v.optional(v.string()), // Video URL (YouTube, Vimeo, etc.)
       potencies: v.array(v.string()),
       forms: v.array(v.string()),
       basePrice: v.number(),

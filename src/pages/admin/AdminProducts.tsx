@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Plus, Search, Trash2, Edit, Loader2, ChevronLeft, ChevronRight, ExternalLink, Eye, Upload, X } from "lucide-react";
+import { Plus, Search, Trash2, Edit, Loader2, ChevronLeft, ChevronRight, ExternalLink, Eye, Upload, X, ArrowLeft, ArrowRight, Video } from "lucide-react";
 import { Link } from "react-router";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -46,10 +46,15 @@ export default function AdminProducts() {
   const [imagePreview, setImagePreview] = useState("");
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   
-  // Gallery state
-  const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
-  const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
-  const [existingGallery, setExistingGallery] = useState<any[]>([]);
+  // Gallery state - Unified for reordering
+  type GalleryItem = {
+    id: string;
+    type: 'existing' | 'new';
+    url: string;
+    storageId?: Id<"_storage">;
+    file?: File;
+  };
+  const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
 
   const itemsPerPage = 5;
 
@@ -138,7 +143,7 @@ export default function AdminProducts() {
           xhr.setRequestHeader("Content-Type", compressed.type);
           xhr.upload.onprogress = (event) => {
             if (event.lengthComputable) {
-              setUploadProgress((event.loaded / event.total) * 50); // First 50% for main image
+              setUploadProgress((event.loaded / event.total) * 30); // 30% for main image
             }
           };
           xhr.onload = () => xhr.status === 200 ? resolve(JSON.parse(xhr.responseText)) : reject(new Error("Upload failed"));
@@ -161,14 +166,19 @@ export default function AdminProducts() {
       imageUrl = undefined;
     }
 
-    // Handle Gallery Uploads
-    const newGalleryImages: { storageId?: Id<"_storage">, url: string }[] = [...existingGallery];
+    // Handle Gallery Uploads & Reordering
+    const finalGalleryImages: { storageId?: Id<"_storage">, url: string }[] = [];
     
-    if (galleryFiles.length > 0) {
-      try {
-        for (let i = 0; i < galleryFiles.length; i++) {
-          const file = galleryFiles[i];
-          const compressed = await compressImage(file);
+    try {
+      const newItems = galleryItems.filter(item => item.type === 'new');
+      const totalNewItems = newItems.length;
+      let processedNewItems = 0;
+
+      for (const item of galleryItems) {
+        if (item.type === 'existing') {
+          finalGalleryImages.push({ storageId: item.storageId, url: item.url });
+        } else if (item.type === 'new' && item.file) {
+          const compressed = await compressImage(item.file);
           const postUrl = await generateUploadUrl();
           
           const uploadResult = await new Promise<{ storageId: Id<"_storage"> }>((resolve, reject) => {
@@ -179,12 +189,15 @@ export default function AdminProducts() {
             xhr.send(compressed);
           });
           
-          newGalleryImages.push({ storageId: uploadResult.storageId, url: "" });
-          setUploadProgress(50 + ((i + 1) / galleryFiles.length) * 50);
+          finalGalleryImages.push({ storageId: uploadResult.storageId, url: "" });
+          processedNewItems++;
+          setUploadProgress(30 + (processedNewItems / totalNewItems) * 70);
         }
-      } catch (error) {
-        toast.error("Failed to upload gallery images");
       }
+    } catch (error) {
+      toast.error("Failed to upload gallery images");
+      setIsSubmitting(false);
+      return;
     }
 
     const productData = {
@@ -192,7 +205,8 @@ export default function AdminProducts() {
       description: formData.get("description") as string,
       imageUrl: imageUrl,
       imageStorageId: imageStorageId,
-      images: newGalleryImages,
+      images: finalGalleryImages,
+      videoUrl: formData.get("videoUrl") as string,
       basePrice: parseFloat(formData.get("basePrice") as string),
       category: formData.get("category") as string,
       availability: formData.get("availability") as string,
@@ -215,9 +229,7 @@ export default function AdminProducts() {
       setIsDialogOpen(false);
       setEditingProduct(null);
       setSelectedImage(null);
-      setGalleryFiles([]);
-      setGalleryPreviews([]);
-      setExistingGallery([]);
+      setGalleryItems([]);
       setUploadProgress(0);
     } catch (error) {
       console.error(error);
@@ -234,9 +246,16 @@ export default function AdminProducts() {
     setFormsInput(product.forms.join(", "));
     setTagsInput(product.symptomsTags.join(", "));
     setImagePreview(product.imageUrl || "");
-    setExistingGallery(product.images || []);
-    setGalleryPreviews([]);
-    setGalleryFiles([]);
+    
+    // Initialize gallery items
+    const items: GalleryItem[] = (product.images || []).map((img: any, index: number) => ({
+      id: `existing-${index}-${Date.now()}`,
+      type: 'existing',
+      url: img.url,
+      storageId: img.storageId
+    }));
+    setGalleryItems(items);
+    
     setSelectedImage(null);
     setUploadProgress(0);
     setIsDialogOpen(true);
@@ -248,9 +267,7 @@ export default function AdminProducts() {
     setFormsInput("");
     setTagsInput("");
     setImagePreview("");
-    setExistingGallery([]);
-    setGalleryPreviews([]);
-    setGalleryFiles([]);
+    setGalleryItems([]);
     setSelectedImage(null);
     setUploadProgress(0);
     setIsDialogOpen(true);
@@ -260,24 +277,40 @@ export default function AdminProducts() {
     const files = Array.from(e.target.files || []);
     if (files.length > 0) {
       const validFiles = files.filter(f => f.type.startsWith("image/"));
-      setGalleryFiles(prev => [...prev, ...validFiles]);
       
       validFiles.forEach(file => {
         const reader = new FileReader();
         reader.onloadend = () => {
-          setGalleryPreviews(prev => [...prev, reader.result as string]);
+          setGalleryItems(prev => [...prev, {
+            id: `new-${Date.now()}-${Math.random()}`,
+            type: 'new',
+            url: reader.result as string,
+            file: file
+          }]);
         };
         reader.readAsDataURL(file);
       });
     }
+    e.target.value = ""; // Reset input
   };
 
-  const removeGalleryItem = (index: number, isExisting: boolean) => {
-    if (isExisting) {
-      setExistingGallery(prev => prev.filter((_, i) => i !== index));
-    } else {
-      setGalleryFiles(prev => prev.filter((_, i) => i !== index));
-      setGalleryPreviews(prev => prev.filter((_, i) => i !== index));
+  const removeGalleryItem = (index: number) => {
+    setGalleryItems(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const moveGalleryItem = (index: number, direction: 'left' | 'right') => {
+    if (direction === 'left' && index > 0) {
+      setGalleryItems(prev => {
+        const newItems = [...prev];
+        [newItems[index - 1], newItems[index]] = [newItems[index], newItems[index - 1]];
+        return newItems;
+      });
+    } else if (direction === 'right' && index < galleryItems.length - 1) {
+      setGalleryItems(prev => {
+        const newItems = [...prev];
+        [newItems[index], newItems[index + 1]] = [newItems[index + 1], newItems[index]];
+        return newItems;
+      });
     }
   };
 
@@ -475,32 +508,55 @@ export default function AdminProducts() {
                       className="cursor-pointer"
                     />
                     <div className="flex flex-wrap gap-2">
-                      {existingGallery.map((img, i) => (
-                        <div key={`exist-${i}`} className="h-20 w-20 rounded-md border bg-secondary/20 overflow-hidden relative group">
-                          <img src={img.url} alt={`Gallery ${i}`} className="h-full w-full object-cover" />
-                          <button 
-                            type="button"
-                            onClick={() => removeGalleryItem(i, true)}
-                            className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </div>
-                      ))}
-                      {galleryPreviews.map((preview, i) => (
-                        <div key={`new-${i}`} className="h-20 w-20 rounded-md border bg-secondary/20 overflow-hidden relative group">
-                          <img src={preview} alt={`New ${i}`} className="h-full w-full object-cover" />
-                          <button 
-                            type="button"
-                            onClick={() => removeGalleryItem(i, false)}
-                            className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
+                      {galleryItems.map((item, i) => (
+                        <div key={item.id} className="h-24 w-24 rounded-md border bg-secondary/20 overflow-hidden relative group flex flex-col">
+                          <div className="h-16 w-full relative">
+                            <img src={item.url} alt={`Gallery ${i}`} className="h-full w-full object-cover" />
+                            <button 
+                              type="button"
+                              onClick={() => removeGalleryItem(i)}
+                              className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                          <div className="flex-1 bg-background flex items-center justify-center border-t gap-1">
+                            <button
+                              type="button"
+                              onClick={() => moveGalleryItem(i, 'left')}
+                              disabled={i === 0}
+                              className="p-1 hover:bg-secondary rounded disabled:opacity-30"
+                            >
+                              <ChevronLeft className="h-3 w-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => moveGalleryItem(i, 'right')}
+                              disabled={i === galleryItems.length - 1}
+                              className="p-1 hover:bg-secondary rounded disabled:opacity-30"
+                            >
+                              <ChevronRight className="h-3 w-3" />
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="videoUrl">Video URL (Optional)</Label>
+                  <div className="relative">
+                    <Video className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      id="videoUrl" 
+                      name="videoUrl" 
+                      defaultValue={editingProduct?.videoUrl} 
+                      placeholder="https://youtube.com/..." 
+                      className="pl-8"
+                    />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">Supports YouTube, Vimeo, or direct MP4 links.</p>
                 </div>
               </div>
 
