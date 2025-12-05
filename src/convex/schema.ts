@@ -32,12 +32,44 @@ const schema = defineSchema(
       role: v.optional(roleValidator), // role of the user. do not remove
     }).index("email", ["email"]), // index for the email. do not remove or modify
 
-    // add other tables here
+    products: defineTable({
+      name: v.string(),
+      description: v.string(),
+      imageUrl: v.string(),
+      potencies: v.array(v.string()),
+      forms: v.array(v.string()),
+      basePrice: v.number(),
+      symptomsTags: v.array(v.string()),
+    })
+      .searchIndex("search_body", {
+        searchField: "description",
+        filterFields: ["name"], // simplified search
+      }),
 
-    // tableName: defineTable({
-    //   ...
-    //   // table fields
-    // }).index("by_field", ["field"])
+    cartItems: defineTable({
+      userId: v.string(), // We'll use the auth user ID
+      productId: v.id("products"),
+      potency: v.string(),
+      form: v.string(),
+      quantity: v.number(),
+    }).index("by_user", ["userId"]),
+
+    orders: defineTable({
+      userId: v.string(),
+      items: v.array(
+        v.object({
+          productId: v.id("products"),
+          name: v.string(),
+          potency: v.string(),
+          form: v.string(),
+          quantity: v.number(),
+          price: v.number(),
+        })
+      ),
+      total: v.number(),
+      status: v.string(), // "pending", "processing", "shipped", "delivered"
+      shippingAddress: v.string(),
+    }).index("by_user", ["userId"]),
   },
   {
     schemaValidation: false,

@@ -13,6 +13,9 @@ import "./types/global.d.ts";
 const Landing = lazy(() => import("./pages/Landing.tsx"));
 const AuthPage = lazy(() => import("./pages/Auth.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
+const ProductDetails = lazy(() => import("./pages/ProductDetails.tsx"));
+const Cart = lazy(() => import("./pages/Cart.tsx"));
+const UploadPrescription = lazy(() => import("./pages/UploadPrescription.tsx"));
 
 // Simple loading fallback for route transitions
 function RouteLoading() {
@@ -61,7 +64,10 @@ createRoot(document.getElementById("root")!).render(
           <Suspense fallback={<RouteLoading />}>
             <Routes>
               <Route path="/" element={<Landing />} />
-              <Route path="/auth" element={<AuthPage redirectAfterAuth="/" />} /> {/* TODO: change redirect after auth to correct page */}
+              <Route path="/auth" element={<AuthPage redirectAfterAuth="/" />} />
+              <Route path="/product/:id" element={<ProductDetails />} />
+              <Route path="/cart" element={<Cart />} />
+              <Route path="/upload" element={<UploadPrescription />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
