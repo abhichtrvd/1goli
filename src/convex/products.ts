@@ -47,35 +47,70 @@ export const seedProducts = mutation({
     const products = [
       {
         name: "Arnica Montana",
-        description: "A top remedy for trauma, bruising, and muscle soreness. Essential for any first aid kit.",
-        imageUrl: "https://images.unsplash.com/photo-1625591342274-013866180475?w=800&auto=format&fit=crop&q=60", // Placeholder flower image
-        potencies: ["30C", "200C"],
-        forms: ["Dilution", "Globules"],
+        description: "The premier remedy for trauma, bruising, and muscle soreness. Essential for any first aid kit to reduce swelling and pain.",
+        imageUrl: "https://images.unsplash.com/photo-1625591342274-013866180475?w=800&auto=format&fit=crop&q=60",
+        potencies: ["30C", "200C", "1M", "Mother Tincture"],
+        forms: ["Dilution", "Globules", "Ointment"],
         basePrice: 12.99,
-        symptomsTags: ["injury", "bruise", "trauma", "muscle pain"],
+        symptomsTags: ["injury", "bruise", "trauma", "muscle pain", "swelling"],
       },
       {
         name: "Nux Vomica",
-        description: "The 'hangover' remedy. Great for indigestion, stress, and irritability caused by overindulgence.",
-        imageUrl: "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=800&auto=format&fit=crop&q=60", // Placeholder seeds/plant
-        potencies: ["30C", "200C"],
+        description: "Effective for digestive issues, stress, and irritability. Often used for 'modern life' excesses like overeating or overworking.",
+        imageUrl: "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=800&auto=format&fit=crop&q=60",
+        potencies: ["30C", "200C", "1M"],
         forms: ["Dilution", "Globules", "Drops"],
         basePrice: 14.50,
-        symptomsTags: ["indigestion", "stress", "hangover", "irritability"],
+        symptomsTags: ["indigestion", "stress", "hangover", "irritability", "constipation"],
       },
       {
         name: "Oscillococcinum",
-        description: "World-famous homeopathic medicine for flu-like symptoms. Best taken at the first sign of illness.",
-        imageUrl: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=800&auto=format&fit=crop&q=60", // Placeholder medicine
-        potencies: ["200K"], // Standard for Oscillo
+        description: "Clinically proven for flu-like symptoms. Reduces the duration and severity of body aches, headache, fever, and chills.",
+        imageUrl: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=800&auto=format&fit=crop&q=60",
+        potencies: ["200K"],
         forms: ["Tube"],
         basePrice: 29.99,
         symptomsTags: ["flu", "body ache", "fever", "chills"],
       },
+      {
+        name: "Rhus Toxicodendron",
+        description: "Indicated for joint pain, arthritis, and rheumatic conditions that improve with motion and warmth.",
+        imageUrl: "https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=800&auto=format&fit=crop&q=60",
+        potencies: ["30C", "200C", "1M"],
+        forms: ["Dilution", "Globules"],
+        basePrice: 13.50,
+        symptomsTags: ["joint pain", "arthritis", "stiffness", "back pain"],
+      },
+      {
+        name: "Belladonna",
+        description: "For sudden high fever, throbbing headaches, and inflammation with redness and heat.",
+        imageUrl: "https://images.unsplash.com/photo-1606041008023-472dfb5e530f?w=800&auto=format&fit=crop&q=60",
+        potencies: ["30C", "200C"],
+        forms: ["Dilution", "Globules", "Drops"],
+        basePrice: 12.99,
+        symptomsTags: ["fever", "headache", "inflammation", "sore throat"],
+      },
+      {
+        name: "Calendula Officinalis",
+        description: "A powerful antiseptic healing agent for open wounds, cuts, and burns. Promotes rapid healing of skin.",
+        imageUrl: "https://images.unsplash.com/photo-1496857239036-1fb137683000?w=800&auto=format&fit=crop&q=60",
+        potencies: ["Mother Tincture", "30C"],
+        forms: ["Ointment", "Dilution", "Spray"],
+        basePrice: 15.00,
+        symptomsTags: ["wounds", "cuts", "burns", "skin", "antiseptic"],
+      },
     ];
 
     for (const p of products) {
-      await ctx.db.insert("products", p);
+      // Check if product already exists to avoid duplicates on re-seed
+      const existingProduct = await ctx.db
+        .query("products")
+        .filter((q) => q.eq(q.field("name"), p.name))
+        .first();
+        
+      if (!existingProduct) {
+        await ctx.db.insert("products", p);
+      }
     }
   },
 });

@@ -87,48 +87,62 @@ export default function ProductDetails() {
 
           {/* Details Section */}
           <div className="flex flex-col">
+            <div className="mb-2">
+              <Badge variant="outline" className="text-primary border-primary/20 mb-2">
+                Homeopathic Medicine
+              </Badge>
+            </div>
             <h1 className="text-3xl md:text-4xl font-bold text-primary mb-2">{product.name}</h1>
             <div className="flex flex-wrap gap-2 mb-6">
               {product.symptomsTags.map((tag) => (
-                <Badge key={tag} variant="secondary" className="bg-secondary/50 text-secondary-foreground">
+                <Badge key={tag} variant="secondary" className="bg-green-50 text-green-700 hover:bg-green-100">
                   {tag}
                 </Badge>
               ))}
             </div>
 
-            <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
-              {product.description}
-            </p>
+            <div className="prose prose-sm text-muted-foreground mb-8 leading-relaxed">
+              <h3 className="text-foreground font-semibold mb-2">Indications</h3>
+              <p>{product.description}</p>
+            </div>
 
-            <Card className="mt-auto border-primary/10 shadow-md">
+            <Card className="mt-auto border-primary/10 shadow-md bg-secondary/30">
               <CardContent className="p-6 space-y-6">
                 <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Select Potency</label>
-                    <Select value={selectedPotency} onValueChange={setSelectedPotency}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose potency" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {product.potencies.map((p) => (
-                          <SelectItem key={p} value={p}>{p}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium flex items-center gap-2">
+                        Potency
+                        <span className="text-xs text-muted-foreground font-normal">(Strength)</span>
+                      </label>
+                      <Select value={selectedPotency} onValueChange={setSelectedPotency}>
+                        <SelectTrigger className="bg-background">
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {product.potencies.map((p) => (
+                            <SelectItem key={p} value={p}>{p}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Select Form</label>
-                    <Select value={selectedForm} onValueChange={setSelectedForm}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose form" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {product.forms.map((f) => (
-                          <SelectItem key={f} value={f}>{f}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium flex items-center gap-2">
+                        Form
+                        <span className="text-xs text-muted-foreground font-normal">(Type)</span>
+                      </label>
+                      <Select value={selectedForm} onValueChange={setSelectedForm}>
+                        <SelectTrigger className="bg-background">
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {product.forms.map((f) => (
+                            <SelectItem key={f} value={f}>{f}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
 

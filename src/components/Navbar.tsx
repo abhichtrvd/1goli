@@ -70,11 +70,10 @@ export function Navbar() {
 
           <div className="hidden md:flex items-center gap-6 text-xs font-medium text-muted-foreground">
             <Link to="/" className="hover:text-foreground transition-colors">Store</Link>
-            <Link to="/upload" className="hover:text-foreground transition-colors">Prescription</Link>
-            <Link to="#" className="hover:text-foreground transition-colors">Mac</Link>
-            <Link to="#" className="hover:text-foreground transition-colors">iPad</Link>
-            <Link to="#" className="hover:text-foreground transition-colors">iPhone</Link>
-            <Link to="#" className="hover:text-foreground transition-colors">Support</Link>
+            <Link to="/upload" className="hover:text-foreground transition-colors">Upload Prescription</Link>
+            <Link to="#" className="hover:text-foreground transition-colors">Remedies</Link>
+            <Link to="#" className="hover:text-foreground transition-colors">Consultation</Link>
+            <Link to="#" className="hover:text-foreground transition-colors">About Us</Link>
           </div>
         </div>
 

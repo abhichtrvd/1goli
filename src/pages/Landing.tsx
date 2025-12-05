@@ -29,10 +29,10 @@ export default function Landing() {
           className="max-w-4xl mx-auto"
         >
           <h1 className="text-5xl md:text-7xl font-semibold tracking-tight text-foreground mb-4">
-            HomeoCure AI.
+            HomeoCure Pharmacy.
           </h1>
           <h2 className="text-3xl md:text-5xl font-medium text-muted-foreground mb-8 tracking-tight">
-            Natural healing. Reimagined.
+            Pure. Potent. Personalized.
           </h2>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
@@ -41,25 +41,25 @@ export default function Landing() {
               className="rounded-full px-8 h-12 text-lg bg-primary hover:bg-primary/90 text-white shadow-none"
               onClick={() => document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' })}
             >
-              Buy
+              Shop Remedies
             </Button>
             <Button 
               variant="link" 
               size="lg" 
               className="text-primary text-lg hover:underline flex items-center gap-1"
             >
-              Learn more <ChevronRight className="h-4 w-4" />
+              Consult a Homeopath <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
 
           <div className="relative max-w-2xl mx-auto mt-12">
              <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 blur-3xl rounded-full opacity-50 group-hover:opacity-75 transition-opacity duration-1000" />
+              <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 to-blue-500/20 blur-3xl rounded-full opacity-50 group-hover:opacity-75 transition-opacity duration-1000" />
               <div className="relative bg-white/50 backdrop-blur-xl border border-white/20 shadow-2xl rounded-3xl p-2 flex items-center">
                 <Search className="ml-4 h-5 w-5 text-muted-foreground" />
                 <Input 
                   className="border-none shadow-none bg-transparent h-12 text-lg focus-visible:ring-0 placeholder:text-muted-foreground/70"
-                  placeholder="Search symptoms (e.g., 'headache', 'flu')..."
+                  placeholder="Search remedies or symptoms (e.g., 'flu', 'arnica')..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -74,10 +74,10 @@ export default function Landing() {
         <div className="container max-w-6xl mx-auto px-4">
           <div className="mb-12 text-center md:text-left">
             <h3 className="text-3xl md:text-4xl font-semibold tracking-tight mb-2">
-              {searchQuery ? "Search Results" : "The Collection."}
+              {searchQuery ? "Search Results" : "Featured Remedies"}
             </h3>
             <p className="text-muted-foreground text-lg">
-              Potent remedies for your well-being.
+              Trusted formulations for your holistic health.
             </p>
           </div>
 
