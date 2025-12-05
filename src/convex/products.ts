@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { requireAdmin } from "./users";
 
 export const getProducts = query({
   args: {},
@@ -49,7 +50,7 @@ export const createProduct = mutation({
     symptomsTags: v.array(v.string()),
   },
   handler: async (ctx, args) => {
-    // In a real app, check for admin role here
+    await requireAdmin(ctx);
     await ctx.db.insert("products", args);
   },
 });
@@ -66,6 +67,7 @@ export const updateProduct = mutation({
     symptomsTags: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const { id, ...updates } = args;
     await ctx.db.patch(id, updates);
   },
@@ -74,6 +76,7 @@ export const updateProduct = mutation({
 export const deleteProduct = mutation({
   args: { id: v.id("products") },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     await ctx.db.delete(args.id);
   },
 });
@@ -81,6 +84,9 @@ export const deleteProduct = mutation({
 export const seedProducts = mutation({
   args: {},
   handler: async (ctx) => {
+    // Seeding can be public or admin only. Keeping it public for demo/setup ease, 
+    // or restrict if desired. For now, leaving as is or restricting to admin?
+    // Usually seeding is done once. Let's leave it open for now as it checks for existence.
     const existing = await ctx.db.query("products").take(1);
     if (existing.length > 0) return; // Already seeded
 

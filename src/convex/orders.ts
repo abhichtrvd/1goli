@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { requireAdmin } from "./users";
 
 export const createOrder = mutation({
   args: {
@@ -60,7 +61,7 @@ export const getOrders = query({
 export const getAllOrders = query({
   args: {},
   handler: async (ctx) => {
-    // In a real app, check for admin role
+    await requireAdmin(ctx);
     return await ctx.db.query("orders").order("desc").collect();
   },
 });
@@ -68,6 +69,7 @@ export const getAllOrders = query({
 export const updateOrderStatus = mutation({
   args: { orderId: v.id("orders"), status: v.string() },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     await ctx.db.patch(args.orderId, { status: args.status });
   },
 });

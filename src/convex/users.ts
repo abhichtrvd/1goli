@@ -1,5 +1,6 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { query, QueryCtx } from "./_generated/server";
+import { query, QueryCtx, MutationCtx } from "./_generated/server";
+import { ROLES } from "./schema";
 
 /**
  * Get the current signed in user. Returns null if the user is not signed in.
@@ -24,10 +25,18 @@ export const currentUser = query({
  * @param ctx
  * @returns
  */
-export const getCurrentUser = async (ctx: QueryCtx) => {
+export const getCurrentUser = async (ctx: QueryCtx | MutationCtx) => {
   const userId = await getAuthUserId(ctx);
   if (userId === null) {
     return null;
   }
   return await ctx.db.get(userId);
+};
+
+export const requireAdmin = async (ctx: QueryCtx | MutationCtx) => {
+  const user = await getCurrentUser(ctx);
+  if (!user || user.role !== ROLES.ADMIN) {
+    throw new Error("Unauthorized: Admin access required");
+  }
+  return user;
 };

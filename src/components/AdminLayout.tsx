@@ -1,13 +1,36 @@
-import { Outlet, Link, useLocation } from "react-router";
-import { LayoutDashboard, Package, ShoppingCart, LogOut, Home } from "lucide-react";
+import { Outlet, Link, useLocation, useNavigate } from "react-router";
+import { LayoutDashboard, Package, ShoppingCart, LogOut, Home, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
+import { useEffect } from "react";
+import { toast } from "sonner";
 
 export default function AdminLayout() {
   const location = useLocation();
-  const { signOut } = useAuth();
+  const navigate = useNavigate();
+  const { signOut, user, isLoading } = useAuth();
 
   const isActive = (path: string) => location.pathname === path;
+
+  useEffect(() => {
+    if (!isLoading) {
+      if (!user) {
+        toast.error("Please sign in to access admin panel");
+        navigate("/auth");
+      } else if (user.role !== "admin") {
+        toast.error("Unauthorized access");
+        navigate("/");
+      }
+    }
+  }, [user, isLoading, navigate]);
+
+  if (isLoading || !user || user.role !== "admin") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-secondary/30">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-secondary/30 flex">
