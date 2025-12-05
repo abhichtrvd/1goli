@@ -39,83 +39,80 @@ export default function Landing() {
 
   return (
     <div className="bg-background min-h-screen">
-      {/* Hero Section - 1mg Style but Apple Aesthetic */}
+      {/* Hero Section - Centered Search */}
       <section className="pt-12 pb-16 md:pt-24 md:pb-24 px-4 bg-secondary/30">
         <div className="container max-w-6xl mx-auto">
-          <div className="flex flex-col md:flex-row items-center gap-12">
-            <div className="flex-1 text-center md:text-left space-y-6">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-              >
-                <h1 className="text-4xl md:text-6xl font-semibold tracking-tight text-foreground mb-4 leading-tight">
-                  Holistic Health, <br/>
-                  <span className="text-[#84cc16]">Simplified.</span>
-                </h1>
-                <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-lg mx-auto md:mx-0">
-                  India's trusted Homeopathic Pharmacy. Authentic remedies, expert guidance, and doorstep delivery.
-                </p>
+          <div className="flex flex-col items-center text-center space-y-10">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="max-w-3xl mx-auto space-y-6"
+            >
+              <h1 className="text-4xl md:text-6xl font-semibold tracking-tight text-foreground leading-tight">
+                Holistic Health, <br/>
+                <span className="text-[#84cc16]">Simplified.</span>
+              </h1>
+              <p className="text-lg md:text-xl text-muted-foreground max-w-lg mx-auto">
+                India's trusted Homeopathic Pharmacy. Authentic remedies, expert guidance, and doorstep delivery.
+              </p>
 
-                <div className="relative max-w-xl mx-auto md:mx-0 mb-8">
-                  <div className="relative bg-white dark:bg-card shadow-xl rounded-2xl p-2 flex items-center border border-border/50">
-                    <Search className="ml-3 h-5 w-5 text-muted-foreground" />
-                    <Input 
-                      className="border-none shadow-none bg-transparent h-12 text-lg focus-visible:ring-0 placeholder:text-muted-foreground/70"
-                      placeholder="Search for homeopathic remedies..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                    <Button className="rounded-xl h-10 px-6" onClick={() => document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' })}>
-                      Search
-                    </Button>
-                  </div>
+              <div className="relative max-w-2xl mx-auto w-full pt-4">
+                <div className="relative bg-white dark:bg-card shadow-xl rounded-2xl p-2 flex items-center border border-border/50">
+                  <Search className="ml-3 h-5 w-5 text-muted-foreground" />
+                  <Input 
+                    className="border-none shadow-none bg-transparent h-12 text-lg focus-visible:ring-0 placeholder:text-muted-foreground/70"
+                    placeholder="Search for homeopathic remedies..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                  <Button className="rounded-xl h-10 px-6" onClick={() => document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' })}>
+                    Search
+                  </Button>
                 </div>
+              </div>
 
-                <div className="flex flex-wrap justify-center md:justify-start gap-4">
-                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground bg-white dark:bg-card px-4 py-2 rounded-full shadow-sm border border-border/50">
-                    <span className="h-2 w-2 rounded-full bg-[#A6FF00]" /> Genuine German Remedies
-                  </div>
-                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground bg-white dark:bg-card px-4 py-2 rounded-full shadow-sm border border-border/50">
-                    <span className="h-2 w-2 rounded-full bg-lime-600" /> Certified Homeopaths
-                  </div>
+              <div className="flex flex-wrap justify-center gap-4 pt-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground bg-white dark:bg-card px-4 py-2 rounded-full shadow-sm border border-border/50">
+                  <span className="h-2 w-2 rounded-full bg-[#A6FF00]" /> Genuine German Remedies
                 </div>
-              </motion.div>
-            </div>
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground bg-white dark:bg-card px-4 py-2 rounded-full shadow-sm border border-border/50">
+                  <span className="h-2 w-2 rounded-full bg-lime-600" /> Certified Homeopaths
+                </div>
+              </div>
+            </motion.div>
 
-            {/* Hero Right Side - Quick Actions */}
-            <div className="flex-1 w-full max-w-md">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-                className="grid grid-cols-2 gap-4"
-              >
-                <Card className="bg-white dark:bg-card border-none shadow-lg hover:shadow-xl transition-shadow cursor-pointer" onClick={() => navigate('/upload')}>
-                  <CardContent className="p-6 flex flex-col items-center text-center gap-4">
-                    <div className="h-12 w-12 rounded-2xl bg-lime-50 text-lime-700 flex items-center justify-center">
-                      <Upload className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold">Upload Prescription</h3>
-                      <p className="text-xs text-muted-foreground mt-1">We'll dispense it for you</p>
-                    </div>
-                  </CardContent>
-                </Card>
+            {/* Quick Actions - Centered Grid */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl"
+            >
+              <Card className="bg-white dark:bg-card border-none shadow-lg hover:shadow-xl transition-shadow cursor-pointer" onClick={() => navigate('/upload')}>
+                <CardContent className="p-6 flex flex-col items-center text-center gap-4">
+                  <div className="h-12 w-12 rounded-2xl bg-lime-50 text-lime-700 flex items-center justify-center">
+                    <Upload className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Upload Prescription</h3>
+                    <p className="text-xs text-muted-foreground mt-1">We'll dispense it for you</p>
+                  </div>
+                </CardContent>
+              </Card>
 
-                <Card className="bg-white dark:bg-card border-none shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
-                  <CardContent className="p-6 flex flex-col items-center text-center gap-4">
-                    <div className="h-12 w-12 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center">
-                      <Stethoscope className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold">Consult Homeopath</h3>
-                      <p className="text-xs text-muted-foreground mt-1">Expert guidance</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </div>
+              <Card className="bg-white dark:bg-card border-none shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+                <CardContent className="p-6 flex flex-col items-center text-center gap-4">
+                  <div className="h-12 w-12 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center">
+                    <Stethoscope className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Consult Homeopath</h3>
+                    <p className="text-xs text-muted-foreground mt-1">Expert guidance</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
           </div>
         </div>
       </section>
