@@ -58,7 +58,7 @@ export function AIWidget() {
                   </div>
                   <div>
                     <CardTitle className="text-sm font-semibold">
-                      1g<span className="relative inline-block"><span className="absolute inset-0 flex items-center justify-center pointer-events-none select-none"><span className="w-[0.38em] h-[0.38em] bg-[#A6FF00] rounded-full translate-y-[0.11em]" /></span><span className="relative z-10">o</span></span>li Assistant
+                      1g<span className="relative inline-block"><span className="absolute inset-0 flex items-center justify-center pointer-events-none select-none"><span className="w-[0.41em] h-[0.41em] bg-[#A6FF00] rounded-full translate-y-[0.1em]" /></span><span className="relative z-10">o</span></span>li Assistant
                     </CardTitle>
                     <p className="text-xs text-muted-foreground">Always here to help.</p>
                   </div>
