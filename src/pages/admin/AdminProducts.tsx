@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Plus, Search, Trash2, Edit, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Search, Trash2, Edit, Loader2, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
+import { Link } from "react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
@@ -134,19 +135,24 @@ export default function AdminProducts() {
                 <Input id="imageUrl" name="imageUrl" required defaultValue={editingProduct?.imageUrl} placeholder="https://..." />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="potencies">Potencies (comma separated)</Label>
-                <Input id="potencies" name="potencies" required defaultValue={editingProduct?.potencies.join(", ")} placeholder="30C, 200C, 1M" />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="potencies">Potencies</Label>
+                  <Input id="potencies" name="potencies" required defaultValue={editingProduct?.potencies.join(", ")} placeholder="30C, 200C, 1M" />
+                  <p className="text-[10px] text-muted-foreground">Comma separated values</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="forms">Forms</Label>
+                  <Input id="forms" name="forms" required defaultValue={editingProduct?.forms.join(", ")} placeholder="Dilution, Globules" />
+                  <p className="text-[10px] text-muted-foreground">Comma separated values</p>
+                </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="forms">Forms (comma separated)</Label>
-                <Input id="forms" name="forms" required defaultValue={editingProduct?.forms.join(", ")} placeholder="Dilution, Globules, Drops" />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="symptomsTags">Tags (comma separated)</Label>
+                <Label htmlFor="symptomsTags">Tags</Label>
                 <Input id="symptomsTags" name="symptomsTags" required defaultValue={editingProduct?.symptomsTags.join(", ")} placeholder="fever, pain, flu" />
+                <p className="text-[10px] text-muted-foreground">Keywords for search and filtering (comma separated)</p>
               </div>
 
               <Button type="submit" className="w-full" disabled={isSubmitting}>
@@ -190,7 +196,12 @@ export default function AdminProducts() {
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-3">
                       <img src={product.imageUrl} alt={product.name} className="h-8 w-8 rounded object-cover bg-secondary" />
-                      {product.name}
+                      <div className="flex flex-col">
+                        <span>{product.name}</span>
+                        <Link to={`/product/${product._id}`} target="_blank" className="text-xs text-primary flex items-center hover:underline">
+                          View on site <ExternalLink className="h-3 w-3 ml-1" />
+                        </Link>
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>${product.basePrice}</TableCell>

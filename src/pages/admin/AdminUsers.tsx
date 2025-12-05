@@ -10,11 +10,14 @@ import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 export default function AdminUsers() {
   const users = useQuery(api.users.getUsers);
   const updateRole = useMutation(api.users.updateUserRole);
   const [currentPage, setCurrentPage] = useState(1);
+  const [search, setSearch] = useState("");
   const itemsPerPage = 10;
 
   const handleRoleChange = async (userId: Id<"users">, newRole: "admin" | "user" | "member") => {
@@ -26,18 +29,39 @@ export default function AdminUsers() {
     }
   };
 
+  // Filter users
+  const filteredUsers = users?.filter(user => {
+    const searchLower = search.toLowerCase();
+    return (
+      (user.name?.toLowerCase() || "").includes(searchLower) ||
+      (user.email?.toLowerCase() || "").includes(searchLower) ||
+      (user.phone || "").includes(searchLower)
+    );
+  });
+
   // Pagination Logic
-  const totalPages = Math.ceil((users?.length || 0) / itemsPerPage);
-  const paginatedUsers = users?.slice(
+  const totalPages = Math.ceil((filteredUsers?.length || 0) / itemsPerPage);
+  const paginatedUsers = filteredUsers?.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Users</h1>
-        <p className="text-muted-foreground">Manage user roles and permissions.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Users</h1>
+          <p className="text-muted-foreground">Manage user roles and permissions.</p>
+        </div>
+        <div className="relative w-64">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input 
+            placeholder="Search users..." 
+            className="pl-8" 
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+          />
+        </div>
       </div>
 
       <Card>

@@ -8,12 +8,15 @@ import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Filter } from "lucide-react";
 import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Eye } from "lucide-react";
 
 export default function AdminOrders() {
   const orders = useQuery(api.orders.getAllOrders);
   const updateStatus = useMutation(api.orders.updateOrderStatus);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const itemsPerPage = 10;
 
   const handleStatusChange = async (orderId: Id<"orders">, newStatus: string) => {
@@ -74,12 +77,13 @@ export default function AdminOrders() {
                 <TableHead>Items</TableHead>
                 <TableHead>Total</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {paginatedOrders?.map((order) => (
                 <TableRow key={order._id}>
-                  <TableCell className="font-mono text-xs">{order._id}</TableCell>
+                  <TableCell className="font-mono text-xs">{order._id.slice(-6)}</TableCell>
                   <TableCell>{new Date(order._creationTime).toLocaleDateString()}</TableCell>
                   <TableCell>
                     <div className="flex flex-col">
@@ -116,6 +120,76 @@ export default function AdminOrders() {
                         <SelectItem value="delivered">Delivered</SelectItem>
                       </SelectContent>
                     </Select>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="ghost" size="icon" onClick={() => setSelectedOrder(order)}>
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-3xl">
+                        <DialogHeader>
+                          <DialogTitle>Order Details #{order._id}</DialogTitle>
+                        </DialogHeader>
+                        <div className="grid grid-cols-2 gap-8 mt-4">
+                          <div>
+                            <h3 className="font-semibold mb-2">Shipping Information</h3>
+                            <div className="p-4 bg-secondary/30 rounded-lg text-sm space-y-1">
+                              <p><span className="text-muted-foreground">User ID:</span> {order.userId}</p>
+                              <p><span className="text-muted-foreground">Address:</span></p>
+                              <p className="whitespace-pre-wrap">{order.shippingAddress}</p>
+                            </div>
+                            
+                            <h3 className="font-semibold mt-6 mb-2">Order Status</h3>
+                            <div className="flex items-center gap-2">
+                              <div className={`text-xs px-2 py-1 rounded-full ${
+                                order.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                order.status === 'processing' ? 'bg-blue-100 text-blue-700' :
+                                order.status === 'shipped' ? 'bg-purple-100 text-purple-700' :
+                                'bg-green-100 text-green-700'
+                              }`}>
+                                {order.status.toUpperCase()}
+                              </div>
+                              <span className="text-xs text-muted-foreground">
+                                Updated: {new Date(order._creationTime).toLocaleString()}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <h3 className="font-semibold mb-2">Order Items</h3>
+                            <div className="border rounded-lg overflow-hidden">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Item</TableHead>
+                                    <TableHead>Qty</TableHead>
+                                    <TableHead className="text-right">Price</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {order.items.map((item: any, idx: number) => (
+                                    <TableRow key={idx}>
+                                      <TableCell>
+                                        <div className="font-medium">{item.name}</div>
+                                        <div className="text-xs text-muted-foreground">{item.potency} - {item.form}</div>
+                                      </TableCell>
+                                      <TableCell>{item.quantity}</TableCell>
+                                      <TableCell className="text-right">${(item.price * item.quantity).toFixed(2)}</TableCell>
+                                    </TableRow>
+                                  ))}
+                                  <TableRow>
+                                    <TableCell colSpan={2} className="font-bold text-right">Total</TableCell>
+                                    <TableCell className="font-bold text-right">${order.total.toFixed(2)}</TableCell>
+                                  </TableRow>
+                                </TableBody>
+                              </Table>
+                            </div>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </TableCell>
                 </TableRow>
               ))}
