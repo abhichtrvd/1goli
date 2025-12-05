@@ -24,6 +24,7 @@ export default function AdminProducts() {
   const [search, setSearch] = useState("");
   const [formFilter, setFormFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [availabilityFilter, setAvailabilityFilter] = useState<string>("all");
   const [minPrice, setMinPrice] = useState<string>("");
   const [maxPrice, setMaxPrice] = useState<string>("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -49,13 +50,14 @@ export default function AdminProducts() {
     );
     const matchesForm = formFilter === "all" || p.forms.some(f => f.toLowerCase() === formFilter.toLowerCase());
     const matchesCategory = categoryFilter === "all" || (p.category && p.category.toLowerCase() === categoryFilter.toLowerCase());
+    const matchesAvailability = availabilityFilter === "all" || p.availability === availabilityFilter;
     
     const price = p.basePrice;
     const min = minPrice ? parseFloat(minPrice) : 0;
     const max = maxPrice ? parseFloat(maxPrice) : Infinity;
     const matchesPrice = price >= min && price <= max;
     
-    return matchesSearch && matchesForm && matchesCategory && matchesPrice;
+    return matchesSearch && matchesForm && matchesCategory && matchesPrice && matchesAvailability;
   });
 
   // Pagination
@@ -179,6 +181,12 @@ export default function AdminProducts() {
                       <SelectItem value="Biochemic">Biochemic</SelectItem>
                       <SelectItem value="Personal Care">Personal Care</SelectItem>
                       <SelectItem value="Mother Tincture">Mother Tincture</SelectItem>
+                      <SelectItem value="Bach Flower">Bach Flower</SelectItem>
+                      <SelectItem value="Bio-Combinations">Bio-Combinations</SelectItem>
+                      <SelectItem value="Triturations">Triturations</SelectItem>
+                      <SelectItem value="Drops">Drops</SelectItem>
+                      <SelectItem value="Syrups">Syrups</SelectItem>
+                      <SelectItem value="Ointments">Ointments</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -355,6 +363,24 @@ export default function AdminProducts() {
                   <SelectItem value="Biochemic">Biochemic</SelectItem>
                   <SelectItem value="Personal Care">Personal Care</SelectItem>
                   <SelectItem value="Mother Tincture">Mother Tincture</SelectItem>
+                  <SelectItem value="Bach Flower">Bach Flower</SelectItem>
+                  <SelectItem value="Bio-Combinations">Bio-Combinations</SelectItem>
+                  <SelectItem value="Triturations">Triturations</SelectItem>
+                  <SelectItem value="Drops">Drops</SelectItem>
+                  <SelectItem value="Syrups">Syrups</SelectItem>
+                  <SelectItem value="Ointments">Ointments</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={availabilityFilter} onValueChange={setAvailabilityFilter}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Availability" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="in_stock">In Stock</SelectItem>
+                  <SelectItem value="out_of_stock">Out of Stock</SelectItem>
+                  <SelectItem value="discontinued">Discontinued</SelectItem>
                 </SelectContent>
               </Select>
 
