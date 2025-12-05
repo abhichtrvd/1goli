@@ -93,7 +93,7 @@ export function Navbar() {
           </div>
 
           <Link to="#" className="hidden sm:flex">
-            <Button variant="ghost" size="sm" className="text-xs font-medium">
+            <Button size="sm" className="text-xs font-medium bg-black text-white hover:bg-black/90 rounded-full px-5 h-8">
               Wholesale
             </Button>
           </Link>
