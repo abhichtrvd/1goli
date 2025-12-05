@@ -22,7 +22,7 @@ export default function Landing() {
   const healthConcerns = [
     { title: "Hair Fall", icon: <Activity className="h-6 w-6" />, color: "bg-orange-100 text-orange-600" },
     { title: "Skin Care", icon: <Heart className="h-6 w-6" />, color: "bg-red-100 text-red-600" },
-    { title: "Gastric Issues", icon: <Pill className="h-6 w-6" />, color: "bg-blue-100 text-blue-600" },
+    { title: "Gastric Issues", icon: <Pill className="h-6 w-6" />, color: "bg-lime-100 text-lime-700" },
     { title: "Cold & Cough", icon: <Thermometer className="h-6 w-6" />, color: "bg-green-100 text-green-600" },
     { title: "Joint Pain", icon: <FlaskConical className="h-6 w-6" />, color: "bg-purple-100 text-purple-600" },
     { title: "Female Care", icon: <Stethoscope className="h-6 w-6" />, color: "bg-teal-100 text-teal-600" },
@@ -49,7 +49,7 @@ export default function Landing() {
               >
                 <h1 className="text-4xl md:text-6xl font-semibold tracking-tight text-foreground mb-4 leading-tight">
                   Holistic Health, <br/>
-                  <span className="text-primary">Simplified.</span>
+                  <span className="text-[#84cc16]">Simplified.</span>
                 </h1>
                 <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-lg mx-auto md:mx-0">
                   India's trusted Homeopathic Pharmacy. Authentic remedies, expert guidance, and doorstep delivery.
@@ -72,10 +72,10 @@ export default function Landing() {
 
                 <div className="flex flex-wrap justify-center md:justify-start gap-4">
                   <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground bg-white dark:bg-card px-4 py-2 rounded-full shadow-sm border border-border/50">
-                    <span className="h-2 w-2 rounded-full bg-green-500" /> Genuine German Remedies
+                    <span className="h-2 w-2 rounded-full bg-[#A6FF00]" /> Genuine German Remedies
                   </div>
                   <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground bg-white dark:bg-card px-4 py-2 rounded-full shadow-sm border border-border/50">
-                    <span className="h-2 w-2 rounded-full bg-blue-500" /> Certified Homeopaths
+                    <span className="h-2 w-2 rounded-full bg-lime-600" /> Certified Homeopaths
                   </div>
                 </div>
               </motion.div>
@@ -91,23 +91,12 @@ export default function Landing() {
               >
                 <Card className="bg-white dark:bg-card border-none shadow-lg hover:shadow-xl transition-shadow cursor-pointer" onClick={() => navigate('/upload')}>
                   <CardContent className="p-6 flex flex-col items-center text-center gap-4">
-                    <div className="h-12 w-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                    <div className="h-12 w-12 rounded-2xl bg-lime-50 text-lime-700 flex items-center justify-center">
                       <Upload className="h-6 w-6" />
                     </div>
                     <div>
                       <h3 className="font-semibold">Upload Prescription</h3>
                       <p className="text-xs text-muted-foreground mt-1">We'll dispense it for you</p>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-white dark:bg-card border-none shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
-                  <CardContent className="p-6 flex flex-col items-center text-center gap-4">
-                    <div className="h-12 w-12 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center">
-                      <Stethoscope className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold">Consult a Homeopath</h3>
-                      <p className="text-xs text-muted-foreground mt-1">Chat with experts 24/7</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -122,7 +111,7 @@ export default function Landing() {
         <div className="container max-w-6xl mx-auto px-4">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">Shop by Health Concern</h2>
-            <Button variant="link" className="text-primary">View All <ChevronRight className="h-4 w-4 ml-1" /></Button>
+            <Button variant="link" className="text-[#84cc16]">View All <ChevronRight className="h-4 w-4 ml-1" /></Button>
           </div>
           
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -150,18 +139,18 @@ export default function Landing() {
               <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">Featured Health Checkups</h2>
               <p className="text-muted-foreground mt-1">Top booked diagnostic tests</p>
             </div>
-            <Button variant="link" className="text-primary">View All <ChevronRight className="h-4 w-4 ml-1" /></Button>
+            <Button variant="link" className="text-[#84cc16]">View All <ChevronRight className="h-4 w-4 ml-1" /></Button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {labTests.map((test, index) => (
               <Card key={index} className="border-none shadow-sm hover:shadow-md transition-shadow cursor-pointer overflow-hidden">
-                <div className="h-2 bg-primary/80" />
+                <div className="h-2 bg-[#A6FF00]" />
                 <CardContent className="p-6">
                   <h3 className="font-semibold text-lg mb-2 line-clamp-2">{test.title}</h3>
                   <p className="text-sm text-muted-foreground mb-4">{test.tests}</p>
                   <div className="flex items-center justify-between mt-4">
-                    <span className="font-bold text-xl text-primary">{test.price}</span>
+                    <span className="font-bold text-xl text-[#84cc16]">{test.price}</span>
                     <Button size="sm" variant="outline" className="rounded-full">Book</Button>
                   </div>
                 </CardContent>
@@ -226,7 +215,7 @@ export default function Landing() {
 
                     <div className="flex items-center justify-between mt-auto pt-4 border-t border-border/50">
                       <span className="text-lg font-medium">From ${product.basePrice}</span>
-                      <Button size="sm" className="rounded-full px-6 bg-primary text-white hover:bg-primary/90">
+                      <Button size="sm" className="rounded-full px-6 bg-primary text-primary-foreground hover:bg-primary/90">
                         Buy
                       </Button>
                     </div>
@@ -254,8 +243,8 @@ export default function Landing() {
                  <h4 className="text-2xl font-semibold mb-2">Symptom Search</h4>
                  <p className="text-muted-foreground">Find what you need, instantly.</p>
                </div>
-               <div className="absolute right-0 bottom-0 w-3/4 h-3/4 bg-gradient-to-tl from-blue-500/10 to-transparent rounded-tl-full" />
-               <Search className="absolute bottom-8 right-8 h-32 w-32 text-primary/10 group-hover:text-primary/20 transition-colors duration-500" />
+               <div className="absolute right-0 bottom-0 w-3/4 h-3/4 bg-gradient-to-tl from-[#A6FF00]/20 to-transparent rounded-tl-full" />
+               <Search className="absolute bottom-8 right-8 h-32 w-32 text-primary/20 group-hover:text-primary/40 transition-colors duration-500" />
             </div>
             <div className="bg-black text-white rounded-3xl p-10 text-left h-[400px] flex flex-col justify-between overflow-hidden relative group shadow-lg">
                <div className="z-10">
@@ -263,7 +252,7 @@ export default function Landing() {
                  <p className="text-gray-400">Guidance available 24/7.</p>
                </div>
                <div className="absolute right-0 bottom-0 w-full h-1/2 bg-gradient-to-t from-gray-900 to-transparent" />
-               <div className="absolute bottom-8 right-8 h-24 w-24 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 blur-2xl opacity-60 group-hover:opacity-80 transition-opacity duration-500" />
+               <div className="absolute bottom-8 right-8 h-24 w-24 rounded-full bg-gradient-to-tr from-[#A6FF00] to-lime-500 blur-2xl opacity-60 group-hover:opacity-80 transition-opacity duration-500" />
             </div>
           </div>
         </div>

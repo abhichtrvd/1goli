@@ -88,14 +88,14 @@ export default function ProductDetails() {
           {/* Details Section */}
           <div className="flex flex-col">
             <div className="mb-2">
-              <Badge variant="outline" className="text-primary border-primary/20 mb-2">
+              <Badge variant="outline" className="text-[#84cc16] border-[#84cc16]/20 mb-2">
                 Homeopathic Medicine
               </Badge>
             </div>
-            <h1 className="text-3xl md:text-4xl font-bold text-primary mb-2">{product.name}</h1>
+            <h1 className="text-3xl md:text-4xl font-bold text-[#84cc16] mb-2">{product.name}</h1>
             <div className="flex flex-wrap gap-2 mb-6">
               {product.symptomsTags.map((tag) => (
-                <Badge key={tag} variant="secondary" className="bg-green-50 text-green-700 hover:bg-green-100">
+                <Badge key={tag} variant="secondary" className="bg-lime-50 text-lime-700 hover:bg-lime-100">
                   {tag}
                 </Badge>
               ))}
@@ -149,7 +149,7 @@ export default function ProductDetails() {
                 <div className="pt-4 border-t flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">Total Price</p>
-                    <p className="text-3xl font-bold text-primary">${getPrice()}</p>
+                    <p className="text-3xl font-bold text-[#84cc16]">${getPrice()}</p>
                   </div>
                 </div>
                 
@@ -173,7 +173,7 @@ export default function ProductDetails() {
         <div className="flex gap-4 items-center">
           <div className="flex-1">
             <p className="text-xs text-muted-foreground">Total</p>
-            <p className="text-xl font-bold text-primary">${getPrice()}</p>
+            <p className="text-xl font-bold text-[#84cc16]">${getPrice()}</p>
           </div>
           <Button 
             className="flex-1 h-12" 

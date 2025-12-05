@@ -53,12 +53,12 @@ export function AIWidget() {
             <Card className="border-none shadow-2xl rounded-3xl overflow-hidden bg-white/80 backdrop-blur-xl">
               <CardHeader className="bg-primary/5 p-4 flex flex-row items-center justify-between space-y-0 border-b border-primary/5">
                 <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center">
-                    <Sparkles className="h-4 w-4 text-white" />
+                  <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-[#A6FF00] to-lime-500 flex items-center justify-center">
+                    <Sparkles className="h-4 w-4 text-black" />
                   </div>
                   <div>
                     <CardTitle className="text-sm font-semibold">
-                      1g<span className="inline-block w-[0.55em] h-[0.55em] rounded-full border-[0.12em] border-current bg-[#A6FF00] mx-[0.02em] translate-y-[0.05em]" />li Assistant
+                      1g<span className="inline-block w-[0.41em] h-[0.41em] rounded-full border-[0.12em] border-current bg-[#A6FF00] mx-[0.02em] translate-y-[0.1em]" />li Assistant
                     </CardTitle>
                     <p className="text-xs text-muted-foreground">Always here to help.</p>
                   </div>

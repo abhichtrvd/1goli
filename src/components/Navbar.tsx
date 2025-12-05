@@ -104,7 +104,7 @@ export function Navbar() {
             <Button variant="ghost" size="icon" className="relative text-foreground/80 hover:text-foreground">
               <ShoppingBag className="h-5 w-5" />
               {cartCount > 0 && (
-                <span className="absolute top-1 right-1 h-3.5 w-3.5 rounded-full bg-primary text-[9px] font-bold text-white flex items-center justify-center ring-2 ring-background">
+                <span className="absolute top-1 right-1 h-3.5 w-3.5 rounded-full bg-primary text-[9px] font-bold text-primary-foreground flex items-center justify-center ring-2 ring-background">
                   {cartCount}
                 </span>
               )}
