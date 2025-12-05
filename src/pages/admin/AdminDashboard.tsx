@@ -1,26 +1,68 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Package, ShoppingCart, DollarSign, TrendingUp, Activity } from "lucide-react";
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis, Pie, PieChart, Cell, ResponsiveContainer } from "recharts";
+import { Package, ShoppingCart, DollarSign, TrendingUp, Activity, Users, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis, Pie, PieChart, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { useMemo } from "react";
 
 export default function AdminDashboard() {
   const products = useQuery(api.products.getProducts);
   const orders = useQuery(api.orders.getAllOrders);
+  const users = useQuery(api.users.getUsers);
 
-  const totalRevenue = orders?.reduce((acc, order) => acc + order.total, 0) || 0;
-  const totalOrders = orders?.length || 0;
-  const totalProducts = products?.length || 0;
-  const pendingOrders = orders?.filter(o => o.status === "pending").length || 0;
+  // --- Key Metrics Calculations with Comparison ---
+  const metrics = useMemo(() => {
+    if (!orders || !products || !users) return null;
 
-  // Analytics Data Preparation
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+
+    // Helper to filter by date range
+    const filterByRange = (data: any[], start: Date, end: Date) => 
+      data.filter(item => {
+        const date = new Date(item._creationTime);
+        return date >= start && date < end;
+      });
+
+    // Current Period (Last 7 Days)
+    const currentOrders = filterByRange(orders, sevenDaysAgo, now);
+    const currentRevenue = currentOrders.reduce((acc, o) => acc + o.total, 0);
+    const currentNewUsers = filterByRange(users, sevenDaysAgo, now).length;
+
+    // Previous Period (7-14 Days ago)
+    const prevOrders = filterByRange(orders, fourteenDaysAgo, sevenDaysAgo);
+    const prevRevenue = prevOrders.reduce((acc, o) => acc + o.total, 0);
+    const prevNewUsers = filterByRange(users, fourteenDaysAgo, sevenDaysAgo).length;
+
+    // Calculate Changes
+    const calculateChange = (current: number, prev: number) => {
+      if (prev === 0) return current > 0 ? 100 : 0;
+      return ((current - prev) / prev) * 100;
+    };
+
+    return {
+      totalRevenue: orders.reduce((acc, o) => acc + o.total, 0),
+      revenueChange: calculateChange(currentRevenue, prevRevenue),
+      totalOrders: orders.length,
+      ordersChange: calculateChange(currentOrders.length, prevOrders.length),
+      totalProducts: products.length,
+      totalUsers: users.length,
+      usersChange: calculateChange(currentNewUsers, prevNewUsers),
+      avgOrderValue: orders.length > 0 ? orders.reduce((acc, o) => acc + o.total, 0) / orders.length : 0,
+      pendingOrders: orders.filter(o => o.status === "pending").length,
+    };
+  }, [orders, products, users]);
+
+  // --- Analytics Data Preparation ---
+  
+  // 1. Revenue Over Time (Existing)
   const revenueData = useMemo(() => {
     if (!orders) return [];
     const last7Days = [...Array(7)].map((_, i) => {
       const d = new Date();
-      d.setDate(d.getDate() - (6 - i)); // Last 7 days including today
+      d.setDate(d.getDate() - (6 - i));
       return d.toISOString().split('T')[0];
     });
 
@@ -29,11 +71,60 @@ export default function AdminDashboard() {
       return {
         date: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
         revenue: dayOrders.reduce((acc, o) => acc + o.total, 0),
-        orders: dayOrders.length
       };
     });
   }, [orders]);
 
+  // 2. User Growth (New Users per Day)
+  const userGrowthData = useMemo(() => {
+    if (!users) return [];
+    const last7Days = [...Array(7)].map((_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (6 - i));
+      return d.toISOString().split('T')[0];
+    });
+
+    return last7Days.map(date => {
+      const count = users.filter(u => new Date(u._creationTime).toISOString().split('T')[0] === date).length;
+      return {
+        date: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
+        users: count,
+      };
+    });
+  }, [users]);
+
+  // 3. Sales by Category
+  const categoryData = useMemo(() => {
+    if (!orders || !products) return [];
+    const categorySales: Record<string, number> = {};
+    
+    // Create a map for quick product lookup
+    const productMap = new Map(products.map(p => [p._id, p]));
+
+    orders.forEach(order => {
+      order.items.forEach(item => {
+        const product = productMap.get(item.productId);
+        const category = product?.category || "Uncategorized";
+        categorySales[category] = (categorySales[category] || 0) + item.quantity;
+      });
+    });
+
+    // Colors for categories
+    const COLORS = [
+      "hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", 
+      "hsl(var(--chart-4))", "hsl(var(--chart-5))", "#84cc16"
+    ];
+
+    return Object.entries(categorySales)
+      .map(([name, value], index) => ({
+        name,
+        value,
+        fill: COLORS[index % COLORS.length]
+      }))
+      .sort((a, b) => b.value - a.value); // Sort by highest sales
+  }, [orders, products]);
+
+  // 4. Order Status (Existing)
   const statusData = useMemo(() => {
     if (!orders) return [];
     const counts: Record<string, number> = {};
@@ -56,6 +147,7 @@ export default function AdminDashboard() {
     }));
   }, [orders]);
 
+  // 5. Top Products (Existing)
   const topProducts = useMemo(() => {
     if (!orders) return [];
     const productSales: Record<string, {name: string, sales: number, revenue: number, id: string}> = {};
@@ -76,15 +168,20 @@ export default function AdminDashboard() {
   }, [orders]);
 
   const chartConfig = {
-    revenue: {
-      label: "Revenue",
-      color: "hsl(var(--primary))",
-    },
-    orders: {
-      label: "Orders",
-      color: "hsl(var(--secondary))",
-    },
+    revenue: { label: "Revenue", color: "hsl(var(--primary))" },
+    users: { label: "New Users", color: "hsl(var(--chart-2))" },
   } satisfies ChartConfig;
+
+  // Helper for percentage badge
+  const PercentBadge = ({ value }: { value: number }) => {
+    const isPositive = value >= 0;
+    return (
+      <div className={`text-xs flex items-center ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+        {isPositive ? <ArrowUpRight className="h-3 w-3 mr-1" /> : <ArrowDownRight className="h-3 w-3 mr-1" />}
+        {Math.abs(value).toFixed(1)}% from last week
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-8">
@@ -101,8 +198,8 @@ export default function AdminDashboard() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalRevenue.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">Lifetime earnings</p>
+            <div className="text-2xl font-bold">${metrics?.totalRevenue.toFixed(2) || "0.00"}</div>
+            {metrics && <PercentBadge value={metrics.revenueChange} />}
           </CardContent>
         </Card>
         <Card>
@@ -111,18 +208,18 @@ export default function AdminDashboard() {
             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+{totalOrders}</div>
-            <p className="text-xs text-muted-foreground">{pendingOrders} pending processing</p>
+            <div className="text-2xl font-bold">+{metrics?.totalOrders || 0}</div>
+            {metrics && <PercentBadge value={metrics.ordersChange} />}
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Products</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalProducts}</div>
-            <p className="text-xs text-muted-foreground">Active in store</p>
+            <div className="text-2xl font-bold">{metrics?.totalUsers || 0}</div>
+            {metrics && <PercentBadge value={metrics.usersChange} />}
           </CardContent>
         </Card>
         <Card>
@@ -132,14 +229,14 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${totalOrders > 0 ? (totalRevenue / totalOrders).toFixed(2) : "0.00"}
+              ${metrics?.avgOrderValue.toFixed(2) || "0.00"}
             </div>
             <p className="text-xs text-muted-foreground">Per order average</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Charts Section */}
+      {/* Charts Section Row 1: Revenue & User Growth */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="col-span-4">
           <CardHeader>
@@ -166,7 +263,7 @@ export default function AdminDashboard() {
                 <YAxis 
                   tickLine={false} 
                   axisLine={false} 
-                  tickFormatter={(value) => `${value}`} 
+                  tickFormatter={(value) => `$${value}`} 
                 />
                 <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
                 <Area 
@@ -184,8 +281,65 @@ export default function AdminDashboard() {
 
         <Card className="col-span-3">
           <CardHeader>
+            <CardTitle>User Growth</CardTitle>
+            <CardDescription>New user registrations (Last 7 Days)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="h-[300px] w-full">
+              <BarChart data={userGrowthData}>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="date"
+                  tickLine={false}
+                  tickMargin={10}
+                  axisLine={false}
+                  tickFormatter={(value) => value.slice(0, 3)}
+                />
+                <ChartTooltip
+                  cursor={false}
+                  content={<ChartTooltipContent hideLabel />}
+                />
+                <Bar dataKey="users" fill="var(--color-users)" radius={8} />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts Section Row 2: Sales by Category & Order Status */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <Card className="col-span-4">
+          <CardHeader>
+            <CardTitle>Sales by Category</CardTitle>
+            <CardDescription>Distribution of items sold by product category</CardDescription>
+          </CardHeader>
+          <CardContent className="flex justify-center">
+             <ChartContainer config={{}} className="h-[300px] w-full">
+              <PieChart>
+                <Pie
+                  data={categoryData}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={100}
+                  label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
+                  labelLine={false}
+                >
+                  {categoryData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Pie>
+                <ChartTooltip content={<ChartTooltipContent />} />
+              </PieChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="col-span-3">
+          <CardHeader>
             <CardTitle>Order Status</CardTitle>
-            <CardDescription>Distribution of current orders</CardDescription>
+            <CardDescription>Current order pipeline</CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">
             <ChartContainer config={{}} className="h-[300px] w-full">
