@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { requireAdmin } from "./users";
+import { Id } from "./_generated/dataModel";
 
 export const createOrder = mutation({
   args: {
@@ -62,7 +63,22 @@ export const getAllOrders = query({
   args: {},
   handler: async (ctx) => {
     await requireAdmin(ctx);
-    return await ctx.db.query("orders").order("desc").collect();
+    const orders = await ctx.db.query("orders").order("desc").collect();
+
+    // Enrich orders with user details
+    const ordersWithUser = await Promise.all(
+      orders.map(async (order) => {
+        // userId is stored as string in schema but is an ID
+        const user = await ctx.db.get(order.userId as Id<"users">);
+        return {
+          ...order,
+          userName: user?.name || "Unknown User",
+          userContact: user?.email || user?.phone || "No contact info",
+        };
+      })
+    );
+
+    return ordersWithUser;
   },
 });
 

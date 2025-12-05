@@ -87,8 +87,9 @@ export default function AdminOrders() {
                   <TableCell>{new Date(order._creationTime).toLocaleDateString()}</TableCell>
                   <TableCell>
                     <div className="flex flex-col">
-                      <span className="text-sm font-medium">User {order.userId.slice(0, 8)}...</span>
-                      <span className="text-xs text-muted-foreground truncate max-w-[150px]">{order.shippingAddress}</span>
+                      <span className="text-sm font-medium">{order.userName}</span>
+                      <span className="text-xs text-muted-foreground truncate max-w-[150px]">{order.userContact}</span>
+                      <span className="text-[10px] text-muted-foreground truncate max-w-[150px]">{order.shippingAddress}</span>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -134,11 +135,15 @@ export default function AdminOrders() {
                         </DialogHeader>
                         <div className="grid grid-cols-2 gap-8 mt-4">
                           <div>
-                            <h3 className="font-semibold mb-2">Shipping Information</h3>
-                            <div className="p-4 bg-secondary/30 rounded-lg text-sm space-y-1">
+                            <h3 className="font-semibold mb-2">Customer & Shipping</h3>
+                            <div className="p-4 bg-secondary/30 rounded-lg text-sm space-y-2">
+                              <p><span className="text-muted-foreground">Name:</span> {order.userName}</p>
+                              <p><span className="text-muted-foreground">Contact:</span> {order.userContact}</p>
                               <p><span className="text-muted-foreground">User ID:</span> {order.userId}</p>
-                              <p><span className="text-muted-foreground">Address:</span></p>
-                              <p className="whitespace-pre-wrap">{order.shippingAddress}</p>
+                              <div className="border-t border-border/50 my-2 pt-2">
+                                <p className="text-muted-foreground mb-1">Shipping Address:</p>
+                                <p className="whitespace-pre-wrap font-medium">{order.shippingAddress}</p>
+                              </div>
                             </div>
                             
                             <h3 className="font-semibold mt-6 mb-2">Order Status</h3>

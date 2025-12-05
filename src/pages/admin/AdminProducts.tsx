@@ -7,11 +7,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Plus, Search, Trash2, Edit, Loader2, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
+import { Plus, Search, Trash2, Edit, Loader2, ChevronLeft, ChevronRight, ExternalLink, Eye } from "lucide-react";
 import { Link } from "react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
+import { Badge } from "@/components/ui/badge";
 
 export default function AdminProducts() {
   const products = useQuery(api.products.getProducts);
@@ -21,9 +22,17 @@ export default function AdminProducts() {
   
   const [search, setSearch] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [viewingProduct, setViewingProduct] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  
+  // Temporary state for inputs to show badges
+  const [potenciesInput, setPotenciesInput] = useState("");
+  const [formsInput, setFormsInput] = useState("");
+  const [tagsInput, setTagsInput] = useState("");
+
   const itemsPerPage = 5;
 
   const filteredProducts = products?.filter(p => 
@@ -47,9 +56,9 @@ export default function AdminProducts() {
       description: formData.get("description") as string,
       imageUrl: formData.get("imageUrl") as string,
       basePrice: parseFloat(formData.get("basePrice") as string),
-      potencies: (formData.get("potencies") as string).split(",").map(s => s.trim()),
-      forms: (formData.get("forms") as string).split(",").map(s => s.trim()),
-      symptomsTags: (formData.get("symptomsTags") as string).split(",").map(s => s.trim()),
+      potencies: (formData.get("potencies") as string).split(",").map(s => s.trim()).filter(Boolean),
+      forms: (formData.get("forms") as string).split(",").map(s => s.trim()).filter(Boolean),
+      symptomsTags: (formData.get("symptomsTags") as string).split(",").map(s => s.trim()).filter(Boolean),
     };
 
     try {
@@ -74,12 +83,23 @@ export default function AdminProducts() {
 
   const openEditDialog = (product: any) => {
     setEditingProduct(product);
+    setPotenciesInput(product.potencies.join(", "));
+    setFormsInput(product.forms.join(", "));
+    setTagsInput(product.symptomsTags.join(", "));
     setIsDialogOpen(true);
   };
 
   const openCreateDialog = () => {
     setEditingProduct(null);
+    setPotenciesInput("");
+    setFormsInput("");
+    setTagsInput("");
     setIsDialogOpen(true);
+  };
+
+  const openViewDialog = (product: any) => {
+    setViewingProduct(product);
+    setIsViewDialogOpen(true);
   };
 
   const handleDelete = async (id: Id<"products">) => {
@@ -138,21 +158,54 @@ export default function AdminProducts() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="potencies">Potencies</Label>
-                  <Input id="potencies" name="potencies" required defaultValue={editingProduct?.potencies.join(", ")} placeholder="30C, 200C, 1M" />
-                  <p className="text-[10px] text-muted-foreground">Comma separated values</p>
+                  <Input 
+                    id="potencies" 
+                    name="potencies" 
+                    required 
+                    value={potenciesInput}
+                    onChange={(e) => setPotenciesInput(e.target.value)}
+                    placeholder="30C, 200C, 1M" 
+                  />
+                  <div className="flex flex-wrap gap-1 mt-2 min-h-[24px]">
+                    {potenciesInput.split(",").map(s => s.trim()).filter(Boolean).map((tag, i) => (
+                      <Badge key={i} variant="secondary" className="text-[10px]">{tag}</Badge>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="forms">Forms</Label>
-                  <Input id="forms" name="forms" required defaultValue={editingProduct?.forms.join(", ")} placeholder="Dilution, Globules" />
-                  <p className="text-[10px] text-muted-foreground">Comma separated values</p>
+                  <Input 
+                    id="forms" 
+                    name="forms" 
+                    required 
+                    value={formsInput}
+                    onChange={(e) => setFormsInput(e.target.value)}
+                    placeholder="Dilution, Globules" 
+                  />
+                  <div className="flex flex-wrap gap-1 mt-2 min-h-[24px]">
+                    {formsInput.split(",").map(s => s.trim()).filter(Boolean).map((tag, i) => (
+                      <Badge key={i} variant="secondary" className="text-[10px]">{tag}</Badge>
+                    ))}
+                  </div>
                 </div>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="symptomsTags">Tags</Label>
-                <Input id="symptomsTags" name="symptomsTags" required defaultValue={editingProduct?.symptomsTags.join(", ")} placeholder="fever, pain, flu" />
-                <p className="text-[10px] text-muted-foreground">Keywords for search and filtering (comma separated)</p>
+                <Input 
+                  id="symptomsTags" 
+                  name="symptomsTags" 
+                  required 
+                  value={tagsInput}
+                  onChange={(e) => setTagsInput(e.target.value)}
+                  placeholder="fever, pain, flu" 
+                />
+                <div className="flex flex-wrap gap-1 mt-2 min-h-[24px]">
+                  {tagsInput.split(",").map(s => s.trim()).filter(Boolean).map((tag, i) => (
+                    <Badge key={i} variant="outline" className="text-[10px]">{tag}</Badge>
+                  ))}
+                </div>
               </div>
 
               <Button type="submit" className="w-full" disabled={isSubmitting}>
@@ -160,6 +213,66 @@ export default function AdminProducts() {
                 {editingProduct ? "Update Product" : "Create Product"}
               </Button>
             </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* View Product Dialog */}
+        <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>Product Details</DialogTitle>
+            </DialogHeader>
+            {viewingProduct && (
+              <div className="grid md:grid-cols-2 gap-8 mt-4">
+                <div className="aspect-square bg-secondary/20 rounded-lg overflow-hidden flex items-center justify-center">
+                  <img src={viewingProduct.imageUrl} alt={viewingProduct.name} className="w-full h-full object-cover" />
+                </div>
+                <div className="space-y-6">
+                  <div>
+                    <h2 className="text-2xl font-bold">{viewingProduct.name}</h2>
+                    <p className="text-2xl font-semibold text-primary mt-2">${viewingProduct.basePrice}</p>
+                  </div>
+                  
+                  <div>
+                    <h3 className="font-semibold mb-2">Description</h3>
+                    <p className="text-muted-foreground text-sm leading-relaxed">{viewingProduct.description}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <h3 className="font-semibold mb-2 text-sm">Available Potencies</h3>
+                      <div className="flex flex-wrap gap-1">
+                        {viewingProduct.potencies.map((p: string) => (
+                          <Badge key={p} variant="secondary">{p}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold mb-2 text-sm">Available Forms</h3>
+                      <div className="flex flex-wrap gap-1">
+                        {viewingProduct.forms.map((f: string) => (
+                          <Badge key={f} variant="secondary">{f}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold mb-2 text-sm">Tags</h3>
+                    <div className="flex flex-wrap gap-1">
+                      {viewingProduct.symptomsTags.map((t: string) => (
+                        <Badge key={t} variant="outline">{t}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="pt-4 border-t">
+                    <p className="text-xs text-muted-foreground">Product ID: {viewingProduct._id}</p>
+                    <p className="text-xs text-muted-foreground">Created: {new Date(viewingProduct._creationTime).toLocaleDateString()}</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>
@@ -217,6 +330,9 @@ export default function AdminProducts() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
+                      <Button variant="ghost" size="icon" onClick={() => openViewDialog(product)}>
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => openEditDialog(product)}>
                         <Edit className="h-4 w-4 text-muted-foreground" />
                       </Button>
