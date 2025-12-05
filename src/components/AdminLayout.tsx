@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router";
-import { LayoutDashboard, Package, ShoppingCart, LogOut, Home, Loader2 } from "lucide-react";
+import { LayoutDashboard, Package, ShoppingCart, LogOut, Home, Loader2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useEffect } from "react";
@@ -71,6 +71,15 @@ export default function AdminLayout() {
             >
               <ShoppingCart className="mr-2 h-4 w-4" />
               Orders
+            </Button>
+          </Link>
+          <Link to="/admin/users">
+            <Button 
+              variant={isActive("/admin/users") ? "secondary" : "ghost"} 
+              className="w-full justify-start"
+            >
+              <Users className="mr-2 h-4 w-4" />
+              Users
             </Button>
           </Link>
         </nav>

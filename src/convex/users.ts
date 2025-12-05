@@ -1,6 +1,9 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { query, QueryCtx, MutationCtx } from "./_generated/server";
 import { ROLES } from "./schema";
+import { v } from "convex/values";
+import { mutation } from "./_generated/server";
+import { roleValidator } from "./schema";
 
 /**
  * Get the current signed in user. Returns null if the user is not signed in.
@@ -40,3 +43,19 @@ export const requireAdmin = async (ctx: QueryCtx | MutationCtx) => {
   }
   return user;
 };
+
+export const getUsers = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    return await ctx.db.query("users").collect();
+  },
+});
+
+export const updateUserRole = mutation({
+  args: { id: v.id("users"), role: roleValidator },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    await ctx.db.patch(args.id, { role: args.role });
+  },
+});
