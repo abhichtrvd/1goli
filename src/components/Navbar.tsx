@@ -38,7 +38,7 @@ export function Navbar() {
             <SheetContent side="left" className="w-[300px] sm:w-[400px]">
               <SheetHeader>
                 <SheetTitle className="text-left font-semibold">
-                  1g<span className="relative inline-block"><span className="absolute inset-0 flex items-center justify-center pointer-events-none select-none"><span className="w-[0.41em] h-[0.41em] bg-[#A6FF00] rounded-full translate-y-[0.1em]" /></span><span className="relative z-10">o</span></span>li
+                  1g<span className="inline-block w-[0.55em] h-[0.55em] rounded-full border-[0.12em] border-current bg-[#A6FF00] mx-[0.02em] translate-y-[0.05em]" />li
                 </SheetTitle>
               </SheetHeader>
               <div className="flex flex-col gap-4 mt-8">
@@ -66,7 +66,7 @@ export function Navbar() {
           
           <Link to="/" className="flex items-center gap-2 transition-opacity hover:opacity-80">
             <span className="font-semibold text-lg tracking-tight">
-              1g<span className="relative inline-block"><span className="absolute inset-0 flex items-center justify-center pointer-events-none select-none"><span className="w-[0.41em] h-[0.41em] bg-[#A6FF00] rounded-full translate-y-[0.1em]" /></span><span className="relative z-10">o</span></span>li
+              1g<span className="inline-block w-[0.55em] h-[0.55em] rounded-full border-[0.12em] border-current bg-[#A6FF00] mx-[0.02em] translate-y-[0.05em]" />li
             </span>
           </Link>
 
