@@ -40,7 +40,7 @@ export default function UploadPrescription() {
           <CardHeader>
             <CardTitle>Upload Prescription</CardTitle>
             <CardDescription>
-              Upload your doctor's prescription and our pharmacists will review it.
+              Upload your homeopath's prescription and our pharmacists will review it.
             </CardDescription>
           </CardHeader>
           <CardContent>

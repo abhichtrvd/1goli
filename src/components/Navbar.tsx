@@ -43,16 +43,16 @@ export function Navbar() {
               </SheetHeader>
               <div className="flex flex-col gap-4 mt-8">
                 <Link to="/" className="text-lg font-medium hover:text-primary transition-colors flex items-center gap-3">
-                  <ShoppingBag className="h-5 w-5" /> Medicines
+                  <ShoppingBag className="h-5 w-5" /> Homeopathy
                 </Link>
                 <Link to="/upload" className="text-lg font-medium hover:text-primary transition-colors flex items-center gap-3">
                   <FileText className="h-5 w-5" /> Lab Tests
                 </Link>
                 <Link to="#" className="text-lg font-medium hover:text-primary transition-colors flex items-center gap-3">
-                  <Stethoscope className="h-5 w-5" /> Consult Doctors
+                  <Stethoscope className="h-5 w-5" /> Consult Homeopaths
                 </Link>
                 <Link to="#" className="text-lg font-medium hover:text-primary transition-colors flex items-center gap-3">
-                  <Activity className="h-5 w-5" /> Ayurveda
+                  <Activity className="h-5 w-5" /> Mother Tinctures
                 </Link>
                 <div className="h-px bg-border/50 my-2" />
                 {isAuthenticated ? (
@@ -78,11 +78,11 @@ export function Navbar() {
           </Link>
 
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
-            <Link to="/" className="hover:text-primary transition-colors text-foreground">Medicines</Link>
+            <Link to="/" className="hover:text-primary transition-colors text-foreground">Homeopathy</Link>
             <Link to="#" className="hover:text-primary transition-colors">Lab Tests</Link>
-            <Link to="#" className="hover:text-primary transition-colors">Consult Doctors</Link>
-            <Link to="#" className="hover:text-primary transition-colors">Ayurveda</Link>
-            <Link to="#" className="hover:text-primary transition-colors">Care Plan</Link>
+            <Link to="#" className="hover:text-primary transition-colors">Consult Homeopaths</Link>
+            <Link to="#" className="hover:text-primary transition-colors">Mother Tinctures</Link>
+            <Link to="#" className="hover:text-primary transition-colors">Biochemics</Link>
           </div>
         </div>
 
@@ -91,7 +91,7 @@ export function Navbar() {
              <Search className="h-4 w-4 text-muted-foreground mr-2" />
              <input 
                className="bg-transparent border-none outline-none text-sm w-full placeholder:text-muted-foreground/70"
-               placeholder="Search for medicines..."
+               placeholder="Search for remedies..."
              />
           </div>
 

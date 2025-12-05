@@ -20,12 +20,12 @@ export default function Landing() {
   }, []);
 
   const healthConcerns = [
-    { title: "Stomach Care", icon: <Activity className="h-6 w-6" />, color: "bg-orange-100 text-orange-600" },
-    { title: "Heart Care", icon: <Heart className="h-6 w-6" />, color: "bg-red-100 text-red-600" },
-    { title: "Pain Relief", icon: <Pill className="h-6 w-6" />, color: "bg-blue-100 text-blue-600" },
+    { title: "Hair Fall", icon: <Activity className="h-6 w-6" />, color: "bg-orange-100 text-orange-600" },
+    { title: "Skin Care", icon: <Heart className="h-6 w-6" />, color: "bg-red-100 text-red-600" },
+    { title: "Gastric Issues", icon: <Pill className="h-6 w-6" />, color: "bg-blue-100 text-blue-600" },
     { title: "Cold & Cough", icon: <Thermometer className="h-6 w-6" />, color: "bg-green-100 text-green-600" },
-    { title: "Diabetes", icon: <FlaskConical className="h-6 w-6" />, color: "bg-purple-100 text-purple-600" },
-    { title: "Consultation", icon: <Stethoscope className="h-6 w-6" />, color: "bg-teal-100 text-teal-600" },
+    { title: "Joint Pain", icon: <FlaskConical className="h-6 w-6" />, color: "bg-purple-100 text-purple-600" },
+    { title: "Female Care", icon: <Stethoscope className="h-6 w-6" />, color: "bg-teal-100 text-teal-600" },
   ];
 
   const labTests = [
@@ -48,11 +48,11 @@ export default function Landing() {
                 transition={{ duration: 0.6 }}
               >
                 <h1 className="text-4xl md:text-6xl font-semibold tracking-tight text-foreground mb-4 leading-tight">
-                  Your Health, <br/>
+                  Holistic Health, <br/>
                   <span className="text-primary">Simplified.</span>
                 </h1>
                 <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-lg mx-auto md:mx-0">
-                  India's leading digital healthcare platform. From medicines to lab tests, we've got you covered.
+                  India's trusted Homeopathic Pharmacy. Authentic remedies, expert guidance, and doorstep delivery.
                 </p>
 
                 <div className="relative max-w-xl mx-auto md:mx-0 mb-8">
@@ -60,7 +60,7 @@ export default function Landing() {
                     <Search className="ml-3 h-5 w-5 text-muted-foreground" />
                     <Input 
                       className="border-none shadow-none bg-transparent h-12 text-lg focus-visible:ring-0 placeholder:text-muted-foreground/70"
-                      placeholder="Search for medicines, lab tests, and more..."
+                      placeholder="Search for homeopathic remedies..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -72,10 +72,10 @@ export default function Landing() {
 
                 <div className="flex flex-wrap justify-center md:justify-start gap-4">
                   <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground bg-white dark:bg-card px-4 py-2 rounded-full shadow-sm border border-border/50">
-                    <span className="h-2 w-2 rounded-full bg-green-500" /> 100% Genuine Medicines
+                    <span className="h-2 w-2 rounded-full bg-green-500" /> Genuine German Remedies
                   </div>
                   <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground bg-white dark:bg-card px-4 py-2 rounded-full shadow-sm border border-border/50">
-                    <span className="h-2 w-2 rounded-full bg-blue-500" /> Trusted by Millions
+                    <span className="h-2 w-2 rounded-full bg-blue-500" /> Certified Homeopaths
                   </div>
                 </div>
               </motion.div>
@@ -96,7 +96,7 @@ export default function Landing() {
                     </div>
                     <div>
                       <h3 className="font-semibold">Upload Prescription</h3>
-                      <p className="text-xs text-muted-foreground mt-1">We'll fill it for you</p>
+                      <p className="text-xs text-muted-foreground mt-1">We'll dispense it for you</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -118,7 +118,7 @@ export default function Landing() {
                         <Stethoscope className="h-6 w-6" />
                       </div>
                       <div className="text-left">
-                        <h3 className="font-semibold">Consult a Doctor</h3>
+                        <h3 className="font-semibold">Consult a Homeopath</h3>
                         <p className="text-xs text-muted-foreground mt-1">Chat with experts 24/7</p>
                       </div>
                     </div>
@@ -190,7 +190,7 @@ export default function Landing() {
         <div className="container max-w-6xl mx-auto px-4">
           <div className="mb-12 text-center md:text-left">
             <h3 className="text-3xl md:text-4xl font-semibold tracking-tight mb-2">
-              {searchQuery ? "Search Results" : "Popular Remedies"}
+              {searchQuery ? "Search Results" : "Popular Homeopathic Remedies"}
             </h3>
             <p className="text-muted-foreground text-lg">
               Trusted formulations for your holistic health.
