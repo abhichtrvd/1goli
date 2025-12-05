@@ -1,5 +1,5 @@
 import { useAuth } from "@/hooks/use-auth";
-import { Menu, ShoppingBag, User, LogOut, Search, FileText, Activity, Stethoscope } from "lucide-react";
+import { Menu, ShoppingBag, User, LogOut, Search, FileText, Activity, Stethoscope, Package } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import { Button } from "./ui/button";
 import {
@@ -45,6 +45,9 @@ export function Navbar() {
                 <Link to="/" className="text-lg font-medium hover:text-primary transition-colors flex items-center gap-3">
                   <ShoppingBag className="h-5 w-5" /> Homeopathy
                 </Link>
+                <Link to="#" className="text-lg font-medium hover:text-primary transition-colors flex items-center gap-3">
+                  <Package className="h-5 w-5" /> Wholesale
+                </Link>
                 <Link to="/upload" className="text-lg font-medium hover:text-primary transition-colors flex items-center gap-3">
                   <FileText className="h-5 w-5" /> Upload Prescription
                 </Link>
@@ -88,6 +91,12 @@ export function Navbar() {
                placeholder="Search for remedies..."
              />
           </div>
+
+          <Link to="#" className="hidden sm:flex">
+            <Button variant="ghost" size="sm" className="text-xs font-medium">
+              Wholesale
+            </Button>
+          </Link>
 
           <Link to="/upload" className="hidden sm:flex">
             <Button variant="ghost" size="sm" className="text-xs font-medium">
