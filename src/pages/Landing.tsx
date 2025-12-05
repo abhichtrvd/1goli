@@ -51,7 +51,7 @@ export default function Landing() {
             >
               <h1 className="text-4xl md:text-6xl font-semibold tracking-tight text-foreground leading-tight">
                 Homoeopathy, <br/>
-                <span className="text-[#84cc16]">Simplified</span> by <span className="text-5xl md:text-7xl">1g<span className="inline-block w-[0.55em] h-[0.55em] rounded-full border-[0.12em] border-current bg-[#A6FF00] mx-[0.02em] translate-y-[0.05em]" />li</span>
+                <span className="text-[#84cc16]">Simplified</span> by <span className="text-5xl md:text-7xl whitespace-nowrap">1g<span className="inline-block w-[0.55em] h-[0.55em] rounded-full border-[0.12em] border-current bg-[#A6FF00] mx-[0.02em] translate-y-[0.05em]" />li</span>
               </h1>
               <p className="text-lg md:text-xl text-muted-foreground max-w-lg mx-auto pt-8">
                 India's trusted Homeopathic Pharmacy. Authentic remedies, expert guidance, and doorstep delivery.
