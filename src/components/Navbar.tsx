@@ -37,7 +37,9 @@ export function Navbar() {
             </SheetTrigger>
             <SheetContent side="left" className="w-[300px] sm:w-[400px]">
               <SheetHeader>
-                <SheetTitle className="text-left font-semibold">1goli</SheetTitle>
+                <SheetTitle className="text-left font-semibold">
+                  1g<span className="relative inline-block"><span className="absolute inset-0 flex items-center justify-center pointer-events-none select-none"><span className="w-[0.45em] h-[0.45em] bg-[#A6FF00] rounded-full" /></span><span className="relative z-10">o</span></span>li
+                </SheetTitle>
               </SheetHeader>
               <div className="flex flex-col gap-4 mt-8">
                 <Link to="/" className="text-xl font-medium hover:text-primary transition-colors">
@@ -64,7 +66,7 @@ export function Navbar() {
           
           <Link to="/" className="flex items-center gap-2 transition-opacity hover:opacity-80">
             <span className="font-semibold text-lg tracking-tight">
-              1goli
+              1g<span className="relative inline-block"><span className="absolute inset-0 flex items-center justify-center pointer-events-none select-none"><span className="w-[0.45em] h-[0.45em] bg-[#A6FF00] rounded-full" /></span><span className="relative z-10">o</span></span>li
             </span>
           </Link>
 

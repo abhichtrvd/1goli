@@ -57,7 +57,9 @@ export function AIWidget() {
                     <Sparkles className="h-4 w-4 text-white" />
                   </div>
                   <div>
-                    <CardTitle className="text-sm font-semibold">1goli Assistant</CardTitle>
+                    <CardTitle className="text-sm font-semibold">
+                      1g<span className="relative inline-block"><span className="absolute inset-0 flex items-center justify-center pointer-events-none select-none"><span className="w-[0.45em] h-[0.45em] bg-[#A6FF00] rounded-full" /></span><span className="relative z-10">o</span></span>li Assistant
+                    </CardTitle>
                     <p className="text-xs text-muted-foreground">Always here to help.</p>
                   </div>
                 </div>
