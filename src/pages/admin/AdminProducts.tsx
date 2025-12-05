@@ -9,7 +9,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Plus, Search, Trash2, Edit, Loader2, ChevronLeft, ChevronRight, ExternalLink, Eye } from "lucide-react";
 import { Link } from "react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +23,7 @@ export default function AdminProducts() {
   
   const [search, setSearch] = useState("");
   const [formFilter, setFormFilter] = useState<string>("all");
+  const [potencyFilter, setPotencyFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [availabilityFilter, setAvailabilityFilter] = useState<string>("all");
   const [minPrice, setMinPrice] = useState<string>("");
@@ -38,6 +39,7 @@ export default function AdminProducts() {
   const [potenciesInput, setPotenciesInput] = useState("");
   const [formsInput, setFormsInput] = useState("");
   const [tagsInput, setTagsInput] = useState("");
+  const [imagePreview, setImagePreview] = useState("");
 
   const itemsPerPage = 5;
 
@@ -49,6 +51,7 @@ export default function AdminProducts() {
       p.symptomsTags.some(tag => tag.toLowerCase().includes(searchLower))
     );
     const matchesForm = formFilter === "all" || p.forms.some(f => f.toLowerCase() === formFilter.toLowerCase());
+    const matchesPotency = potencyFilter === "all" || p.potencies.some(pot => pot.toLowerCase() === potencyFilter.toLowerCase());
     const matchesCategory = categoryFilter === "all" || (p.category && p.category.toLowerCase() === categoryFilter.toLowerCase());
     const matchesAvailability = availabilityFilter === "all" || p.availability === availabilityFilter;
     
@@ -57,7 +60,7 @@ export default function AdminProducts() {
     const max = maxPrice ? parseFloat(maxPrice) : Infinity;
     const matchesPrice = price >= min && price <= max;
     
-    return matchesSearch && matchesForm && matchesCategory && matchesPrice && matchesAvailability;
+    return matchesSearch && matchesForm && matchesPotency && matchesCategory && matchesPrice && matchesAvailability;
   });
 
   // Pagination
@@ -109,6 +112,7 @@ export default function AdminProducts() {
     setPotenciesInput(product.potencies.join(", "));
     setFormsInput(product.forms.join(", "));
     setTagsInput(product.symptomsTags.join(", "));
+    setImagePreview(product.imageUrl);
     setIsDialogOpen(true);
   };
 
@@ -117,6 +121,7 @@ export default function AdminProducts() {
     setPotenciesInput("");
     setFormsInput("");
     setTagsInput("");
+    setImagePreview("");
     setIsDialogOpen(true);
   };
 
@@ -212,7 +217,26 @@ export default function AdminProducts() {
 
               <div className="space-y-2">
                 <Label htmlFor="imageUrl">Image URL</Label>
-                <Input id="imageUrl" name="imageUrl" required defaultValue={editingProduct?.imageUrl} placeholder="https://..." />
+                <div className="flex gap-4 items-start">
+                  <div className="flex-1">
+                    <Input 
+                      id="imageUrl" 
+                      name="imageUrl" 
+                      required 
+                      value={imagePreview}
+                      onChange={(e) => setImagePreview(e.target.value)}
+                      placeholder="https://..." 
+                    />
+                    <p className="text-[10px] text-muted-foreground mt-1">Enter a valid image URL to see a preview.</p>
+                  </div>
+                  <div className="h-16 w-16 rounded-md border bg-secondary/20 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                    {imagePreview ? (
+                      <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground">No Image</span>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -395,6 +419,21 @@ export default function AdminProducts() {
                   <SelectItem value="mother tincture">Mother Tincture</SelectItem>
                   <SelectItem value="ointment">Ointment</SelectItem>
                   <SelectItem value="drops">Drops</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={potencyFilter} onValueChange={setPotencyFilter}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Filter by Potency" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Potencies</SelectItem>
+                  <SelectItem value="30C">30C</SelectItem>
+                  <SelectItem value="200C">200C</SelectItem>
+                  <SelectItem value="1M">1M</SelectItem>
+                  <SelectItem value="Mother Tincture">Mother Tincture</SelectItem>
+                  <SelectItem value="6X">6X</SelectItem>
+                  <SelectItem value="12X">12X</SelectItem>
                 </SelectContent>
               </Select>
               
