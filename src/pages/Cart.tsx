@@ -108,7 +108,7 @@ export default function Cart() {
                 <Card key={item._id} className="flex flex-col sm:flex-row overflow-hidden">
                   <div className="w-full sm:w-32 h-32 bg-secondary/20 shrink-0">
                     <img 
-                      src={item.product.imageUrl} 
+                      src={item.product.imageUrl || ""} 
                       alt={item.product.name} 
                       className="w-full h-full object-cover"
                     />

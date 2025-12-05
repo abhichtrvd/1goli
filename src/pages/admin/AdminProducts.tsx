@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
 
 export default function AdminProducts() {
   const products = useQuery(api.products.getProducts);
@@ -33,6 +34,7 @@ export default function AdminProducts() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [viewingProduct, setViewingProduct] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -83,30 +85,69 @@ export default function AdminProducts() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setUploadProgress(0);
     const formData = new FormData(e.currentTarget);
     
-    let imageStorageId = undefined;
+    let imageStorageId: Id<"_storage"> | null | undefined = undefined;
+    let imageUrl: string | null | undefined = formData.get("imageUrl") as string | null;
+
+    // Handle Image Upload
     if (selectedImage) {
       try {
         const postUrl = await generateUploadUrl();
-        const result = await fetch(postUrl, {
-          method: "POST",
-          headers: { "Content-Type": selectedImage.type },
-          body: selectedImage,
+        
+        // Upload with progress
+        const uploadResult = await new Promise<{ storageId: Id<"_storage"> }>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open("POST", postUrl);
+          xhr.setRequestHeader("Content-Type", selectedImage.type);
+          
+          xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable) {
+              const percentComplete = (event.loaded / event.total) * 100;
+              setUploadProgress(percentComplete);
+            }
+          };
+
+          xhr.onload = () => {
+            if (xhr.status === 200) {
+              resolve(JSON.parse(xhr.responseText));
+            } else {
+              reject(new Error("Upload failed"));
+            }
+          };
+
+          xhr.onerror = () => reject(new Error("Upload failed"));
+          xhr.send(selectedImage);
         });
-        const { storageId } = await result.json();
-        imageStorageId = storageId;
+
+        imageStorageId = uploadResult.storageId;
+        imageUrl = null; // Clear manual URL if uploading
       } catch (error) {
         toast.error("Failed to upload image");
         setIsSubmitting(false);
+        setUploadProgress(0);
         return;
       }
+    } else if (!imageUrl && !imagePreview) {
+      // If no selected image, no manual URL, and no preview (cleared), explicitly remove it
+      imageUrl = null;
+      imageStorageId = null;
+    } else if (!imageUrl && imagePreview && editingProduct?.imageStorageId) {
+      // Keeping existing storage image (preview shows it, but input is empty)
+      // We don't need to send anything if we are just keeping it, 
+      // BUT if we want to be safe or if logic requires it:
+      // If we are updating, undefined means "no change".
+      // If we cleared it, imagePreview would be empty.
+      // So if imagePreview is there, we leave it undefined to keep existing.
+      imageStorageId = undefined;
+      imageUrl = undefined;
     }
 
     const productData = {
       name: formData.get("name") as string,
       description: formData.get("description") as string,
-      imageUrl: formData.get("imageUrl") as string,
+      imageUrl: imageUrl,
       imageStorageId: imageStorageId,
       basePrice: parseFloat(formData.get("basePrice") as string),
       category: formData.get("category") as string,
@@ -118,23 +159,28 @@ export default function AdminProducts() {
 
     try {
       if (editingProduct) {
+        // If we are explicitly clearing (null), we pass null. 
+        // If undefined, it's ignored by patch (kept).
         await updateProduct({
           id: editingProduct._id,
           ...productData,
         });
         toast.success("Product updated successfully");
       } else {
-        await createProduct(productData);
+        // For create, undefined is fine (optional), null is also fine.
+        await createProduct(productData as any);
         toast.success("Product created successfully");
       }
       setIsDialogOpen(false);
       setEditingProduct(null);
       setSelectedImage(null);
+      setUploadProgress(0);
     } catch (error) {
       console.error(error);
       toast.error(editingProduct ? "Failed to update product" : "Failed to create product");
     } finally {
       setIsSubmitting(false);
+      setUploadProgress(0);
     }
   };
 
@@ -145,6 +191,7 @@ export default function AdminProducts() {
     setTagsInput(product.symptomsTags.join(", "));
     setImagePreview(product.imageUrl || "");
     setSelectedImage(null);
+    setUploadProgress(0);
     setIsDialogOpen(true);
   };
 
@@ -155,12 +202,25 @@ export default function AdminProducts() {
     setTagsInput("");
     setImagePreview("");
     setSelectedImage(null);
+    setUploadProgress(0);
     setIsDialogOpen(true);
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Validation
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Image size must be less than 5MB");
+        e.target.value = ""; // Reset input
+        return;
+      }
+      if (!file.type.startsWith("image/")) {
+        toast.error("File must be an image");
+        e.target.value = "";
+        return;
+      }
+
       setSelectedImage(file);
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -273,6 +333,15 @@ export default function AdminProducts() {
                         className="cursor-pointer"
                       />
                     </div>
+                    {uploadProgress > 0 && uploadProgress < 100 && (
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>Uploading...</span>
+                          <span>{Math.round(uploadProgress)}%</span>
+                        </div>
+                        <Progress value={uploadProgress} className="h-1" />
+                      </div>
+                    )}
                     <div className="relative">
                       <div className="absolute inset-0 flex items-center">
                         <span className="w-full border-t" />
@@ -284,7 +353,7 @@ export default function AdminProducts() {
                     <Input 
                       id="imageUrl" 
                       name="imageUrl" 
-                      value={selectedImage ? "" : imagePreview}
+                      value={selectedImage ? "" : (imagePreview === editingProduct?.imageUrl ? "" : imagePreview)} 
                       onChange={(e) => {
                         setImagePreview(e.target.value);
                         setSelectedImage(null);
@@ -292,6 +361,9 @@ export default function AdminProducts() {
                       placeholder="https://..." 
                       disabled={!!selectedImage}
                     />
+                    <p className="text-[10px] text-muted-foreground">
+                      Max size 5MB. Supported formats: JPG, PNG, WebP.
+                    </p>
                   </div>
                   <div className="h-24 w-24 rounded-md border bg-secondary/20 overflow-hidden flex-shrink-0 flex items-center justify-center relative group">
                     {imagePreview ? (
@@ -302,8 +374,12 @@ export default function AdminProducts() {
                           onClick={() => {
                             setImagePreview("");
                             setSelectedImage(null);
+                            // Reset file input if possible, or just rely on state
+                            const fileInput = document.getElementById('imageFile') as HTMLInputElement;
+                            if (fileInput) fileInput.value = '';
                           }}
-                          className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
+                          title="Remove image"
                         >
                           <X className="h-3 w-3" />
                         </button>

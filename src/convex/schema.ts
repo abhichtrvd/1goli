@@ -40,8 +40,8 @@ const schema = defineSchema(
     products: defineTable({
       name: v.string(),
       description: v.string(),
-      imageUrl: v.optional(v.string()), // Made optional to support storage-only images
-      imageStorageId: v.optional(v.id("_storage")), // Added for file storage
+      imageUrl: v.optional(v.union(v.string(), v.null())), // Allow null for deletion
+      imageStorageId: v.optional(v.union(v.id("_storage"), v.null())), // Allow null for deletion
       potencies: v.array(v.string()),
       forms: v.array(v.string()),
       basePrice: v.number(),
