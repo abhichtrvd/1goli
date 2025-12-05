@@ -35,9 +35,14 @@ export default function AdminProducts() {
 
   const itemsPerPage = 5;
 
-  const filteredProducts = products?.filter(p => 
-    p.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredProducts = products?.filter(p => {
+    const searchLower = search.toLowerCase();
+    return (
+      p.name.toLowerCase().includes(searchLower) ||
+      p.description.toLowerCase().includes(searchLower) ||
+      p.symptomsTags.some(tag => tag.toLowerCase().includes(searchLower))
+    );
+  });
 
   // Pagination
   const totalPages = Math.ceil((filteredProducts?.length || 0) / itemsPerPage);

@@ -1,5 +1,5 @@
 import { useAuth } from "@/hooks/use-auth";
-import { Menu, ShoppingBag, User, LogOut, Search, FileText, Activity, Stethoscope, Package } from "lucide-react";
+import { Menu, ShoppingBag, User, LogOut, Search, FileText, Activity, Stethoscope, Package, Settings, Loader2 } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import { Button } from "./ui/button";
 import {
@@ -14,15 +14,49 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "./ui/dropdown-menu";
-import { useQuery } from "convex/react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "./ui/dialog";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useState } from "react";
+import { toast } from "sonner";
 
 export function Navbar() {
-  const { isAuthenticated, signOut } = useAuth();
+  const { isAuthenticated, signOut, user } = useAuth();
   const navigate = useNavigate();
   const cartItems = useQuery(api.cart.getCart);
   const cartCount = cartItems?.reduce((acc, item) => acc + item.quantity, 0) || 0;
+  
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const updateProfile = useMutation(api.users.updateCurrentUser);
+
+  const handleUpdateProfile = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsUpdatingProfile(true);
+    const formData = new FormData(e.currentTarget);
+    const name = formData.get("name") as string;
+
+    try {
+      await updateProfile({ name });
+      toast.success("Profile updated successfully");
+      setIsProfileOpen(false);
+    } catch (error) {
+      toast.error("Failed to update profile");
+    } finally {
+      setIsUpdatingProfile(false);
+    }
+  };
 
   return (
     <nav className="sticky top-0 z-50 w-full bg-background/80 backdrop-blur-md border-b border-border/40">
@@ -56,12 +90,20 @@ export function Navbar() {
                 </Link>
                 <div className="h-px bg-border/50 my-2" />
                 {isAuthenticated ? (
-                  <button
-                    onClick={() => signOut()}
-                    className="text-lg font-medium text-left hover:text-primary transition-colors text-destructive"
-                  >
-                    Sign Out
-                  </button>
+                  <>
+                    <button
+                      onClick={() => setIsProfileOpen(true)}
+                      className="text-lg font-medium text-left hover:text-primary transition-colors flex items-center gap-3"
+                    >
+                      <Settings className="h-5 w-5" /> Profile
+                    </button>
+                    <button
+                      onClick={() => signOut()}
+                      className="text-lg font-medium text-left hover:text-primary transition-colors text-destructive flex items-center gap-3"
+                    >
+                      <LogOut className="h-5 w-5" /> Sign Out
+                    </button>
+                  </>
                 ) : (
                   <Link to="/auth" className="text-lg font-medium hover:text-primary transition-colors">
                     Sign In
@@ -121,8 +163,20 @@ export function Navbar() {
                   <User className="h-5 w-5" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={() => signOut()}>
+              <DropdownMenuContent align="end" className="w-56">
+                <div className="flex items-center justify-start gap-2 p-2">
+                  <div className="flex flex-col space-y-1 leading-none">
+                    {user?.name && <p className="font-medium">{user.name}</p>}
+                    {user?.email && <p className="w-[200px] truncate text-xs text-muted-foreground">{user.email}</p>}
+                    {user?.phone && <p className="w-[200px] truncate text-xs text-muted-foreground">{user.phone}</p>}
+                  </div>
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setIsProfileOpen(true)}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  Profile Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => signOut()} className="text-destructive focus:text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
                   Sign Out
                 </DropdownMenuItem>
@@ -148,6 +202,55 @@ export function Navbar() {
           </div>
         </div>
       </div>
+
+      <Dialog open={isProfileOpen} onOpenChange={setIsProfileOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Profile</DialogTitle>
+            <DialogDescription>
+              Make changes to your profile here. Click save when you're done.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdateProfile}>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="name" className="text-right">
+                  Name
+                </Label>
+                <Input
+                  id="name"
+                  name="name"
+                  defaultValue={user?.name || ""}
+                  className="col-span-3"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right text-muted-foreground">
+                  Email
+                </Label>
+                <div className="col-span-3 text-sm text-muted-foreground">
+                  {user?.email || "Not linked"}
+                </div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right text-muted-foreground">
+                  Phone
+                </Label>
+                <div className="col-span-3 text-sm text-muted-foreground">
+                  {user?.phone || "Not linked"}
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={isUpdatingProfile}>
+                {isUpdatingProfile && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save changes
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </nav>
   );
 }

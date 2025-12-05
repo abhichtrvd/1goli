@@ -6,7 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Filter } from "lucide-react";
+import { ChevronLeft, ChevronRight, Filter, Clock, Package, Truck, CheckCircle } from "lucide-react";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Eye } from "lucide-react";
@@ -25,6 +25,37 @@ export default function AdminOrders() {
       toast.success("Order status updated");
     } catch (error) {
       toast.error("Failed to update status");
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return (
+          <div className="flex items-center gap-1.5 bg-yellow-100 text-yellow-700 px-2.5 py-0.5 rounded-full border border-yellow-200 text-xs font-medium">
+            <Clock className="h-3 w-3" /> Pending
+          </div>
+        );
+      case 'processing':
+        return (
+          <div className="flex items-center gap-1.5 bg-blue-100 text-blue-700 px-2.5 py-0.5 rounded-full border border-blue-200 text-xs font-medium">
+            <Package className="h-3 w-3" /> Processing
+          </div>
+        );
+      case 'shipped':
+        return (
+          <div className="flex items-center gap-1.5 bg-purple-100 text-purple-700 px-2.5 py-0.5 rounded-full border border-purple-200 text-xs font-medium">
+            <Truck className="h-3 w-3" /> Shipped
+          </div>
+        );
+      case 'delivered':
+        return (
+          <div className="flex items-center gap-1.5 bg-green-100 text-green-700 px-2.5 py-0.5 rounded-full border border-green-200 text-xs font-medium">
+            <CheckCircle className="h-3 w-3" /> Delivered
+          </div>
+        );
+      default:
+        return <span className="text-muted-foreground">{status}</span>;
     }
   };
 
@@ -102,25 +133,24 @@ export default function AdminOrders() {
                   </TableCell>
                   <TableCell className="font-bold">${order.total.toFixed(2)}</TableCell>
                   <TableCell>
-                    <Select 
-                      defaultValue={order.status} 
-                      onValueChange={(val) => handleStatusChange(order._id, val)}
-                    >
-                      <SelectTrigger className={`w-[130px] h-8 text-xs ${
-                        order.status === 'pending' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' :
-                        order.status === 'processing' ? 'bg-blue-100 text-blue-700 border-blue-200' :
-                        order.status === 'shipped' ? 'bg-purple-100 text-purple-700 border-purple-200' :
-                        'bg-green-100 text-green-700 border-green-200'
-                      }`}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="processing">Processing</SelectItem>
-                        <SelectItem value="shipped">Shipped</SelectItem>
-                        <SelectItem value="delivered">Delivered</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="flex items-center gap-2">
+                      {getStatusBadge(order.status)}
+                      <Select 
+                        defaultValue={order.status} 
+                        onValueChange={(val) => handleStatusChange(order._id, val)}
+                      >
+                        <SelectTrigger className="w-[24px] h-[24px] p-0 border-none shadow-none hover:bg-secondary/50 rounded-full flex items-center justify-center">
+                          <span className="sr-only">Change status</span>
+                          <Filter className="h-3 w-3 text-muted-foreground" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="processing">Processing</SelectItem>
+                          <SelectItem value="shipped">Shipped</SelectItem>
+                          <SelectItem value="delivered">Delivered</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </TableCell>
                   <TableCell className="text-right">
                     <Dialog>
@@ -148,14 +178,7 @@ export default function AdminOrders() {
                             
                             <h3 className="font-semibold mt-6 mb-2">Order Status</h3>
                             <div className="flex items-center gap-2">
-                              <div className={`text-xs px-2 py-1 rounded-full ${
-                                order.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                                order.status === 'processing' ? 'bg-blue-100 text-blue-700' :
-                                order.status === 'shipped' ? 'bg-purple-100 text-purple-700' :
-                                'bg-green-100 text-green-700'
-                              }`}>
-                                {order.status.toUpperCase()}
-                              </div>
+                              {getStatusBadge(order.status)}
                               <span className="text-xs text-muted-foreground">
                                 Updated: {new Date(order._creationTime).toLocaleString()}
                               </span>
