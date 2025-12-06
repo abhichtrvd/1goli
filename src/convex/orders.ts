@@ -3,6 +3,7 @@ import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { requireAdmin } from "./users";
 import { Id } from "./_generated/dataModel";
+import { paginationOptsValidator } from "convex/server";
 
 export const createOrder = mutation({
   args: {
@@ -86,6 +87,42 @@ export const getAllOrders = query({
     );
 
     return ordersWithUser;
+  },
+});
+
+export const getPaginatedOrders = query({
+  args: { 
+    paginationOpts: paginationOptsValidator,
+    search: v.optional(v.string())
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    
+    let result;
+    if (args.search) {
+        result = await ctx.db
+            .query("orders")
+            .withSearchIndex("search_shipping", (q) => q.search("shippingAddress", args.search!))
+            .paginate(args.paginationOpts);
+    } else {
+        result = await ctx.db
+            .query("orders")
+            .order("desc")
+            .paginate(args.paginationOpts);
+    }
+
+    const pageWithUsers = await Promise.all(
+      result.page.map(async (order) => {
+        const user = await ctx.db.get(order.userId as Id<"users">);
+        return {
+          ...order,
+          userName: user?.name || "Unknown User",
+          userContact: user?.email || user?.phone || "No contact info",
+        };
+      })
+    );
+
+    return { ...result, page: pageWithUsers };
   },
 });
 

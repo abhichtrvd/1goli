@@ -35,7 +35,10 @@ const schema = defineSchema(
       role: v.optional(roleValidator), // role of the user. do not remove
     })
       .index("email", ["email"])
-      .index("phone", ["phone"]), // index for the phone
+      .index("phone", ["phone"])
+      .searchIndex("search_name", {
+        searchField: "name",
+      }),
 
     products: defineTable({
       name: v.string(),
@@ -92,7 +95,11 @@ const schema = defineSchema(
           })
         )
       ),
-    }).index("by_user", ["userId"]),
+    })
+      .index("by_user", ["userId"])
+      .searchIndex("search_shipping", {
+        searchField: "shippingAddress",
+      }),
   },
   {
     schemaValidation: false,

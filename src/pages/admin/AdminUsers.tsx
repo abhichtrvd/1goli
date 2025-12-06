@@ -1,24 +1,26 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useQuery, useMutation } from "convex/react";
+import { useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 export default function AdminUsers() {
-  const users = useQuery(api.users.getUsers);
-  const updateRole = useMutation(api.users.updateUserRole);
-  const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
-  const itemsPerPage = 10;
+  const { results: users, status, loadMore, isLoading } = usePaginatedQuery(
+    api.users.searchUsers,
+    { search },
+    { initialNumItems: 10 }
+  );
+  
+  const updateRole = useMutation(api.users.updateUserRole);
 
   const handleRoleChange = async (userId: Id<"users">, newRole: "admin" | "user" | "member") => {
     try {
@@ -28,23 +30,6 @@ export default function AdminUsers() {
       toast.error("Failed to update role");
     }
   };
-
-  // Filter users
-  const filteredUsers = users?.filter(user => {
-    const searchLower = search.toLowerCase();
-    return (
-      (user.name?.toLowerCase() || "").includes(searchLower) ||
-      (user.email?.toLowerCase() || "").includes(searchLower) ||
-      (user.phone || "").includes(searchLower)
-    );
-  });
-
-  // Pagination Logic
-  const totalPages = Math.ceil((filteredUsers?.length || 0) / itemsPerPage);
-  const paginatedUsers = filteredUsers?.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
 
   return (
     <div className="space-y-8">
@@ -56,10 +41,10 @@ export default function AdminUsers() {
         <div className="relative w-64">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input 
-            placeholder="Search users..." 
+            placeholder="Search users by name..." 
             className="pl-8" 
             value={search}
-            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+            onChange={(e) => setSearch(e.target.value)}
           />
         </div>
       </div>
@@ -79,7 +64,7 @@ export default function AdminUsers() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedUsers?.map((user) => (
+              {users?.map((user) => (
                 <TableRow key={user._id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
@@ -113,35 +98,31 @@ export default function AdminUsers() {
                   </TableCell>
                 </TableRow>
               ))}
+              {users?.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                    No users found.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
 
-          {/* Pagination Controls */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-end space-x-2 py-4">
+          <div className="flex items-center justify-center py-4">
+            {status === "CanLoadMore" && (
               <Button
                 variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
+                onClick={() => loadMore(10)}
+                disabled={isLoading}
               >
-                <ChevronLeft className="h-4 w-4" />
-                Previous
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Load More
               </Button>
-              <div className="text-sm font-medium">
-                Page {currentPage} of {totalPages}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
+            )}
+            {status === "LoadingFirstPage" && (
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

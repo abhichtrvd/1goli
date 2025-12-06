@@ -1,23 +1,28 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useQuery, useMutation } from "convex/react";
+import { useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
-import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Filter, Clock, Package, Truck, CheckCircle } from "lucide-react";
+import { Filter, Clock, Package, Truck, CheckCircle, Search, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Eye } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 export default function AdminOrders() {
-  const orders = useQuery(api.orders.getAllOrders);
+  const [search, setSearch] = useState("");
+  const { results: orders, status, loadMore, isLoading } = usePaginatedQuery(
+    api.orders.getPaginatedOrders,
+    { search: search || undefined },
+    { initialNumItems: 10 }
+  );
+
   const updateStatus = useMutation(api.orders.updateOrderStatus);
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [currentPage, setCurrentPage] = useState(1);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   
   // State for status update dialog
@@ -25,8 +30,6 @@ export default function AdminOrders() {
   const [orderToUpdate, setOrderToUpdate] = useState<any>(null);
   const [newStatus, setNewStatus] = useState<string>("");
   const [statusNote, setStatusNote] = useState("");
-
-  const itemsPerPage = 10;
 
   const handleStatusUpdateSubmit = async () => {
     if (!orderToUpdate || !newStatus) return;
@@ -89,13 +92,6 @@ export default function AdminOrders() {
     statusFilter === "all" ? true : order.status === statusFilter
   );
 
-  // Pagination
-  const totalPages = Math.ceil((filteredOrders?.length || 0) / itemsPerPage);
-  const paginatedOrders = filteredOrders?.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -104,8 +100,17 @@ export default function AdminOrders() {
           <p className="text-muted-foreground">Manage customer orders and shipments.</p>
         </div>
         <div className="flex items-center gap-2">
+          <div className="relative w-64">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="Search by address..." 
+              className="pl-8" 
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
           <Filter className="h-4 w-4 text-muted-foreground" />
-          <Select value={statusFilter} onValueChange={(val) => { setStatusFilter(val); setCurrentPage(1); }}>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
@@ -138,7 +143,7 @@ export default function AdminOrders() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedOrders?.map((order) => (
+              {filteredOrders?.map((order) => (
                 <TableRow key={order._id}>
                   <TableCell className="font-mono text-xs">{order._id.slice(-6)}</TableCell>
                   <TableCell>{new Date(order._creationTime).toLocaleDateString()}</TableCell>
@@ -153,7 +158,7 @@ export default function AdminOrders() {
                     <div className="text-sm">
                       {order.items.length} items
                       <div className="text-xs text-muted-foreground">
-                        {order.items.map(i => i.name).join(", ").slice(0, 30)}...
+                        {order.items.map((i: any) => i.name).join(", ").slice(0, 30)}...
                       </div>
                     </div>
                   </TableCell>
@@ -267,35 +272,31 @@ export default function AdminOrders() {
                   </TableCell>
                 </TableRow>
               ))}
+              {filteredOrders?.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    No orders found.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
 
-          {/* Pagination Controls */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-end space-x-2 py-4">
+          <div className="flex items-center justify-center py-4">
+            {status === "CanLoadMore" && (
               <Button
                 variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
+                onClick={() => loadMore(10)}
+                disabled={isLoading}
               >
-                <ChevronLeft className="h-4 w-4" />
-                Previous
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Load More
               </Button>
-              <div className="text-sm font-medium">
-                Page {currentPage} of {totalPages}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
+            )}
+            {status === "LoadingFirstPage" && (
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            )}
+          </div>
         </CardContent>
       </Card>
 

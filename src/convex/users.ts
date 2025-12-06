@@ -4,6 +4,7 @@ import { ROLES } from "./schema";
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
 import { roleValidator } from "./schema";
+import { paginationOptsValidator } from "convex/server";
 
 /**
  * Get the current signed in user. Returns null if the user is not signed in.
@@ -49,6 +50,30 @@ export const getUsers = query({
   handler: async (ctx) => {
     await requireAdmin(ctx);
     return await ctx.db.query("users").collect();
+  },
+});
+
+export const searchUsers = query({
+  args: {
+    search: v.string(),
+    paginationOpts: paginationOptsValidator,
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    
+    if (args.search) {
+      return await ctx.db
+        .query("users")
+        .withSearchIndex("search_name", (q) => 
+          q.search("name", args.search)
+        )
+        .paginate(args.paginationOpts);
+    }
+
+    return await ctx.db
+      .query("users")
+      .order("desc")
+      .paginate(args.paginationOpts);
   },
 });
 
