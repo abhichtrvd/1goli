@@ -93,3 +93,12 @@ export const updateCurrentUser = mutation({
     await ctx.db.patch(user._id, { name: args.name, address: args.address });
   },
 });
+
+export const promoteCurrentUserToAdmin = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const user = await getCurrentUser(ctx);
+    if (!user) throw new Error("Not authenticated");
+    await ctx.db.patch(user._id, { role: ROLES.ADMIN });
+  },
+});

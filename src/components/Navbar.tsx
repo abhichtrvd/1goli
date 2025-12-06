@@ -1,5 +1,5 @@
 import { useAuth } from "@/hooks/use-auth";
-import { Menu, ShoppingBag, User, LogOut, Search, FileText, Activity, Stethoscope, Package, Settings, Loader2, LayoutDashboard } from "lucide-react";
+import { Menu, ShoppingBag, User, LogOut, Search, FileText, Activity, Stethoscope, Package, Settings, Loader2, LayoutDashboard, ShieldAlert } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import { Button } from "./ui/button";
 import {
@@ -40,12 +40,24 @@ export function Navbar() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const updateProfile = useMutation(api.users.updateCurrentUser);
+  const promoteToAdmin = useMutation(api.users.promoteCurrentUserToAdmin);
   const [searchQuery, setSearchQuery] = useState("");
 
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && searchQuery.trim()) {
       navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
       setSearchQuery("");
+    }
+  };
+
+  const handlePromoteToAdmin = async () => {
+    try {
+      await promoteToAdmin();
+      toast.success("You are now an admin!");
+      // Small delay to allow DB propagation before reload/navigation might be better, but reload ensures fresh state
+      setTimeout(() => window.location.reload(), 500);
+    } catch (error) {
+      toast.error("Failed to promote to admin");
     }
   };
 
@@ -200,6 +212,12 @@ export function Navbar() {
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                   </>
+                )}
+                {user?.role !== "admin" && (
+                   <DropdownMenuItem onClick={handlePromoteToAdmin}>
+                      <ShieldAlert className="mr-2 h-4 w-4" />
+                      Dev: Make Me Admin
+                   </DropdownMenuItem>
                 )}
                 <DropdownMenuItem onClick={() => setIsProfileOpen(true)}>
                   <Settings className="mr-2 h-4 w-4" />
