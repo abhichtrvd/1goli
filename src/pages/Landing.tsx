@@ -71,19 +71,26 @@ export default function Landing() {
               className="max-w-3xl mx-auto space-y-6"
             >
               <div className="relative max-w-2xl mx-auto w-full pb-6">
-                <div className="relative bg-white dark:bg-card shadow-[0_10px_40px_-10px_rgba(166,255,0,0.5)] rounded-2xl p-2 flex items-center border border-border">
-                  <Search className="ml-3 h-5 w-5 text-muted-foreground" />
+                <motion.div 
+                  whileHover={{ scale: 1.01 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                  className="relative bg-white/90 dark:bg-card/90 backdrop-blur-xl shadow-[0_20px_50px_-12px_rgba(166,255,0,0.3)] rounded-full p-2 pl-6 flex items-center border border-lime-500/20 ring-4 ring-lime-500/5"
+                >
+                  <Search className="h-5 w-5 text-lime-600 mr-2" />
                   <Input 
-                    className="border-none shadow-none bg-transparent h-12 text-lg focus-visible:ring-0 placeholder:text-muted-foreground/70"
+                    className="border-none shadow-none bg-transparent h-14 text-lg focus-visible:ring-0 placeholder:text-muted-foreground/60 px-2"
                     placeholder="Search for homeopathic remedies..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={handleKeyDown}
                   />
-                  <Button className="rounded-xl h-10 px-6" onClick={handleSearch}>
+                  <Button 
+                    className="rounded-full h-12 px-8 bg-[#A6FF00] hover:bg-[#95e600] text-black font-semibold text-base shadow-lg shadow-lime-500/20 transition-all hover:shadow-lime-500/40" 
+                    onClick={handleSearch}
+                  >
                     Search
                   </Button>
-                </div>
+                </motion.div>
               </div>
 
               <h1 className="text-4xl md:text-6xl font-semibold tracking-tight text-foreground leading-tight">
