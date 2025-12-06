@@ -66,7 +66,7 @@ export default function Landing() {
 
               <h1 className="text-4xl md:text-6xl font-semibold tracking-tight text-foreground leading-tight">
                 Homoeopathy, <br/>
-                <span className="text-[#84cc16]">Simplified</span> by <br/>
+                <span className="text-lime-600">Simplified</span> by <br/>
                 <span className="text-5xl md:text-7xl whitespace-nowrap">1g<span className="inline-block w-[0.55em] h-[0.55em] rounded-full border-[0.12em] border-current bg-[#A6FF00] mx-[0.02em] translate-y-[0.05em]" />li</span>
               </h1>
               <p className="text-lg md:text-xl text-muted-foreground max-w-lg mx-auto pt-4">
@@ -123,7 +123,7 @@ export default function Landing() {
         <div className="container max-w-6xl mx-auto px-4">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">Shop by Health Concern</h2>
-            <Button variant="link" className="text-[#84cc16]">View All <ChevronRight className="h-4 w-4 ml-1" /></Button>
+            <Button variant="link" className="text-lime-600">View All <ChevronRight className="h-4 w-4 ml-1" /></Button>
           </div>
           
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -154,7 +154,7 @@ export default function Landing() {
                 whileHover={{ scale: 1.05 }}
                 className="bg-white dark:bg-card p-6 rounded-2xl shadow-sm border border-border/50 flex items-center justify-center text-center hover:shadow-md transition-all cursor-pointer h-24"
               >
-                <span className="font-semibold text-muted-foreground hover:text-[#84cc16] transition-colors">{brand}</span>
+                <span className="font-semibold text-muted-foreground hover:text-lime-600 transition-colors">{brand}</span>
               </motion.div>
             ))}
           </div>

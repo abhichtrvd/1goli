@@ -17,16 +17,16 @@ export function Footer() {
               India's trusted Homeopathic Pharmacy. Authentic remedies, expert guidance, and doorstep delivery.
             </p>
             <div className="flex gap-4 pt-2">
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+              <a href="#" className="text-muted-foreground hover:text-lime-600 transition-colors">
                 <Facebook className="h-5 w-5" />
               </a>
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+              <a href="#" className="text-muted-foreground hover:text-lime-600 transition-colors">
                 <Twitter className="h-5 w-5" />
               </a>
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+              <a href="#" className="text-muted-foreground hover:text-lime-600 transition-colors">
                 <Instagram className="h-5 w-5" />
               </a>
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+              <a href="#" className="text-muted-foreground hover:text-lime-600 transition-colors">
                 <Linkedin className="h-5 w-5" />
               </a>
             </div>
@@ -36,11 +36,11 @@ export function Footer() {
           <div>
             <h3 className="font-semibold mb-6">Quick Links</h3>
             <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link to="/" className="hover:text-primary transition-colors">Home</Link></li>
-              <li><Link to="/#products" className="hover:text-primary transition-colors">Shop Remedies</Link></li>
-              <li><Link to="/upload" className="hover:text-primary transition-colors">Upload Prescription</Link></li>
-              <li><Link to="#" className="hover:text-primary transition-colors">Consult Homeopath</Link></li>
-              <li><Link to="#" className="hover:text-primary transition-colors">Wholesale</Link></li>
+              <li><Link to="/" className="hover:text-lime-600 transition-colors">Home</Link></li>
+              <li><Link to="/#products" className="hover:text-lime-600 transition-colors">Shop Remedies</Link></li>
+              <li><Link to="/upload" className="hover:text-lime-600 transition-colors">Upload Prescription</Link></li>
+              <li><Link to="#" className="hover:text-lime-600 transition-colors">Consult Homeopath</Link></li>
+              <li><Link to="#" className="hover:text-lime-600 transition-colors">Wholesale</Link></li>
             </ul>
           </div>
 
@@ -48,11 +48,11 @@ export function Footer() {
           <div>
             <h3 className="font-semibold mb-6">Support</h3>
             <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link to="#" className="hover:text-primary transition-colors">Help Center</Link></li>
-              <li><Link to="#" className="hover:text-primary transition-colors">Track Order</Link></li>
-              <li><Link to="#" className="hover:text-primary transition-colors">Returns & Refunds</Link></li>
-              <li><Link to="#" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
-              <li><Link to="#" className="hover:text-primary transition-colors">Terms of Service</Link></li>
+              <li><Link to="#" className="hover:text-lime-600 transition-colors">Help Center</Link></li>
+              <li><Link to="#" className="hover:text-lime-600 transition-colors">Track Order</Link></li>
+              <li><Link to="#" className="hover:text-lime-600 transition-colors">Returns & Refunds</Link></li>
+              <li><Link to="#" className="hover:text-lime-600 transition-colors">Privacy Policy</Link></li>
+              <li><Link to="#" className="hover:text-lime-600 transition-colors">Terms of Service</Link></li>
             </ul>
           </div>
 
@@ -61,15 +61,15 @@ export function Footer() {
             <h3 className="font-semibold mb-6">Contact Us</h3>
             <ul className="space-y-4 text-sm text-muted-foreground">
               <li className="flex items-start gap-3">
-                <MapPin className="h-5 w-5 shrink-0 text-primary" />
+                <MapPin className="h-5 w-5 shrink-0 text-lime-600" />
                 <span>123 Wellness Street, Health City, India 400001</span>
               </li>
               <li className="flex items-center gap-3">
-                <Phone className="h-5 w-5 shrink-0 text-primary" />
+                <Phone className="h-5 w-5 shrink-0 text-lime-600" />
                 <span>+91 98765 43210</span>
               </li>
               <li className="flex items-center gap-3">
-                <Mail className="h-5 w-5 shrink-0 text-primary" />
+                <Mail className="h-5 w-5 shrink-0 text-lime-600" />
                 <span>support@1goli.com</span>
               </li>
             </ul>

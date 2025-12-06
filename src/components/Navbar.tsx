@@ -77,16 +77,16 @@ export function Navbar() {
                 </SheetTitle>
               </SheetHeader>
               <div className="flex flex-col gap-4 mt-8">
-                <Link to="/" className="text-lg font-medium hover:text-primary transition-colors flex items-center gap-3">
+                <Link to="/" className="text-lg font-medium hover:text-lime-600 transition-colors flex items-center gap-3">
                   <ShoppingBag className="h-5 w-5" /> Homeopathy
                 </Link>
-                <Link to="/upload" className="text-lg font-medium hover:text-primary transition-colors flex items-center gap-3">
+                <Link to="/upload" className="text-lg font-medium hover:text-lime-600 transition-colors flex items-center gap-3">
                   <FileText className="h-5 w-5" /> Upload Prescription
                 </Link>
-                <Link to="#" className="text-lg font-medium hover:text-primary transition-colors flex items-center gap-3">
+                <Link to="#" className="text-lg font-medium hover:text-lime-600 transition-colors flex items-center gap-3">
                   <Stethoscope className="h-5 w-5" /> Consult Homeopaths
                 </Link>
-                <Link to="#" className="text-lg font-medium hover:text-primary transition-colors flex items-center gap-3">
+                <Link to="#" className="text-lg font-medium hover:text-lime-600 transition-colors flex items-center gap-3">
                   <Package className="h-5 w-5" /> Wholesale
                 </Link>
                 <div className="h-px bg-border/50 my-2" />
@@ -94,19 +94,19 @@ export function Navbar() {
                   <>
                     <button
                       onClick={() => setIsProfileOpen(true)}
-                      className="text-lg font-medium text-left hover:text-primary transition-colors flex items-center gap-3"
+                      className="text-lg font-medium text-left hover:text-lime-600 transition-colors flex items-center gap-3"
                     >
                       <Settings className="h-5 w-5" /> Profile
                     </button>
                     <button
                       onClick={() => signOut()}
-                      className="text-lg font-medium text-left hover:text-primary transition-colors text-destructive flex items-center gap-3"
+                      className="text-lg font-medium text-left hover:text-lime-600 transition-colors text-destructive flex items-center gap-3"
                     >
                       <LogOut className="h-5 w-5" /> Sign Out
                     </button>
                   </>
                 ) : (
-                  <Link to="/auth" className="text-lg font-medium hover:text-primary transition-colors">
+                  <Link to="/auth" className="text-lg font-medium hover:text-lime-600 transition-colors">
                     Sign In
                   </Link>
                 )}
@@ -121,8 +121,8 @@ export function Navbar() {
           </Link>
 
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
-            <Link to="/" className="hover:text-primary transition-colors text-foreground">Homeopathy</Link>
-            <Link to="#" className="hover:text-primary transition-colors">Consult Homeopaths</Link>
+            <Link to="/" className="hover:text-lime-600 transition-colors text-foreground">Homeopathy</Link>
+            <Link to="#" className="hover:text-lime-600 transition-colors">Consult Homeopaths</Link>
             <Link to="#">
               <Button size="sm" className="text-xs font-medium bg-black text-white hover:bg-black/90 rounded-full px-5 h-8">
                 Wholesale
@@ -194,12 +194,12 @@ export function Navbar() {
       <div className="border-t border-border/40 bg-background/50 backdrop-blur-md">
         <div className="container max-w-7xl mx-auto px-4">
           <div className="flex items-center gap-6 md:gap-8 h-10 text-sm font-medium text-muted-foreground overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-            <Link to="#" className="hover:text-primary transition-colors whitespace-nowrap">Dilutions</Link>
-            <Link to="#" className="hover:text-primary transition-colors whitespace-nowrap">Mother Tincture</Link>
-            <Link to="#" className="hover:text-primary transition-colors whitespace-nowrap">Biochemics</Link>
-            <Link to="#" className="hover:text-primary transition-colors whitespace-nowrap">Triturations</Link>
-            <Link to="#" className="hover:text-primary transition-colors whitespace-nowrap">Bio Combinations</Link>
-            <Link to="#" className="hover:text-primary transition-colors whitespace-nowrap">Patent</Link>
+            <Link to="#" className="hover:text-lime-600 transition-colors whitespace-nowrap">Dilutions</Link>
+            <Link to="#" className="hover:text-lime-600 transition-colors whitespace-nowrap">Mother Tincture</Link>
+            <Link to="#" className="hover:text-lime-600 transition-colors whitespace-nowrap">Biochemics</Link>
+            <Link to="#" className="hover:text-lime-600 transition-colors whitespace-nowrap">Triturations</Link>
+            <Link to="#" className="hover:text-lime-600 transition-colors whitespace-nowrap">Bio Combinations</Link>
+            <Link to="#" className="hover:text-lime-600 transition-colors whitespace-nowrap">Patent</Link>
           </div>
         </div>
       </div>
