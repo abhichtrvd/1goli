@@ -8,6 +8,13 @@ import { useNavigate } from "react-router";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 
 export default function Landing() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -189,9 +196,9 @@ export default function Landing() {
           </div>
 
           {products === undefined ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="h-[280px] bg-muted animate-pulse rounded-2xl" />
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="h-[240px] bg-muted animate-pulse rounded-2xl" />
               ))}
             </div>
           ) : products.length === 0 ? (
@@ -199,52 +206,65 @@ export default function Landing() {
               <p className="text-muted-foreground text-xl">No remedies found.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {products.slice(0, 12).map((product, index) => (
-                <motion.div
-                  key={product._id}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5, delay: index * 0.05 }}
-                  className="group relative bg-white dark:bg-card rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer border border-border"
-                  onClick={() => navigate(`/product/${product._id}`)}
-                >
-                  <div className="p-4 h-full flex flex-col">
-                    <div className="mb-3">
-                      <Badge variant="secondary" className="mb-2 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-md px-2 py-0.5 text-[10px] font-normal">
-                        New
-                      </Badge>
-                      <h4 className="text-base font-semibold mb-1 group-hover:text-primary transition-colors line-clamp-1" title={product.name}>{product.name}</h4>
-                      <p className="text-muted-foreground line-clamp-2 text-xs leading-relaxed h-8">
-                        {product.description}
-                      </p>
-                    </div>
-                    
-                    <div className="mt-auto relative aspect-square w-full flex items-center justify-center bg-secondary rounded-xl overflow-hidden mb-3">
-                      {product.imageUrl ? (
-                        <img 
-                          src={product.imageUrl} 
-                          alt={product.name}
-                          className="w-full h-full object-cover mix-blend-multiply dark:mix-blend-normal transition-transform duration-500 group-hover:scale-105"
-                        />
-                      ) : (
-                        <div className="flex flex-col items-center justify-center text-muted-foreground/50">
-                          <Activity className="h-8 w-8 mb-1" />
-                          <span className="text-xs">No Image</span>
+            <Carousel
+              opts={{
+                align: "start",
+                loop: true,
+              }}
+              className="w-full"
+            >
+              <CarouselContent className="-ml-2 md:-ml-4">
+                {products.map((product, index) => (
+                  <CarouselItem key={product._id} className="pl-2 md:pl-4 basis-1/2 md:basis-1/4 lg:basis-1/6">
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.5, delay: index * 0.05 }}
+                      className="group relative bg-white dark:bg-card rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer border border-border h-full"
+                      onClick={() => navigate(`/product/${product._id}`)}
+                    >
+                      <div className="p-3 h-full flex flex-col">
+                        <div className="relative aspect-square w-full flex items-center justify-center bg-secondary rounded-lg overflow-hidden mb-2">
+                          {product.imageUrl ? (
+                            <img 
+                              src={product.imageUrl} 
+                              alt={product.name}
+                              className="w-full h-full object-cover mix-blend-multiply dark:mix-blend-normal transition-transform duration-500 group-hover:scale-105"
+                            />
+                          ) : (
+                            <div className="flex flex-col items-center justify-center text-muted-foreground/50">
+                              <Activity className="h-6 w-6 mb-1" />
+                              <span className="text-[10px]">No Image</span>
+                            </div>
+                          )}
+                          <Badge variant="secondary" className="absolute top-1 right-1 bg-white/80 backdrop-blur-sm text-black text-[9px] px-1.5 py-0 h-4">
+                            New
+                          </Badge>
                         </div>
-                      )}
-                    </div>
 
-                    <div className="flex items-center justify-between mt-auto pt-3 border-t border-border/50">
-                      <span className="text-sm font-medium text-lime-600">${product.basePrice}</span>
-                      <Button size="sm" className="rounded-full px-4 h-8 text-xs bg-primary text-primary-foreground hover:bg-primary/90">
-                        Buy
-                      </Button>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+                        <div className="mb-1">
+                          <h4 className="text-sm font-semibold mb-0.5 group-hover:text-primary transition-colors line-clamp-1" title={product.name}>{product.name}</h4>
+                          <p className="text-muted-foreground line-clamp-1 text-[10px]">
+                            {product.description}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center justify-between mt-auto pt-2 border-t border-border/50">
+                          <span className="text-xs font-bold text-lime-600">${product.basePrice}</span>
+                          <Button size="sm" className="rounded-full px-3 h-6 text-[10px] bg-primary text-primary-foreground hover:bg-primary/90">
+                            Add
+                          </Button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <div className="hidden md:block">
+                <CarouselPrevious className="-left-4" />
+                <CarouselNext className="-right-4" />
+              </div>
+            </Carousel>
           )}
           
           <div className="mt-12 text-center">
