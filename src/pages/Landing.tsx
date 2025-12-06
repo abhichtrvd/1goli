@@ -40,7 +40,7 @@ export default function Landing() {
   return (
     <div className="bg-background min-h-screen">
       {/* Hero Section - Centered Search */}
-      <section className="pt-12 pb-16 md:pt-24 md:pb-24 px-4 bg-secondary/30">
+      <section className="pt-12 pb-16 md:pt-24 md:pb-24 px-4 bg-secondary">
         <div className="container max-w-6xl mx-auto">
           <div className="flex flex-col items-center text-center space-y-10">
             <motion.div
@@ -50,7 +50,7 @@ export default function Landing() {
               className="max-w-3xl mx-auto space-y-6"
             >
               <div className="relative max-w-2xl mx-auto w-full pb-6">
-                <div className="relative bg-white dark:bg-card shadow-xl rounded-2xl p-2 flex items-center border border-border/50">
+                <div className="relative bg-white dark:bg-card shadow-xl rounded-2xl p-2 flex items-center border border-border">
                   <Search className="ml-3 h-5 w-5 text-muted-foreground" />
                   <Input 
                     className="border-none shadow-none bg-transparent h-12 text-lg focus-visible:ring-0 placeholder:text-muted-foreground/70"
@@ -74,10 +74,10 @@ export default function Landing() {
               </p>
 
               <div className="flex flex-wrap justify-center gap-4 pt-2">
-                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground bg-white dark:bg-card px-4 py-2 rounded-full shadow-sm border border-border/50">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground bg-white dark:bg-card px-4 py-2 rounded-full shadow-sm border border-border">
                   <span className="h-2 w-2 rounded-full bg-[#A6FF00]" /> Genuine Medicines
                 </div>
-                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground bg-white dark:bg-card px-4 py-2 rounded-full shadow-sm border border-border/50">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground bg-white dark:bg-card px-4 py-2 rounded-full shadow-sm border border-border">
                   <span className="h-2 w-2 rounded-full bg-lime-600" /> Certified Homeopaths
                 </div>
               </div>
@@ -131,7 +131,7 @@ export default function Landing() {
               <motion.div
                 key={index}
                 whileHover={{ y: -5 }}
-                className="flex flex-col items-center gap-3 p-4 rounded-2xl bg-secondary/30 hover:bg-secondary/60 transition-colors cursor-pointer text-center"
+                className="flex flex-col items-center gap-3 p-4 rounded-2xl bg-secondary hover:bg-secondary transition-colors cursor-pointer text-center"
               >
                 <div className={`h-16 w-16 rounded-full flex items-center justify-center ${concern.color}`}>
                   {concern.icon}
@@ -144,7 +144,7 @@ export default function Landing() {
       </section>
 
       {/* Featured Brands */}
-      <section className="py-12 bg-secondary/30 border-y border-border/50">
+      <section className="py-12 bg-secondary border-y border-border">
         <div className="container max-w-6xl mx-auto px-4">
           <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-8">Featured Brands</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
@@ -152,7 +152,7 @@ export default function Landing() {
               <motion.div
                 key={index}
                 whileHover={{ scale: 1.05 }}
-                className="bg-white dark:bg-card p-6 rounded-2xl shadow-sm border border-border/50 flex items-center justify-center text-center hover:shadow-md transition-all cursor-pointer h-24"
+                className="bg-white dark:bg-card p-6 rounded-2xl shadow-sm border border-border flex items-center justify-center text-center hover:shadow-md transition-all cursor-pointer h-24"
               >
                 <span className="font-semibold text-muted-foreground hover:text-lime-600 transition-colors">{brand}</span>
               </motion.div>
@@ -162,7 +162,7 @@ export default function Landing() {
       </section>
 
       {/* Products Grid - Bento Style */}
-      <section id="products" className="py-20 bg-secondary/30">
+      <section id="products" className="py-20 bg-secondary">
         <div className="container max-w-6xl mx-auto px-4">
           <div className="mb-12 text-center md:text-left">
             <h3 className="text-3xl md:text-4xl font-semibold tracking-tight mb-2">
@@ -192,7 +192,7 @@ export default function Landing() {
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
-                  className="group relative bg-white dark:bg-card rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 cursor-pointer border border-border/50"
+                  className="group relative bg-white dark:bg-card rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 cursor-pointer border border-border"
                   onClick={() => navigate(`/product/${product._id}`)}
                 >
                   <div className="p-8 h-full flex flex-col">
@@ -206,7 +206,7 @@ export default function Landing() {
                       </p>
                     </div>
                     
-                    <div className="mt-auto relative aspect-square w-full flex items-center justify-center bg-secondary/30 rounded-2xl overflow-hidden mb-6">
+                    <div className="mt-auto relative aspect-square w-full flex items-center justify-center bg-secondary rounded-2xl overflow-hidden mb-6">
                       {product.imageUrl ? (
                         <img 
                           src={product.imageUrl} 
@@ -221,7 +221,7 @@ export default function Landing() {
                       )}
                     </div>
 
-                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-border/50">
+                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-border">
                       <span className="text-lg font-medium">From ${product.basePrice}</span>
                       <Button size="sm" className="rounded-full px-6 bg-primary text-primary-foreground hover:bg-primary/90">
                         Buy
@@ -236,7 +236,7 @@ export default function Landing() {
       </section>
 
       {/* Feature Section */}
-      <section className="py-24 bg-secondary/30">
+      <section className="py-24 bg-secondary">
         <div className="container max-w-5xl mx-auto px-4 text-center">
           <h3 className="text-4xl md:text-5xl font-semibold tracking-tight mb-6">
             Intelligent Homeopathy.

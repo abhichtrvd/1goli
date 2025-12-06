@@ -60,7 +60,7 @@ export function Navbar() {
   };
 
   return (
-    <nav className="sticky top-0 z-50 w-full bg-background/80 backdrop-blur-md border-b border-border/40">
+    <nav className="sticky top-0 z-50 w-full bg-background backdrop-blur-md border-b border-border/40">
       <div className="container max-w-7xl mx-auto flex h-14 items-center justify-between px-4">
         <div className="flex items-center gap-4 md:gap-8">
           <Sheet>
@@ -132,10 +132,10 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-2 md:gap-3">
-          <div className="hidden lg:flex items-center bg-secondary/50 rounded-full px-3 py-1.5 border border-transparent focus-within:border-primary/20 focus-within:bg-secondary transition-all w-64">
+          <div className="hidden lg:flex items-center bg-secondary rounded-full px-3 py-1.5 border border-transparent focus-within:border-primary/20 focus-within:bg-secondary transition-all w-64">
              <Search className="h-4 w-4 text-muted-foreground mr-2" />
              <input 
-               className="bg-transparent border-none outline-none text-sm w-full placeholder:text-muted-foreground/70"
+               className="border-none shadow-none bg-transparent h-12 text-lg focus-visible:ring-0 placeholder:text-muted-foreground/70"
                placeholder="Search for remedies..."
              />
           </div>

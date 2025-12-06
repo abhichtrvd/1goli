@@ -46,33 +46,33 @@
 :root {
   --radius: 1rem; /* More rounded, like Apple's UI */
   
-  /* Apple-like Color Palette */
+  /* Apple-like Color Palette - Refined for better contrast */
   --primary: #A6FF00; /* User requested green */
   --primary-foreground: #1d1d1f; /* Dark text for contrast */
   
-  --secondary: #f5f5f7; /* Apple Light Gray Background */
-  --secondary-foreground: #1d1d1f;
+  --secondary: #F8F8F8; /* Lightest grey background */
+  --secondary-foreground: #18181b;
 
   --background: #ffffff;
-  --foreground: #1d1d1f; /* Apple Dark Gray Text */
+  --foreground: #18181b; /* Zinc 900 */
   
   --card: #ffffff;
-  --card-foreground: #1d1d1f;
+  --card-foreground: #18181b;
   
   --popover: #ffffff;
-  --popover-foreground: #1d1d1f;
+  --popover-foreground: #18181b;
   
-  --muted: #f5f5f7;
-  --muted-foreground: #5c5c60; /* Darker for better contrast */
+  --muted: #F3F3F3; /* Slightly darker muted background */
+  --muted-foreground: #52525b; /* Zinc 600 - Readable grey text */
   
-  --accent: #f5f5f7;
-  --accent-foreground: #1d1d1f;
+  --accent: #f4f4f5;
+  --accent-foreground: #18181b;
   
-  --destructive: #ff3b30; /* Apple Red */
+  --destructive: #ef4444;
   --destructive-foreground: #ffffff;
   
-  --border: #d2d2d7;
-  --input: #d2d2d7;
+  --border: #E5E5E5; /* Visible border */
+  --input: #E5E5E5;
   --ring: #A6FF00;
   
   --chart-1: #A6FF00;
@@ -100,16 +100,16 @@
   --popover-foreground: #f5f5f7;
   --primary: #A6FF00; /* User requested green */
   --primary-foreground: #1d1d1f;
-  --secondary: #1d1d1f;
+  --secondary: #27272A; /* Zinc 800 */
   --secondary-foreground: #f5f5f7;
-  --muted: #1d1d1f;
-  --muted-foreground: #86868b;
+  --muted: #27272A; /* Zinc 800 */
+  --muted-foreground: #A1A1AA; /* Zinc 400 */
   --accent: #1d1d1f;
   --accent-foreground: #f5f5f7;
   --destructive: #ff453a;
   --destructive-foreground: #ffffff;
-  --border: #424245;
-  --input: #424245;
+  --border: #3F3F46; /* Zinc 700 */
+  --input: #3F3F46; /* Zinc 700 */
   --ring: #A6FF00;
 }
 
