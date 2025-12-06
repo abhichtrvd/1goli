@@ -162,7 +162,7 @@ export default function AdminOrders() {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="font-bold">${order.total.toFixed(2)}</TableCell>
+                  <TableCell className="font-bold">₹{order.total.toFixed(2)}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       {getStatusBadge(order.status)}
@@ -255,12 +255,12 @@ export default function AdminOrders() {
                                         <div className="text-xs text-muted-foreground">{item.potency} - {item.form}</div>
                                       </TableCell>
                                       <TableCell>{item.quantity}</TableCell>
-                                      <TableCell className="text-right">${(item.price * item.quantity).toFixed(2)}</TableCell>
+                                      <TableCell className="text-right">₹{(item.price * item.quantity).toFixed(2)}</TableCell>
                                     </TableRow>
                                   ))}
                                   <TableRow>
                                     <TableCell colSpan={2} className="font-bold text-right">Total</TableCell>
-                                    <TableCell className="font-bold text-right">${order.total.toFixed(2)}</TableCell>
+                                    <TableCell className="font-bold text-right">₹{order.total.toFixed(2)}</TableCell>
                                   </TableRow>
                                 </TableBody>
                               </Table>

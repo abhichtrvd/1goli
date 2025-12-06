@@ -79,7 +79,7 @@ export default function SearchResults() {
                   </div>
                   
                   <div className="flex items-center justify-between mt-auto pt-2 border-t border-border/50">
-                    <span className="text-sm font-medium text-lime-600">${product.basePrice}</span>
+                    <span className="text-sm font-medium text-lime-600">₹{product.basePrice}</span>
                     <Button size="icon" className="h-8 w-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm">
                       <ShoppingCart className="h-4 w-4" />
                     </Button>

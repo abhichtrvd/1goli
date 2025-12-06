@@ -250,7 +250,7 @@ export default function Landing() {
                         </div>
 
                         <div className="flex items-center justify-between mt-auto pt-2 border-t border-border/50">
-                          <span className="text-xs font-bold text-lime-600">${product.basePrice}</span>
+                          <span className="text-xs font-bold text-lime-600">₹{product.basePrice}</span>
                           <Button size="sm" className="rounded-full px-3 h-6 text-[10px] bg-primary text-primary-foreground hover:bg-primary/90">
                             Add
                           </Button>

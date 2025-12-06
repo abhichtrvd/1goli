@@ -266,7 +266,7 @@ export default function ProductDetails() {
                 <div className="pt-4 border-t flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">Total Price</p>
-                    <p className="text-3xl font-bold text-lime-600">${getPrice()}</p>
+                    <p className="text-3xl font-bold text-lime-600">₹{getPrice()}</p>
                   </div>
                 </div>
                 
@@ -290,7 +290,7 @@ export default function ProductDetails() {
         <div className="flex gap-4 items-center">
           <div className="flex-1">
             <p className="text-xs text-muted-foreground">Total</p>
-            <p className="text-xl font-bold text-lime-600">${getPrice()}</p>
+            <p className="text-xl font-bold text-lime-600">₹{getPrice()}</p>
           </div>
           <Button 
             className="flex-1 h-12" 
