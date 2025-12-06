@@ -11,13 +11,27 @@ import { Card, CardContent } from "@/components/ui/card";
 
 export default function Landing() {
   const [searchQuery, setSearchQuery] = useState("");
-  const products = useQuery(api.products.searchProducts, { query: searchQuery });
+  // Use empty query to get popular/all products initially or a specific "featured" query if available
+  // For now, we'll just fetch all (or a subset) for the "Popular" section without search filtering
+  const products = useQuery(api.products.searchProducts, { query: "" }); 
   const seed = useMutation(api.products.seedProducts);
   const navigate = useNavigate();
 
   useEffect(() => {
     seed();
   }, []);
+
+  const handleSearch = () => {
+    if (searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
 
   const healthConcerns = [
     { title: "Hair Fall", icon: <Activity className="h-6 w-6" />, color: "bg-orange-100 text-orange-600" },
@@ -57,8 +71,9 @@ export default function Landing() {
                     placeholder="Search for homeopathic remedies..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={handleKeyDown}
                   />
-                  <Button className="rounded-xl h-10 px-6" onClick={() => document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' })}>
+                  <Button className="rounded-xl h-10 px-6" onClick={handleSearch}>
                     Search
                   </Button>
                 </div>
@@ -166,7 +181,7 @@ export default function Landing() {
         <div className="container max-w-6xl mx-auto px-4">
           <div className="mb-12 text-center md:text-left">
             <h3 className="text-3xl md:text-4xl font-semibold tracking-tight mb-2">
-              {searchQuery ? "Search Results" : "Popular Homeopathic Remedies"}
+              Popular Homeopathic Remedies
             </h3>
             <p className="text-muted-foreground text-lg">
               Trusted formulations for your holistic health.
@@ -181,12 +196,11 @@ export default function Landing() {
             </div>
           ) : products.length === 0 ? (
             <div className="text-center py-20">
-              <p className="text-muted-foreground text-xl">No remedies found for "{searchQuery}".</p>
-              <Button variant="link" onClick={() => setSearchQuery("")} className="mt-4">Clear Search</Button>
+              <p className="text-muted-foreground text-xl">No remedies found.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {products.map((product, index) => (
+              {products.slice(0, 6).map((product, index) => (
                 <motion.div
                   key={product._id}
                   initial={{ opacity: 0, scale: 0.95 }}
@@ -232,6 +246,12 @@ export default function Landing() {
               ))}
             </div>
           )}
+          
+          <div className="mt-12 text-center">
+             <Button variant="outline" size="lg" className="rounded-full px-8" onClick={() => navigate('/search')}>
+               View All Remedies
+             </Button>
+          </div>
         </div>
       </section>
 

@@ -17,6 +17,7 @@ const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 const ProductDetails = lazy(() => import("./pages/ProductDetails.tsx"));
 const Cart = lazy(() => import("./pages/Cart.tsx"));
 const UploadPrescription = lazy(() => import("./pages/UploadPrescription.tsx"));
+const SearchResults = lazy(() => import("./pages/SearchResults.tsx"));
 
 // Admin Pages
 const AdminLayout = lazy(() => import("./components/AdminLayout.tsx"));
@@ -73,6 +74,7 @@ createRoot(document.getElementById("root")!).render(
             <Routes>
               <Route element={<Layout />}>
                 <Route path="/" element={<Landing />} />
+                <Route path="/search" element={<SearchResults />} />
                 <Route path="/product/:id" element={<ProductDetails />} />
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/upload" element={<UploadPrescription />} />

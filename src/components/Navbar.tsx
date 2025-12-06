@@ -40,6 +40,14 @@ export function Navbar() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const updateProfile = useMutation(api.users.updateCurrentUser);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+      setSearchQuery("");
+    }
+  };
 
   const handleUpdateProfile = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -145,6 +153,9 @@ export function Navbar() {
              <input 
                className="border-none shadow-none bg-transparent h-full w-full text-sm focus-visible:ring-0 placeholder:text-muted-foreground/70 focus:outline-none"
                placeholder="Search for remedies..."
+               value={searchQuery}
+               onChange={(e) => setSearchQuery(e.target.value)}
+               onKeyDown={handleSearch}
              />
           </div>
 
