@@ -189,9 +189,9 @@ export default function Landing() {
           </div>
 
           {products === undefined ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-[400px] bg-muted animate-pulse rounded-3xl" />
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-[280px] bg-muted animate-pulse rounded-2xl" />
               ))}
             </div>
           ) : products.length === 0 ? (
@@ -199,45 +199,45 @@ export default function Landing() {
               <p className="text-muted-foreground text-xl">No remedies found.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {products.slice(0, 6).map((product, index) => (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {products.slice(0, 12).map((product, index) => (
                 <motion.div
                   key={product._id}
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                  className="group relative bg-white dark:bg-card rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 cursor-pointer border border-border"
+                  transition={{ duration: 0.5, delay: index * 0.05 }}
+                  className="group relative bg-white dark:bg-card rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer border border-border"
                   onClick={() => navigate(`/product/${product._id}`)}
                 >
-                  <div className="p-8 h-full flex flex-col">
-                    <div className="mb-6">
-                      <Badge variant="secondary" className="mb-3 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-full px-3 font-normal">
+                  <div className="p-4 h-full flex flex-col">
+                    <div className="mb-3">
+                      <Badge variant="secondary" className="mb-2 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-md px-2 py-0.5 text-[10px] font-normal">
                         New
                       </Badge>
-                      <h4 className="text-2xl font-semibold mb-2 group-hover:text-primary transition-colors">{product.name}</h4>
-                      <p className="text-muted-foreground line-clamp-2 text-sm leading-relaxed">
+                      <h4 className="text-base font-semibold mb-1 group-hover:text-primary transition-colors line-clamp-1" title={product.name}>{product.name}</h4>
+                      <p className="text-muted-foreground line-clamp-2 text-xs leading-relaxed h-8">
                         {product.description}
                       </p>
                     </div>
                     
-                    <div className="mt-auto relative aspect-square w-full flex items-center justify-center bg-secondary rounded-2xl overflow-hidden mb-6">
+                    <div className="mt-auto relative aspect-square w-full flex items-center justify-center bg-secondary rounded-xl overflow-hidden mb-3">
                       {product.imageUrl ? (
                         <img 
                           src={product.imageUrl} 
                           alt={product.name}
-                          className="w-full h-full object-cover mix-blend-multiply dark:mix-blend-normal transition-transform duration-700 group-hover:scale-105"
+                          className="w-full h-full object-cover mix-blend-multiply dark:mix-blend-normal transition-transform duration-500 group-hover:scale-105"
                         />
                       ) : (
                         <div className="flex flex-col items-center justify-center text-muted-foreground/50">
-                          <Activity className="h-12 w-12 mb-2" />
-                          <span className="text-sm">No Image</span>
+                          <Activity className="h-8 w-8 mb-1" />
+                          <span className="text-xs">No Image</span>
                         </div>
                       )}
                     </div>
 
-                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-border">
-                      <span className="text-lg font-medium">From ${product.basePrice}</span>
-                      <Button size="sm" className="rounded-full px-6 bg-primary text-primary-foreground hover:bg-primary/90">
+                    <div className="flex items-center justify-between mt-auto pt-3 border-t border-border/50">
+                      <span className="text-sm font-medium text-lime-600">${product.basePrice}</span>
+                      <Button size="sm" className="rounded-full px-4 h-8 text-xs bg-primary text-primary-foreground hover:bg-primary/90">
                         Buy
                       </Button>
                     </div>
