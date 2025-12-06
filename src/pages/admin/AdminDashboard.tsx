@@ -263,7 +263,7 @@ export default function AdminDashboard() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${metrics?.totalRevenue.toFixed(2) || "0.00"}</div>
+            <div className="text-2xl font-bold">₹{metrics?.totalRevenue.toFixed(2) || "0.00"}</div>
             {metrics && <PercentBadge value={metrics.revenueChange} />}
           </CardContent>
         </Card>
@@ -294,7 +294,7 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${metrics?.avgOrderValue.toFixed(2) || "0.00"}
+              ₹{metrics?.avgOrderValue.toFixed(2) || "0.00"}
             </div>
             <p className="text-xs text-muted-foreground">Per order average</p>
           </CardContent>
@@ -343,7 +343,7 @@ export default function AdminDashboard() {
                 <YAxis 
                   tickLine={false} 
                   axisLine={false} 
-                  tickFormatter={(value) => chartMetric === "revenue" ? `$${value}` : value.toString()} 
+                  tickFormatter={(value) => chartMetric === "revenue" ? `₹${value}` : value.toString()} 
                 />
                 <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
                 <Area 
@@ -455,7 +455,7 @@ export default function AdminDashboard() {
                   {outOfStockProducts.map(p => (
                     <div key={p._id} className="text-xs flex justify-between items-center bg-destructive/10 p-2 rounded">
                       <span className="truncate max-w-[150px]">{p.name}</span>
-                      <span className="font-mono text-destructive">${p.basePrice}</span>
+                      <span className="font-mono text-destructive">₹{p.basePrice}</span>
                     </div>
                   ))}
                 </div>
@@ -493,7 +493,7 @@ export default function AdminDashboard() {
                     }`}>
                       {order.status}
                     </div>
-                    <div className="font-medium">${order.total.toFixed(2)}</div>
+                    <div className="font-medium">₹{order.total.toFixed(2)}</div>
                   </div>
                 </div>
               ))}
@@ -518,7 +518,7 @@ export default function AdminDashboard() {
                     </div>
                     <div className="flex-1 space-y-1">
                       <p className="text-sm font-medium leading-none truncate">{product.name}</p>
-                      <p className="text-xs text-muted-foreground">{product.sales} sold • ${product.revenue.toFixed(2)} rev</p>
+                      <p className="text-xs text-muted-foreground">{product.sales} sold • ₹{product.revenue.toFixed(2)} rev</p>
                     </div>
                   </div>
                 ))

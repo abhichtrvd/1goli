@@ -393,8 +393,8 @@ export default function AdminProducts() {
                   <Input id="name" name="name" required defaultValue={editingProduct?.name} placeholder="e.g. Arnica Montana" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="basePrice">Base Price ($)</Label>
-                  <Input id="basePrice" name="basePrice" type="number" step="0.01" required defaultValue={editingProduct?.basePrice} placeholder="12.99" />
+                  <Label htmlFor="basePrice">Base Price (₹)</Label>
+                  <Input id="basePrice" name="basePrice" type="number" step="0.01" required defaultValue={editingProduct?.basePrice} placeholder="1299" />
                 </div>
               </div>
 
@@ -662,7 +662,7 @@ export default function AdminProducts() {
                   <div>
                     <h2 className="text-2xl font-bold">{viewingProduct.name}</h2>
                     <div className="flex items-center gap-2 mt-2">
-                      <p className="text-2xl font-semibold text-primary">${viewingProduct.basePrice}</p>
+                      <p className="text-2xl font-semibold text-primary">₹{viewingProduct.basePrice}</p>
                       {viewingProduct.availability === "out_of_stock" && (
                         <Badge variant="destructive">Out of Stock</Badge>
                       )}
@@ -842,7 +842,7 @@ export default function AdminProducts() {
                   <TableCell>
                     <Badge variant="outline" className="font-normal">{product.category || "Classical"}</Badge>
                   </TableCell>
-                  <TableCell>${product.basePrice}</TableCell>
+                  <TableCell>₹{product.basePrice}</TableCell>
                   <TableCell>
                     {product.availability === "out_of_stock" ? (
                       <Badge variant="destructive" className="text-[10px]">Out of Stock</Badge>
