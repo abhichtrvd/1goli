@@ -422,28 +422,26 @@ export default function AdminDashboard() {
             <CardDescription>Stock status overview</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <div className="h-[200px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={inventoryData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
-                  >
-                    {inventoryData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                  <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                  <Legend verticalAlign="bottom" height={36}/>
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+            <ChartContainer config={{}} className="h-[200px] w-full">
+              <PieChart>
+                <Pie
+                  data={inventoryData}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={5}
+                >
+                  {inventoryData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Pie>
+                <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                <Legend verticalAlign="bottom" height={36}/>
+              </PieChart>
+            </ChartContainer>
             
             {outOfStockProducts.length > 0 && (
               <div className="mt-2 space-y-2">
