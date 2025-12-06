@@ -71,7 +71,7 @@ export default function Landing() {
               className="max-w-3xl mx-auto space-y-6"
             >
               <div className="relative max-w-2xl mx-auto w-full pb-6">
-                <div className="relative bg-white dark:bg-card shadow-xl rounded-2xl p-2 flex items-center border border-border">
+                <div className="relative bg-white dark:bg-card shadow-[0_10px_40px_-10px_rgba(166,255,0,0.5)] rounded-2xl p-2 flex items-center border border-border">
                   <Search className="ml-3 h-5 w-5 text-muted-foreground" />
                   <Input 
                     className="border-none shadow-none bg-transparent h-12 text-lg focus-visible:ring-0 placeholder:text-muted-foreground/70"
