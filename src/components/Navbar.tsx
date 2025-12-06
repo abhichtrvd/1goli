@@ -1,5 +1,5 @@
 import { useAuth } from "@/hooks/use-auth";
-import { Menu, ShoppingBag, User, LogOut, Search, FileText, Activity, Stethoscope, Package, Settings, Loader2 } from "lucide-react";
+import { Menu, ShoppingBag, User, LogOut, Search, FileText, Activity, Stethoscope, Package, Settings, Loader2, LayoutDashboard } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import { Button } from "./ui/button";
 import {
@@ -92,6 +92,14 @@ export function Navbar() {
                 <div className="h-px bg-border/50 my-2" />
                 {isAuthenticated ? (
                   <>
+                    {user?.role === "admin" && (
+                      <Link
+                        to="/admin"
+                        className="text-lg font-medium text-left hover:text-lime-600 transition-colors flex items-center gap-3"
+                      >
+                        <LayoutDashboard className="h-5 w-5" /> Admin Dashboard
+                      </Link>
+                    )}
                     <button
                       onClick={() => setIsProfileOpen(true)}
                       className="text-lg font-medium text-left hover:text-lime-600 transition-colors flex items-center gap-3"
@@ -173,6 +181,15 @@ export function Navbar() {
                   </div>
                 </div>
                 <DropdownMenuSeparator />
+                {user?.role === "admin" && (
+                  <>
+                    <DropdownMenuItem onClick={() => navigate("/admin")}>
+                      <LayoutDashboard className="mr-2 h-4 w-4" />
+                      Admin Dashboard
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
                 <DropdownMenuItem onClick={() => setIsProfileOpen(true)}>
                   <Settings className="mr-2 h-4 w-4" />
                   Profile Settings
