@@ -17,7 +17,8 @@ import {
   CheckCircle2,
   CreditCard,
   Banknote,
-  Search
+  Search,
+  ArrowRight
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -47,15 +48,9 @@ const initialForm = {
 
 export default function ConsultHomeopath() {
   const [citySearch, setCitySearch] = useState("");
-  const [debouncedCity, setDebouncedCity] = useState("");
-
-  // Debounce search
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedCity(citySearch), 500);
-    return () => clearTimeout(timer);
-  }, [citySearch]);
-
-  const doctors = useQuery(api.consultations.listDoctors, { city: debouncedCity });
+  
+  // Fetch all doctors without filtering by city on the backend
+  const doctors = useQuery(api.consultations.listDoctors, {});
   const seedDoctors = useMutation(api.consultations.seedDoctors);
   const bookAppointment = useMutation(api.consultations.bookAppointment);
   
@@ -127,6 +122,11 @@ export default function ConsultHomeopath() {
     return <div className="min-h-screen flex items-center justify-center">Loading doctors...</div>;
   }
 
+  // Client-side filtering for search results
+  const searchResults = citySearch.trim() 
+    ? doctors.filter(d => d.clinicCity.toLowerCase().includes(citySearch.toLowerCase()))
+    : [];
+
   return (
     <div className="bg-gradient-to-b from-background via-secondary/30 to-background text-foreground min-h-screen">
       <section className="container max-w-7xl mx-auto px-4 py-8">
@@ -141,102 +141,58 @@ export default function ConsultHomeopath() {
 
         {/* Search Bar */}
         <div className="max-w-md mx-auto mb-10 relative">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="relative flex items-center">
+            <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
             <Input 
               placeholder="Search by City (e.g. Hyderabad, Mumbai)..." 
-              className="pl-9 h-12 rounded-full shadow-sm border-lime-200 focus-visible:ring-lime-500 bg-white dark:bg-secondary/50"
+              className="pl-9 pr-24 h-12 rounded-full shadow-sm border-lime-200 focus-visible:ring-lime-500 bg-white dark:bg-secondary/50"
               value={citySearch}
               onChange={(e) => setCitySearch(e.target.value)}
             />
+            <Button 
+              size="sm" 
+              className="absolute right-1.5 h-9 rounded-full bg-[#A6FF00] text-black hover:bg-[#98f000] font-medium px-4"
+              onClick={() => {}} // Search is real-time, button is mostly visual/UX
+            >
+              Search
+            </Button>
           </div>
         </div>
 
+        {/* Search Results Section - Only visible when searching */}
+        {citySearch.trim() && (
+          <div className="mb-12">
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold tracking-tight flex items-center gap-2">
+                Doctors in "{citySearch}"
+              </h2>
+            </div>
+            
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {searchResults.length === 0 ? (
+                <div className="col-span-full text-center py-8 text-muted-foreground bg-secondary/20 rounded-xl border border-dashed">
+                  No doctors found in "{citySearch}". Check out our suggested doctors below.
+                </div>
+              ) : (
+                searchResults.map((doctor) => (
+                  <DoctorCard key={`search-${doctor._id}`} doctor={doctor} onBook={() => handleBookClick(doctor)} />
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Suggested Doctors Section - Always Visible */}
         <div className="mb-6">
           <h2 className="text-xl font-semibold tracking-tight flex items-center gap-2">
-            {debouncedCity ? `Doctors in "${debouncedCity}"` : "Suggested Doctors"}
+            Suggested Doctors
           </h2>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {doctors.length === 0 ? (
-            <div className="col-span-full text-center py-12 text-muted-foreground">
-              No doctors found in this city. Try searching for another location.
-            </div>
-          ) : (
-            doctors.map((doctor) => (
-              <motion.div
-                key={doctor._id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
-              >
-                <Card className="h-full flex flex-col overflow-hidden hover:shadow-md transition-shadow border-border/60">
-                  <div className="relative h-32 bg-secondary/50">
-                    <img 
-                      src={doctor.imageUrl} 
-                      alt={doctor.name} 
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute top-2 right-2">
-                      <Badge className="bg-white/90 text-black hover:bg-white shadow-sm text-[10px] px-1.5 h-5">
-                        <Star className="h-3 w-3 text-amber-500 mr-1 fill-amber-500" />
-                        {doctor.rating}
-                      </Badge>
-                    </div>
-                  </div>
-                  <CardHeader className="p-3 pb-1">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="text-base leading-tight">{doctor.name}</CardTitle>
-                        <CardDescription className="text-lime-600 font-medium mt-0.5 text-[10px]">
-                          {doctor.specialization}
-                        </CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-3 pt-0 space-y-2 flex-1">
-                    <p className="text-[10px] text-muted-foreground line-clamp-2">
-                      {doctor.bio}
-                    </p>
-                    
-                    <div className="grid grid-cols-2 gap-1 text-[10px]">
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <CalendarDays className="h-3 w-3" />
-                        <span>{doctor.experienceYears}+ Years</span>
-                      </div>
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <Users className="h-3 w-3" />
-                        <span>{doctor.totalConsultations}+</span>
-                      </div>
-                      <div className="flex items-center gap-1 text-muted-foreground col-span-2">
-                        <MapPin className="h-3 w-3" />
-                        <span className="truncate">{doctor.clinicCity}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-1 pt-1">
-                      {doctor.services.slice(0, 2).map((service: string) => (
-                        <Badge key={service} variant="secondary" className="text-[9px] font-normal px-1.5 h-4">
-                          {service}
-                        </Badge>
-                      ))}
-                      {doctor.services.length > 2 && (
-                        <Badge variant="secondary" className="text-[9px] font-normal px-1.5 h-4">
-                          +{doctor.services.length - 2}
-                        </Badge>
-                      )}
-                    </div>
-                  </CardContent>
-                  <CardFooter className="p-3 pt-0">
-                    <Button size="sm" className="w-full bg-[#A6FF00] text-black hover:bg-[#98f000] h-8 text-[10px] font-semibold" onClick={() => handleBookClick(doctor)}>
-                      Book Appointment
-                    </Button>
-                  </CardFooter>
-                </Card>
-              </motion.div>
-            ))
-          )}
+          {doctors.map((doctor) => (
+            <DoctorCard key={doctor._id} doctor={doctor} onBook={() => handleBookClick(doctor)} />
+          ))}
         </div>
       </section>
 
@@ -343,5 +299,80 @@ export default function ConsultHomeopath() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// Extracted Doctor Card Component for reuse
+function DoctorCard({ doctor, onBook }: { doctor: any, onBook: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+    >
+      <Card className="h-full flex flex-col overflow-hidden hover:shadow-md transition-shadow border-border/60">
+        <div className="relative h-32 bg-secondary/50">
+          <img 
+            src={doctor.imageUrl} 
+            alt={doctor.name} 
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute top-2 right-2">
+            <Badge className="bg-white/90 text-black hover:bg-white shadow-sm text-[10px] px-1.5 h-5">
+              <Star className="h-3 w-3 text-amber-500 mr-1 fill-amber-500" />
+              {doctor.rating}
+            </Badge>
+          </div>
+        </div>
+        <CardHeader className="p-3 pb-1">
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle className="text-base leading-tight">{doctor.name}</CardTitle>
+              <CardDescription className="text-lime-600 font-medium mt-0.5 text-[10px]">
+                {doctor.specialization}
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-3 pt-0 space-y-2 flex-1">
+          <p className="text-[10px] text-muted-foreground line-clamp-2">
+            {doctor.bio}
+          </p>
+          
+          <div className="grid grid-cols-2 gap-1 text-[10px]">
+            <div className="flex items-center gap-1 text-muted-foreground">
+              <CalendarDays className="h-3 w-3" />
+              <span>{doctor.experienceYears}+ Years</span>
+            </div>
+            <div className="flex items-center gap-1 text-muted-foreground">
+              <Users className="h-3 w-3" />
+              <span>{doctor.totalConsultations}+</span>
+            </div>
+            <div className="flex items-center gap-1 text-muted-foreground col-span-2">
+              <MapPin className="h-3 w-3" />
+              <span className="truncate">{doctor.clinicCity}</span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-1 pt-1">
+            {doctor.services.slice(0, 2).map((service: string) => (
+              <Badge key={service} variant="secondary" className="text-[9px] font-normal px-1.5 h-4">
+                {service}
+              </Badge>
+            ))}
+            {doctor.services.length > 2 && (
+              <Badge variant="secondary" className="text-[9px] font-normal px-1.5 h-4">
+                +{doctor.services.length - 2}
+              </Badge>
+            )}
+          </div>
+        </CardContent>
+        <CardFooter className="p-3 pt-0">
+          <Button size="sm" className="w-full bg-[#A6FF00] text-black hover:bg-[#98f000] h-8 text-[10px] font-semibold" onClick={onBook}>
+            Book Appointment
+          </Button>
+        </CardFooter>
+      </Card>
+    </motion.div>
   );
 }
