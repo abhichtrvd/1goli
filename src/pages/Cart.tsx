@@ -1,4 +1,3 @@
-import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery, useMutation } from "convex/react";
@@ -78,8 +77,6 @@ export default function Cart() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
-      
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold">Your Cart</h1>
