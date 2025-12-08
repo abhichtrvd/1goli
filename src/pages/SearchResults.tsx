@@ -3,25 +3,96 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Activity, ShoppingCart } from "lucide-react";
+import { Activity, ShoppingCart, Filter, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { Navbar } from "@/components/Navbar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const CATEGORIES = [
+  "Dilution",
+  "Mother Tincture",
+  "Biochemics",
+  "Bio Combinations",
+  "Triturations",
+  "Patent",
+  "Cosmetics"
+];
 
 export default function SearchResults() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get("q") || "";
+  const category = searchParams.get("category") || undefined;
   const navigate = useNavigate();
   
-  const products = useQuery(api.products.searchProducts, { query });
+  const products = useQuery(api.products.searchProducts, { query, category });
+
+  const handleCategoryChange = (value: string) => {
+    const newParams = new URLSearchParams(searchParams);
+    if (value === "all") {
+      newParams.delete("category");
+    } else {
+      newParams.set("category", value);
+    }
+    setSearchParams(newParams);
+  };
+
+  const clearFilters = () => {
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete("category");
+    newParams.delete("q");
+    setSearchParams(newParams);
+  };
 
   return (
     <div className="min-h-screen bg-background">
       <div className="container max-w-6xl mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight mb-2">Search Results</h1>
-          <p className="text-muted-foreground">
-            Showing results for "<span className="font-medium text-foreground">{query}</span>"
-          </p>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight mb-2">
+              {category ? `${category} Remedies` : "Search Results"}
+            </h1>
+            <p className="text-muted-foreground">
+              {query && (
+                <span>
+                  Results for "<span className="font-medium text-foreground">{query}</span>"
+                </span>
+              )}
+              {query && category && <span> in </span>}
+              {category && (
+                <span className="font-medium text-foreground">{category}</span>
+              )}
+              {!query && !category && "Showing all products"}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Select value={category || "all"} onValueChange={handleCategoryChange}>
+              <SelectTrigger className="w-[180px]">
+                <Filter className="w-4 h-4 mr-2 text-muted-foreground" />
+                <SelectValue placeholder="Filter by Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {CATEGORIES.map((cat) => (
+                  <SelectItem key={cat} value={cat}>
+                    {cat}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            {(query || category) && (
+              <Button variant="ghost" size="icon" onClick={clearFilters} title="Clear filters">
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
 
         {products === undefined ? (
@@ -35,10 +106,10 @@ export default function SearchResults() {
             <Activity className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-xl font-semibold mb-2">No remedies found</h3>
             <p className="text-muted-foreground mb-6">
-              We couldn't find any products matching "{query}".
+              We couldn't find any products matching your criteria.
             </p>
-            <Button onClick={() => navigate("/")} variant="outline">
-              Back to Home
+            <Button onClick={clearFilters} variant="outline">
+              Clear Filters
             </Button>
           </div>
         ) : (

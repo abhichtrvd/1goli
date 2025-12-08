@@ -47,7 +47,10 @@ export const getProduct = query({
 });
 
 export const searchProducts = query({
-  args: { query: v.string() },
+  args: { 
+    query: v.optional(v.string()),
+    category: v.optional(v.string())
+  },
   handler: async (ctx, args) => {
     // Simple search implementation
     // In a real app, we would use ctx.db.query("products").withSearchIndex(...)
@@ -57,9 +60,19 @@ export const searchProducts = query({
     const products = await ctx.db.query("products").collect();
     
     let filtered = products;
+
+    if (args.category) {
+      filtered = filtered.filter((p) => {
+        if (args.category === "Cosmetics") {
+          return p.category === "Cosmetics" || p.category === "Personal Care";
+        }
+        return p.category === args.category;
+      });
+    }
+
     if (args.query) {
       const lowerQuery = args.query.toLowerCase();
-      filtered = products.filter((product) => {
+      filtered = filtered.filter((product) => {
         const nameMatch = product.name.toLowerCase().includes(lowerQuery);
         const tagMatch = product.symptomsTags.some(tag => tag.toLowerCase().includes(lowerQuery));
         const descMatch = product.description.toLowerCase().includes(lowerQuery);
