@@ -90,16 +90,10 @@ export default function Wholesale() {
     seed();
   }, []);
 
-  if (products === undefined) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-lime-600" />
-      </div>
-    );
-  }
-
   // Group products by Brand -> Category
   const groupedProducts = useMemo(() => {
+    if (!products) return {};
+
     const filteredProducts = products.filter(product => 
       product.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
     );
@@ -124,8 +118,16 @@ export default function Wholesale() {
       }
 
       return acc;
-    }, {} as Record<string, Record<string, typeof products>>);
+    }, {} as Record<string, Record<string, any[]>>);
   }, [products, debouncedSearchQuery, selectedCategory]);
+
+  if (products === undefined) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-lime-600" />
+      </div>
+    );
+  }
 
   const handleQuantityChange = (productId: string, delta: number) => {
     setQuantities(prev => {
@@ -303,30 +305,30 @@ export default function Wholesale() {
                                                         <SelectTrigger className="h-9 text-xs">
                                                             <SelectValue placeholder="Select Potency" />
                                                         </SelectTrigger>
-                                                        <SelectContent>
-                                                            {availablePotencies.map(p => (
-                                                                <SelectItem key={p} value={p} className="text-xs">{p}</SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                            )}
-
-                                            {/* Packing Size Selection */}
-                                            <div className="space-y-1 col-span-1">
-                                                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Pack Size</span>
-                                                <Select 
-                                                    value={selection.packingSize || availablePackingSizes[0]} 
-                                                    onValueChange={(val) => handleSelectionChange(product._id, 'packingSize', val)}
-                                                >
-                                                    <SelectTrigger className="h-9 text-xs">
-                                                        <SelectValue placeholder="Select Size" />
-                                                    </SelectTrigger>
                                                     <SelectContent>
-                                                        {availablePackingSizes.map(s => (
-                                                            <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>
+                                                        {availablePotencies.map((p: string) => (
+                                                            <SelectItem key={p} value={p} className="text-xs">{p}</SelectItem>
                                                         ))}
                                                     </SelectContent>
+                                                </Select>
+                                            </div>
+                                        )}
+
+                                        {/* Packing Size Selection */}
+                                        <div className="space-y-1 col-span-1">
+                                            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Pack Size</span>
+                                            <Select 
+                                                value={selection.packingSize || availablePackingSizes[0]} 
+                                                onValueChange={(val) => handleSelectionChange(product._id, 'packingSize', val)}
+                                            >
+                                                <SelectTrigger className="h-9 text-xs">
+                                                    <SelectValue placeholder="Select Size" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {availablePackingSizes.map((s: string) => (
+                                                        <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
                                                 </Select>
                                             </div>
                                         </div>
