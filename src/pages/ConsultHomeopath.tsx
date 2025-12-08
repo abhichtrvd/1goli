@@ -159,18 +159,11 @@ export default function ConsultHomeopath() {
             <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
             <Input 
               placeholder="Search by City (e.g. Hyderabad, Mumbai)..." 
-              className="pl-9 pr-24 h-12 rounded-full shadow-sm border-lime-200 focus-visible:ring-lime-500 bg-white dark:bg-secondary/50"
+              className="pl-9 pr-4 h-12 rounded-full shadow-sm border-lime-200 focus-visible:ring-lime-500 bg-white dark:bg-secondary/50"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyDown={handleKeyDown}
             />
-            <Button 
-              size="sm" 
-              className="absolute right-1.5 h-9 rounded-full bg-[#A6FF00] text-black hover:bg-[#98f000] font-medium px-4"
-              onClick={handleSearch}
-            >
-              Search
-            </Button>
           </div>
         </div>
 
