@@ -20,6 +20,7 @@ import {
   Search,
   ArrowRight
 } from "lucide-react";
+import { useDebounce } from "@/hooks/use-debounce";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -48,10 +49,16 @@ const initialForm = {
 
 export default function ConsultHomeopath() {
   const [searchInput, setSearchInput] = useState("");
-  const [executedSearch, setExecutedSearch] = useState("");
+  const debouncedSearch = useDebounce(searchInput, 500);
   
-  // Fetch all doctors without filtering by city on the backend
-  const doctors = useQuery(api.consultations.listDoctors, {});
+  // Fetch suggested doctors (always visible)
+  const suggestedDoctors = useQuery(api.consultations.listDoctors, {});
+  
+  // Fetch search results from backend based on debounced search
+  const searchResults = useQuery(api.consultations.listDoctors, { 
+    city: debouncedSearch.trim() ? debouncedSearch : undefined 
+  });
+
   const seedDoctors = useMutation(api.consultations.seedDoctors);
   const bookAppointment = useMutation(api.consultations.bookAppointment);
   
@@ -78,8 +85,9 @@ export default function ConsultHomeopath() {
     setShowBookingDialog(true);
   };
 
+  // Search is now handled via debounce, but we keep this for the button to perhaps focus or just visual
   const handleSearch = () => {
-    setExecutedSearch(searchInput);
+    // Optional: Force immediate search or just let debounce handle it
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -129,14 +137,9 @@ export default function ConsultHomeopath() {
     }
   };
 
-  if (doctors === undefined) {
+  if (suggestedDoctors === undefined) {
     return <div className="min-h-screen flex items-center justify-center">Loading doctors...</div>;
   }
-
-  // Client-side filtering for search results
-  const searchResults = executedSearch.trim() 
-    ? doctors.filter(d => d.clinicCity.toLowerCase().includes(executedSearch.toLowerCase()))
-    : [];
 
   return (
     <div className="bg-gradient-to-b from-background via-secondary/30 to-background text-foreground min-h-screen">
@@ -172,18 +175,20 @@ export default function ConsultHomeopath() {
         </div>
 
         {/* Search Results Section - Only visible when searching */}
-        {executedSearch.trim() && (
+        {debouncedSearch.trim() && (
           <div className="mb-12">
             <div className="mb-6">
               <h2 className="text-xl font-semibold tracking-tight flex items-center gap-2">
-                Doctors in "{executedSearch}"
+                Doctors in "{debouncedSearch}"
               </h2>
             </div>
             
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {searchResults.length === 0 ? (
+              {searchResults === undefined ? (
+                 <div className="col-span-full text-center py-8 text-muted-foreground">Searching...</div>
+              ) : searchResults.length === 0 ? (
                 <div className="col-span-full text-center py-8 text-muted-foreground bg-secondary/20 rounded-xl border border-dashed">
-                  No doctors found in "{executedSearch}". Check out our suggested doctors below.
+                  No doctors found in "{debouncedSearch}". Check out our suggested doctors below.
                 </div>
               ) : (
                 searchResults.map((doctor) => (
@@ -202,7 +207,7 @@ export default function ConsultHomeopath() {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {doctors.map((doctor) => (
+          {suggestedDoctors.map((doctor) => (
             <DoctorCard key={doctor._id} doctor={doctor} onBook={() => handleBookClick(doctor)} />
           ))}
         </div>
