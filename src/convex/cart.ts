@@ -11,7 +11,7 @@ export const getCart = query({
     const cartItems = await ctx.db
       .query("cartItems")
       .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
+      .take(100);
 
     const itemsWithDetails = await Promise.all(
       cartItems.map(async (item) => {
@@ -38,18 +38,16 @@ export const addToCart = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
-    // Check if item already exists with same potency and form
-    const existing = await ctx.db
+    const [existing] = await ctx.db
       .query("cartItems")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .filter((q) => 
-        q.and(
-          q.eq(q.field("productId"), args.productId),
-          q.eq(q.field("potency"), args.potency),
-          q.eq(q.field("form"), args.form)
-        )
+      .withIndex("by_user_product_variant", (q) =>
+        q
+          .eq("userId", userId)
+          .eq("productId", args.productId)
+          .eq("potency", args.potency)
+          .eq("form", args.form)
       )
-      .first();
+      .take(1);
 
     if (existing) {
       await ctx.db.patch(existing._id, {
@@ -101,13 +99,17 @@ export const clearCart = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
-    const items = await ctx.db
-      .query("cartItems")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
+    while (true) {
+      const batch = await ctx.db
+        .query("cartItems")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .take(100);
 
-    for (const item of items) {
-      await ctx.db.delete(item._id);
+      if (batch.length === 0) break;
+
+      for (const item of batch) {
+        await ctx.db.delete(item._id);
+      }
     }
   },
 });

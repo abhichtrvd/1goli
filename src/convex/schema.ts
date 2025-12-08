@@ -64,12 +64,14 @@ const schema = defineSchema(
       }),
 
     cartItems: defineTable({
-      userId: v.string(), // We'll use the auth user ID
+      userId: v.string(),
       productId: v.id("products"),
       potency: v.string(),
       form: v.string(),
       quantity: v.number(),
-    }).index("by_user", ["userId"]),
+    })
+      .index("by_user", ["userId"])
+      .index("by_user_product_variant", ["userId", "productId", "potency", "form"]),
 
     orders: defineTable({
       userId: v.string(),
