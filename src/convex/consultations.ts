@@ -3,9 +3,15 @@ import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
 export const listDoctors = query({
-  args: {},
-  handler: async (ctx) => {
-    return await ctx.db.query("consultationDoctors").collect();
+  args: { city: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const doctors = await ctx.db.query("consultationDoctors").collect();
+    if (args.city) {
+      const searchCity = args.city.toLowerCase().trim();
+      if (!searchCity) return doctors;
+      return doctors.filter((d) => d.clinicCity.toLowerCase().includes(searchCity));
+    }
+    return doctors;
   },
 });
 
@@ -20,7 +26,7 @@ export const seedDoctors = mutation({
         name: "Dr. Ananya Rao",
         credentials: "MD (Hom), Senior Consultant",
         specialization: "Chronic Lifestyle Conditions",
-        bio: "Holistic care for chronic lifestyle conditions, skin, respiratory and hormonal health. Inspired by Lybrate’s structured experience.",
+        bio: "Holistic care for chronic lifestyle conditions, skin, respiratory and hormonal health. Inspired by Lybrate's structured experience.",
         experienceYears: 14,
         rating: 4.9,
         totalConsultations: 12000,
