@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -9,11 +9,12 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { Minus, Plus, ShoppingCart, Loader2, Search, Filter } from "lucide-react";
+import { Minus, Plus, ShoppingCart, Loader2, Search, Filter, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { useDebounce } from "@/hooks/use-debounce";
 
 // Categories as requested
 const CATEGORIES = [
@@ -29,12 +30,53 @@ const CATEGORIES = [
 // Specific potencies for Dilutions as requested
 const DILUTION_POTENCIES = ["1x", "2x", "3x", "6ch", "30ch", "200ch", "1000ch", "1m", "lm", "cm"];
 
+// Helper to determine product category with refined logic
+const getProductCategory = (product: any) => {
+  // 1. Explicit Category Matches
+  if (product.category === "Patent") return "Patent";
+  if (product.category === "Biochemics") return "Biochemics";
+  if (product.category === "Bio Combinations") return "Bio Combinations";
+  if (product.category === "Personal Care" || product.category === "Cosmetics") return "Cosmetics";
+
+  // 2. Form/Potency based classification (mostly for "Classical" or undefined categories)
+  const forms = product.forms || [];
+  const potencies = product.potencies || [];
+  const name = product.name || "";
+
+  // Mother Tincture
+  if (potencies.includes("Mother Tincture") || potencies.includes("Q") || forms.includes("Mother Tincture")) {
+      return "Mother Tincture";
+  }
+
+  // Dilutions (C, M, LM potencies or explicit form)
+  if (forms.includes("Dilution") || potencies.some((p: string) => /^\d+(C|M|LM|K)/i.test(p))) {
+      return "Dilution";
+  }
+
+  // Triturations (X potencies often, Tablets)
+  if (forms.includes("Trituration") || forms.includes("Tablets")) {
+      // Check if it looks like a Biochemic (Calcarea, etc) but doesn't have the category set
+      if (name.toLowerCase().includes("calcarea") || name.toLowerCase().includes("ferrum") || name.toLowerCase().includes("kali") || name.toLowerCase().includes("magnesia") || name.toLowerCase().includes("natrum") || name.toLowerCase().includes("silicea")) {
+           return "Biochemics";
+      }
+      return "Triturations";
+  }
+
+  // Fallbacks
+  if (name.toLowerCase().includes("bio-combination") || name.toLowerCase().includes("bio combination")) return "Bio Combinations";
+  if (forms.some((f: string) => f.toLowerCase().includes("dilution"))) return "Dilution";
+  if (name.toLowerCase().includes("bio")) return "Biochemics";
+  
+  return "Patent"; // Default catch-all
+};
+
 export default function Wholesale() {
   const products = useQuery(api.products.getProducts);
   const addToCart = useMutation(api.cart.addToCart);
   const seed = useMutation(api.products.seedProducts);
 
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const [selectedCategory, setSelectedCategory] = useState("All");
 
   // Local state for quantities: { [productId]: quantity }
@@ -56,73 +98,34 @@ export default function Wholesale() {
     );
   }
 
-  // Helper to determine product category with refined logic
-  const getProductCategory = (product: any) => {
-    // 1. Explicit Category Matches
-    if (product.category === "Patent") return "Patent";
-    if (product.category === "Biochemics") return "Biochemics";
-    if (product.category === "Bio Combinations") return "Bio Combinations";
-    if (product.category === "Personal Care" || product.category === "Cosmetics") return "Cosmetics";
-
-    // 2. Form/Potency based classification (mostly for "Classical" or undefined categories)
-    const forms = product.forms || [];
-    const potencies = product.potencies || [];
-    const name = product.name || "";
-
-    // Mother Tincture
-    if (potencies.includes("Mother Tincture") || potencies.includes("Q") || forms.includes("Mother Tincture")) {
-        return "Mother Tincture";
-    }
-
-    // Dilutions (C, M, LM potencies or explicit form)
-    if (forms.includes("Dilution") || potencies.some((p: string) => /^\d+(C|M|LM|K)/i.test(p))) {
-        return "Dilution";
-    }
-
-    // Triturations (X potencies often, Tablets)
-    if (forms.includes("Trituration") || forms.includes("Tablets")) {
-        // Check if it looks like a Biochemic (Calcarea, etc) but doesn't have the category set
-        if (name.toLowerCase().includes("calcarea") || name.toLowerCase().includes("ferrum") || name.toLowerCase().includes("kali") || name.toLowerCase().includes("magnesia") || name.toLowerCase().includes("natrum") || name.toLowerCase().includes("silicea")) {
-             return "Biochemics";
-        }
-        return "Triturations";
-    }
-
-    // Fallbacks
-    if (name.toLowerCase().includes("bio-combination") || name.toLowerCase().includes("bio combination")) return "Bio Combinations";
-    if (forms.some((f: string) => f.toLowerCase().includes("dilution"))) return "Dilution";
-    if (name.toLowerCase().includes("bio")) return "Biochemics";
-    
-    return "Patent"; // Default catch-all
-  };
-
-  // Filter products based on search query
-  const filteredProducts = products.filter(product => 
-    product.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   // Group products by Brand -> Category
-  const groupedProducts = filteredProducts.reduce((acc, product) => {
-    const brand = product.brand || "Other Brands";
-    const categoryBucket = getProductCategory(product);
+  const groupedProducts = useMemo(() => {
+    const filteredProducts = products.filter(product => 
+      product.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
+    );
 
-    // Filter by selected category if not "All"
-    if (selectedCategory !== "All" && categoryBucket !== selectedCategory) {
-        return acc;
-    }
+    return filteredProducts.reduce((acc, product) => {
+      const brand = product.brand || "Other Brands";
+      const categoryBucket = getProductCategory(product);
 
-    if (!acc[brand]) {
-      acc[brand] = {};
-      CATEGORIES.forEach(cat => acc[brand][cat] = []);
-    }
+      // Filter by selected category if not "All"
+      if (selectedCategory !== "All" && categoryBucket !== selectedCategory) {
+          return acc;
+      }
 
-    // Only add if it matches one of our target categories
-    if (CATEGORIES.includes(categoryBucket)) {
-        acc[brand][categoryBucket].push(product);
-    }
+      if (!acc[brand]) {
+        acc[brand] = {};
+        CATEGORIES.forEach(cat => acc[brand][cat] = []);
+      }
 
-    return acc;
-  }, {} as Record<string, Record<string, typeof products>>);
+      // Only add if it matches one of our target categories
+      if (CATEGORIES.includes(categoryBucket)) {
+          acc[brand][categoryBucket].push(product);
+      }
+
+      return acc;
+    }, {} as Record<string, Record<string, typeof products>>);
+  }, [products, debouncedSearchQuery, selectedCategory]);
 
   const handleQuantityChange = (productId: string, delta: number) => {
     setQuantities(prev => {
@@ -201,10 +204,18 @@ export default function Wholesale() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input 
                 placeholder="Search for medicines..." 
-                className="pl-9 bg-background shadow-sm"
+                className="pl-9 pr-8 bg-background shadow-sm"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
               <SelectTrigger className="w-[160px] bg-background shadow-sm">
