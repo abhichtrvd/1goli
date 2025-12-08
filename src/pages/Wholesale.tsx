@@ -9,7 +9,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { Minus, Plus, ShoppingCart, Loader2, Search } from "lucide-react";
+import { Minus, Plus, ShoppingCart, Loader2, Search, Filter } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -35,6 +35,7 @@ export default function Wholesale() {
   const seed = useMutation(api.products.seedProducts);
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
 
   // Local state for quantities: { [productId]: quantity }
   const [quantities, setQuantities] = useState<Record<string, number>>({});
@@ -55,6 +56,46 @@ export default function Wholesale() {
     );
   }
 
+  // Helper to determine product category with refined logic
+  const getProductCategory = (product: any) => {
+    // 1. Explicit Category Matches
+    if (product.category === "Patent") return "Patent";
+    if (product.category === "Biochemics") return "Biochemics";
+    if (product.category === "Bio Combinations") return "Bio Combinations";
+    if (product.category === "Personal Care" || product.category === "Cosmetics") return "Cosmetics";
+
+    // 2. Form/Potency based classification (mostly for "Classical" or undefined categories)
+    const forms = product.forms || [];
+    const potencies = product.potencies || [];
+    const name = product.name || "";
+
+    // Mother Tincture
+    if (potencies.includes("Mother Tincture") || potencies.includes("Q") || forms.includes("Mother Tincture")) {
+        return "Mother Tincture";
+    }
+
+    // Dilutions (C, M, LM potencies or explicit form)
+    if (forms.includes("Dilution") || potencies.some((p: string) => /^\d+(C|M|LM|K)/i.test(p))) {
+        return "Dilution";
+    }
+
+    // Triturations (X potencies often, Tablets)
+    if (forms.includes("Trituration") || forms.includes("Tablets")) {
+        // Check if it looks like a Biochemic (Calcarea, etc) but doesn't have the category set
+        if (name.toLowerCase().includes("calcarea") || name.toLowerCase().includes("ferrum") || name.toLowerCase().includes("kali") || name.toLowerCase().includes("magnesia") || name.toLowerCase().includes("natrum") || name.toLowerCase().includes("silicea")) {
+             return "Biochemics";
+        }
+        return "Triturations";
+    }
+
+    // Fallbacks
+    if (name.toLowerCase().includes("bio-combination") || name.toLowerCase().includes("bio combination")) return "Bio Combinations";
+    if (forms.some((f: string) => f.toLowerCase().includes("dilution"))) return "Dilution";
+    if (name.toLowerCase().includes("bio")) return "Biochemics";
+    
+    return "Patent"; // Default catch-all
+  };
+
   // Filter products based on search query
   const filteredProducts = products.filter(product => 
     product.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -63,27 +104,16 @@ export default function Wholesale() {
   // Group products by Brand -> Category
   const groupedProducts = filteredProducts.reduce((acc, product) => {
     const brand = product.brand || "Other Brands";
+    const categoryBucket = getProductCategory(product);
+
+    // Filter by selected category if not "All"
+    if (selectedCategory !== "All" && categoryBucket !== selectedCategory) {
+        return acc;
+    }
+
     if (!acc[brand]) {
       acc[brand] = {};
       CATEGORIES.forEach(cat => acc[brand][cat] = []);
-    }
-
-    // Determine category bucket
-    let categoryBucket = "Other";
-    
-    // Logic to map product to requested categories
-    if (product.category === "Patent") categoryBucket = "Patent";
-    else if (product.category === "Biochemics") categoryBucket = "Biochemics";
-    else if (product.category === "Bio Combinations") categoryBucket = "Bio Combinations";
-    else if (product.category === "Personal Care") categoryBucket = "Cosmetics";
-    else if (product.forms.includes("Dilution") || product.potencies.some(p => p.includes("C") || p.includes("M"))) categoryBucket = "Dilution";
-    else if (product.potencies.includes("Mother Tincture") || product.potencies.includes("Q")) categoryBucket = "Mother Tincture";
-    else if (product.forms.includes("Trituration") || product.forms.includes("Tablets")) categoryBucket = "Triturations";
-    else {
-        // Fallback logic
-        if (product.forms.some(f => f.toLowerCase().includes("dilution"))) categoryBucket = "Dilution";
-        else if (product.name.toLowerCase().includes("bio")) categoryBucket = "Biochemics";
-        else categoryBucket = "Patent"; 
     }
 
     // Only add if it matches one of our target categories
@@ -166,14 +196,28 @@ export default function Wholesale() {
             Bulk order homeopathic medicines from top brands.
           </p>
           
-          <div className="max-w-md mx-auto relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search for medicines (e.g. Arnica)..." 
-              className="pl-9 bg-background shadow-sm"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+          <div className="max-w-xl mx-auto flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input 
+                placeholder="Search for medicines..." 
+                className="pl-9 bg-background shadow-sm"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-[160px] bg-background shadow-sm">
+                <Filter className="w-4 h-4 mr-2 text-muted-foreground" />
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">All Categories</SelectItem>
+                {CATEGORIES.map(cat => (
+                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
