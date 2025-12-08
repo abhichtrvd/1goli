@@ -102,6 +102,57 @@ const schema = defineSchema(
       .searchIndex("search_shipping", {
         searchField: "shippingAddress",
       }),
+
+    consultationDoctors: defineTable({
+      name: v.string(),
+      credentials: v.string(),
+      specialization: v.string(),
+      bio: v.string(),
+      experienceYears: v.number(),
+      rating: v.number(),
+      totalConsultations: v.number(),
+      clinicAddress: v.string(),
+      clinicCity: v.string(),
+      clinicPhone: v.string(),
+      clinicMapUrl: v.optional(v.string()),
+      availability: v.array(v.string()),
+      languages: v.array(v.string()),
+      consultationModes: v.array(
+        v.object({
+          mode: v.string(),
+          price: v.number(),
+          durationMinutes: v.number(),
+          description: v.optional(v.string()),
+        })
+      ),
+      services: v.array(v.string()),
+      imageUrl: v.string(),
+    })
+      .index("by_specialization", ["specialization"]),
+
+    consultationBookings: defineTable({
+      doctorId: v.id("consultationDoctors"),
+      userId: v.optional(v.id("users")),
+      patientName: v.string(),
+      phone: v.string(),
+      email: v.optional(v.string()),
+      preferredDate: v.string(),
+      preferredSlot: v.string(),
+      concern: v.optional(v.string()),
+      consultationMode: v.string(),
+      paymentMethod: v.string(),
+      paymentStatus: v.union(v.literal("paid"), v.literal("pending")),
+      paymentReference: v.string(),
+      status: v.union(
+        v.literal("pending"),
+        v.literal("confirmed"),
+        v.literal("completed"),
+        v.literal("cancelled")
+      ),
+      amount: v.number(),
+      notes: v.optional(v.string()),
+    })
+      .index("by_doctor", ["doctorId"]),
   },
   {
     schemaValidation: false,
