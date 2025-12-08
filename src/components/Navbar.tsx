@@ -246,6 +246,7 @@ export function Navbar() {
             <Link to="#" className="hover:text-lime-600 transition-colors whitespace-nowrap">Triturations</Link>
             <Link to="#" className="hover:text-lime-600 transition-colors whitespace-nowrap">Bio Combinations</Link>
             <Link to="#" className="hover:text-lime-600 transition-colors whitespace-nowrap">Patent</Link>
+            <Link to="#" className="hover:text-lime-600 transition-colors whitespace-nowrap">Cosmetics</Link>
           </div>
         </div>
       </div>
