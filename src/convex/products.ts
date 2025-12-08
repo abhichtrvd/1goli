@@ -49,7 +49,8 @@ export const getProduct = query({
 export const searchProducts = query({
   args: { 
     query: v.optional(v.string()),
-    category: v.optional(v.string())
+    category: v.optional(v.string()),
+    brands: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     // Simple search implementation
@@ -68,6 +69,10 @@ export const searchProducts = query({
         }
         return p.category === args.category;
       });
+    }
+
+    if (args.brands && args.brands.length > 0) {
+      filtered = filtered.filter((p) => p.brand && args.brands!.includes(p.brand));
     }
 
     if (args.query) {

@@ -240,13 +240,13 @@ export function Navbar() {
       <div className="border-t border-border/40 bg-background/50 backdrop-blur-md">
         <div className="container max-w-7xl mx-auto px-4">
           <div className="flex items-center gap-6 md:gap-8 h-10 text-sm font-medium text-muted-foreground overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-            <Link to="/search?category=Dilution" className="hover:text-lime-600 transition-colors whitespace-nowrap">Dilutions</Link>
-            <Link to="/search?category=Mother%20Tincture" className="hover:text-lime-600 transition-colors whitespace-nowrap">Mother Tincture</Link>
-            <Link to="/search?category=Biochemics" className="hover:text-lime-600 transition-colors whitespace-nowrap">Biochemics</Link>
-            <Link to="/search?category=Triturations" className="hover:text-lime-600 transition-colors whitespace-nowrap">Triturations</Link>
-            <Link to="/search?category=Bio%20Combinations" className="hover:text-lime-600 transition-colors whitespace-nowrap">Bio Combinations</Link>
-            <Link to="/search?category=Patent" className="hover:text-lime-600 transition-colors whitespace-nowrap">Patent</Link>
-            <Link to="/search?category=Cosmetics" className="hover:text-lime-600 transition-colors whitespace-nowrap">Cosmetics</Link>
+            <Link to="/category/Dilution" className="hover:text-lime-600 transition-colors whitespace-nowrap">Dilutions</Link>
+            <Link to="/category/Mother%20Tincture" className="hover:text-lime-600 transition-colors whitespace-nowrap">Mother Tincture</Link>
+            <Link to="/category/Biochemics" className="hover:text-lime-600 transition-colors whitespace-nowrap">Biochemics</Link>
+            <Link to="/category/Triturations" className="hover:text-lime-600 transition-colors whitespace-nowrap">Triturations</Link>
+            <Link to="/category/Bio%20Combinations" className="hover:text-lime-600 transition-colors whitespace-nowrap">Bio Combinations</Link>
+            <Link to="/category/Patent" className="hover:text-lime-600 transition-colors whitespace-nowrap">Patent</Link>
+            <Link to="/category/Cosmetics" className="hover:text-lime-600 transition-colors whitespace-nowrap">Cosmetics</Link>
           </div>
         </div>
       </div>
