@@ -43,6 +43,7 @@ const schema = defineSchema(
     products: defineTable({
       name: v.string(),
       description: v.string(),
+      brand: v.optional(v.string()), // Added brand field
       imageUrl: v.optional(v.union(v.string(), v.null())), // Allow null for deletion
       imageStorageId: v.optional(v.union(v.id("_storage"), v.null())), // Allow null for deletion
       images: v.optional(v.array(v.object({ 

@@ -103,10 +103,10 @@ export function Navbar() {
                 <Link to="/upload" className="text-lg font-medium hover:text-lime-600 transition-colors flex items-center gap-3">
                   <FileText className="h-5 w-5" /> Upload Prescription
                 </Link>
-                <Link to="#" className="text-lg font-medium hover:text-lime-600 transition-colors flex items-center gap-3">
+                <Link to="/consult" className="text-lg font-medium hover:text-lime-600 transition-colors flex items-center gap-3">
                   <Stethoscope className="h-5 w-5" /> Consult Homeopaths
                 </Link>
-                <Link to="#" className="text-lg font-medium hover:text-lime-600 transition-colors flex items-center gap-3">
+                <Link to="/wholesale" className="text-lg font-medium hover:text-lime-600 transition-colors flex items-center gap-3">
                   <Package className="h-5 w-5" /> Wholesale
                 </Link>
                 <div className="h-px bg-border/50 my-2" />
@@ -150,8 +150,8 @@ export function Navbar() {
 
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
             <Link to="/" className="hover:text-lime-600 transition-colors text-foreground">Homeopathy</Link>
-            <Link to="#" className="hover:text-lime-600 transition-colors">Consult Homeopaths</Link>
-            <Link to="#">
+            <Link to="/consult" className="hover:text-lime-600 transition-colors">Consult Homeopaths</Link>
+            <Link to="/wholesale">
               <Button size="sm" className="text-xs font-medium bg-black text-white hover:bg-black/90 rounded-full px-5 h-8">
                 Wholesale
               </Button>

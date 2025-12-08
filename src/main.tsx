@@ -19,6 +19,7 @@ const Cart = lazy(() => import("./pages/Cart.tsx"));
 const UploadPrescription = lazy(() => import("./pages/UploadPrescription.tsx"));
 const SearchResults = lazy(() => import("./pages/SearchResults.tsx"));
 const ConsultHomeopath = lazy(() => import("./pages/ConsultHomeopath.tsx"));
+const Wholesale = lazy(() => import("./pages/Wholesale.tsx"));
 
 // Admin Pages
 const AdminLayout = lazy(() => import("./components/AdminLayout.tsx"));
@@ -80,6 +81,7 @@ createRoot(document.getElementById("root")!).render(
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/upload" element={<UploadPrescription />} />
                 <Route path="/consult" element={<ConsultHomeopath />} />
+                <Route path="/wholesale" element={<Wholesale />} />
               </Route>
               
               {/* Admin Routes */}

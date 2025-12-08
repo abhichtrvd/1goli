@@ -91,6 +91,7 @@ export const createProduct = mutation({
   args: {
     name: v.string(),
     description: v.string(),
+    brand: v.optional(v.string()),
     imageUrl: v.optional(v.union(v.string(), v.null())),
     imageStorageId: v.optional(v.union(v.id("_storage"), v.null())),
     images: v.optional(v.array(v.object({ 
@@ -122,6 +123,7 @@ export const updateProduct = mutation({
     id: v.id("products"),
     name: v.optional(v.string()),
     description: v.optional(v.string()),
+    brand: v.optional(v.string()),
     imageUrl: v.optional(v.union(v.string(), v.null())),
     imageStorageId: v.optional(v.union(v.id("_storage"), v.null())),
     images: v.optional(v.array(v.object({ 
@@ -158,6 +160,18 @@ export const seedProducts = mutation({
     // Seeding can be public or admin only. Keeping it public for demo/setup ease, 
     // or restrict if desired. For now, leaving as is or restricting to admin?
     // Usually seeding is done once. Let's leave it open for now as it checks for existence.
+    
+    // Check if we need to backfill brands for existing products
+    const allProducts = await ctx.db.query("products").collect();
+    for (const p of allProducts) {
+      if (!p.brand) {
+        // Assign random brand if missing
+        const brands = ["Dr. Reckeweg", "SBL World Class", "Schwabe India", "Adel Pekana", "Bakson's", "Bjain Pharma"];
+        const randomBrand = brands[Math.floor(Math.random() * brands.length)];
+        await ctx.db.patch(p._id, { brand: randomBrand });
+      }
+    }
+
     const existing = await ctx.db.query("products").take(1);
     if (existing.length > 0) return; // Already seeded
 
@@ -172,6 +186,7 @@ export const seedProducts = mutation({
         symptomsTags: ["injury", "bruise", "trauma", "muscle pain", "swelling"],
         category: "Classical",
         availability: "in_stock",
+        brand: "Dr. Reckeweg"
       },
       {
         name: "Nux Vomica",
@@ -183,6 +198,7 @@ export const seedProducts = mutation({
         symptomsTags: ["indigestion", "stress", "hangover", "irritability", "constipation"],
         category: "Classical",
         availability: "in_stock",
+        brand: "SBL World Class"
       },
       {
         name: "Oscillococcinum",
@@ -194,6 +210,7 @@ export const seedProducts = mutation({
         symptomsTags: ["flu", "body ache", "fever", "chills"],
         category: "Patent",
         availability: "in_stock",
+        brand: "Boiron"
       },
       {
         name: "Rhus Toxicodendron",
@@ -205,6 +222,7 @@ export const seedProducts = mutation({
         symptomsTags: ["joint pain", "arthritis", "stiffness", "back pain"],
         category: "Classical",
         availability: "in_stock",
+        brand: "Schwabe India"
       },
       {
         name: "Belladonna",
@@ -216,6 +234,7 @@ export const seedProducts = mutation({
         symptomsTags: ["fever", "headache", "inflammation", "sore throat"],
         category: "Classical",
         availability: "in_stock",
+        brand: "Dr. Reckeweg"
       },
       {
         name: "Calendula Officinalis",
@@ -227,7 +246,32 @@ export const seedProducts = mutation({
         symptomsTags: ["wounds", "cuts", "burns", "skin", "antiseptic"],
         category: "Personal Care",
         availability: "in_stock",
+        brand: "SBL World Class"
       },
+      {
+        name: "Calcarea Fluorica",
+        description: "Biochemic tissue salt for elasticity of blood vessels, tissues, and skin.",
+        imageUrl: "https://images.unsplash.com/photo-1585435557343-3b092031a831?w=800&auto=format&fit=crop&q=60",
+        potencies: ["6X", "12X"],
+        forms: ["Tablets"],
+        basePrice: 10.00,
+        symptomsTags: ["varicose veins", "skin", "teeth"],
+        category: "Biochemics",
+        availability: "in_stock",
+        brand: "Schwabe India"
+      },
+      {
+        name: "Bio-Combination 28",
+        description: "General tonic for overall health and vitality.",
+        imageUrl: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=800&auto=format&fit=crop&q=60",
+        potencies: ["6X"],
+        forms: ["Tablets"],
+        basePrice: 18.00,
+        symptomsTags: ["tonic", "weakness", "vitality"],
+        category: "Bio Combinations",
+        availability: "in_stock",
+        brand: "SBL World Class"
+      }
     ];
 
     for (const p of products) {
