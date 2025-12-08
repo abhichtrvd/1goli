@@ -54,6 +54,7 @@ const schema = defineSchema(
       videoThumbnail: v.optional(v.string()), // Auto-generated or custom thumbnail
       potencies: v.array(v.string()),
       forms: v.array(v.string()),
+      packingSizes: v.optional(v.array(v.string())), // Added packing sizes (e.g., "30ml", "100ml")
       basePrice: v.number(),
       symptomsTags: v.array(v.string()),
       category: v.optional(v.string()), // e.g., "Classical", "Patent", "Personal Care"
@@ -69,10 +70,11 @@ const schema = defineSchema(
       productId: v.id("products"),
       potency: v.string(),
       form: v.string(),
+      packingSize: v.optional(v.string()), // Added packing size selection
       quantity: v.number(),
     })
       .index("by_user", ["userId"])
-      .index("by_user_product_variant", ["userId", "productId", "potency", "form"]),
+      .index("by_user_product_variant", ["userId", "productId", "potency", "form", "packingSize"]),
 
     orders: defineTable({
       userId: v.string(),
@@ -82,6 +84,7 @@ const schema = defineSchema(
           name: v.string(),
           potency: v.string(),
           form: v.string(),
+          packingSize: v.optional(v.string()), // Added packing size to order items
           quantity: v.number(),
           price: v.number(),
         })

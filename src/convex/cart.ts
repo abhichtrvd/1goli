@@ -32,11 +32,14 @@ export const addToCart = mutation({
     productId: v.id("products"),
     potency: v.string(),
     form: v.string(),
+    packingSize: v.optional(v.string()),
     quantity: v.number(),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
+
+    const packingSize = args.packingSize || "Standard";
 
     const [existing] = await ctx.db
       .query("cartItems")
@@ -46,6 +49,7 @@ export const addToCart = mutation({
           .eq("productId", args.productId)
           .eq("potency", args.potency)
           .eq("form", args.form)
+          .eq("packingSize", packingSize)
       )
       .take(1);
 
@@ -59,6 +63,7 @@ export const addToCart = mutation({
         productId: args.productId,
         potency: args.potency,
         form: args.form,
+        packingSize: packingSize,
         quantity: args.quantity,
       });
     }

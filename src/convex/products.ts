@@ -102,6 +102,7 @@ export const createProduct = mutation({
     videoThumbnail: v.optional(v.string()),
     potencies: v.array(v.string()),
     forms: v.array(v.string()),
+    packingSizes: v.optional(v.array(v.string())),
     basePrice: v.number(),
     symptomsTags: v.array(v.string()),
     category: v.optional(v.string()),
@@ -114,6 +115,7 @@ export const createProduct = mutation({
       category: args.category || "Classical",
       availability: args.availability || "in_stock",
       images: args.images || [],
+      packingSizes: args.packingSizes || ["30ml", "100ml"], // Default if not provided
     });
   },
 });
@@ -134,6 +136,7 @@ export const updateProduct = mutation({
     videoThumbnail: v.optional(v.string()),
     potencies: v.optional(v.array(v.string())),
     forms: v.optional(v.array(v.string())),
+    packingSizes: v.optional(v.array(v.string())),
     basePrice: v.optional(v.number()),
     symptomsTags: v.optional(v.array(v.string())),
     category: v.optional(v.string()),
@@ -157,18 +160,27 @@ export const deleteProduct = mutation({
 export const seedProducts = mutation({
   args: {},
   handler: async (ctx) => {
-    // Seeding can be public or admin only. Keeping it public for demo/setup ease, 
-    // or restrict if desired. For now, leaving as is or restricting to admin?
-    // Usually seeding is done once. Let's leave it open for now as it checks for existence.
-    
-    // Check if we need to backfill brands for existing products
+    // Check if we need to backfill brands or packingSizes for existing products
     const allProducts = await ctx.db.query("products").collect();
     for (const p of allProducts) {
+      let updates: any = {};
       if (!p.brand) {
-        // Assign random brand if missing
         const brands = ["Dr. Reckeweg", "SBL World Class", "Schwabe India", "Adel Pekana", "Bakson's", "Bjain Pharma"];
-        const randomBrand = brands[Math.floor(Math.random() * brands.length)];
-        await ctx.db.patch(p._id, { brand: randomBrand });
+        updates.brand = brands[Math.floor(Math.random() * brands.length)];
+      }
+      if (!p.packingSizes) {
+        // Assign default packing sizes based on form/category guess
+        if (p.forms.includes("Tablets") || p.category === "Biochemics") {
+            updates.packingSizes = ["25g", "450g"];
+        } else if (p.forms.includes("Ointment")) {
+            updates.packingSizes = ["25g", "50g"];
+        } else {
+            updates.packingSizes = ["30ml", "100ml", "450ml"];
+        }
+      }
+      
+      if (Object.keys(updates).length > 0) {
+        await ctx.db.patch(p._id, updates);
       }
     }
 
@@ -182,6 +194,7 @@ export const seedProducts = mutation({
         imageUrl: "https://images.unsplash.com/photo-1625591342274-013866180475?w=800&auto=format&fit=crop&q=60",
         potencies: ["30C", "200C", "1M", "Mother Tincture"],
         forms: ["Dilution", "Globules", "Ointment"],
+        packingSizes: ["30ml", "100ml", "450ml"],
         basePrice: 12.99,
         symptomsTags: ["injury", "bruise", "trauma", "muscle pain", "swelling"],
         category: "Classical",
@@ -194,6 +207,7 @@ export const seedProducts = mutation({
         imageUrl: "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=800&auto=format&fit=crop&q=60",
         potencies: ["30C", "200C", "1M"],
         forms: ["Dilution", "Globules", "Drops"],
+        packingSizes: ["30ml", "100ml"],
         basePrice: 14.50,
         symptomsTags: ["indigestion", "stress", "hangover", "irritability", "constipation"],
         category: "Classical",
@@ -206,6 +220,7 @@ export const seedProducts = mutation({
         imageUrl: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=800&auto=format&fit=crop&q=60",
         potencies: ["200K"],
         forms: ["Tube"],
+        packingSizes: ["6 Doses", "12 Doses", "30 Doses"],
         basePrice: 29.99,
         symptomsTags: ["flu", "body ache", "fever", "chills"],
         category: "Patent",
@@ -218,6 +233,7 @@ export const seedProducts = mutation({
         imageUrl: "https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=800&auto=format&fit=crop&q=60",
         potencies: ["30C", "200C", "1M"],
         forms: ["Dilution", "Globules"],
+        packingSizes: ["30ml", "100ml"],
         basePrice: 13.50,
         symptomsTags: ["joint pain", "arthritis", "stiffness", "back pain"],
         category: "Classical",
@@ -230,6 +246,7 @@ export const seedProducts = mutation({
         imageUrl: "https://images.unsplash.com/photo-1606041008023-472dfb5e530f?w=800&auto=format&fit=crop&q=60",
         potencies: ["30C", "200C"],
         forms: ["Dilution", "Globules", "Drops"],
+        packingSizes: ["30ml", "100ml"],
         basePrice: 12.99,
         symptomsTags: ["fever", "headache", "inflammation", "sore throat"],
         category: "Classical",
@@ -242,6 +259,7 @@ export const seedProducts = mutation({
         imageUrl: "https://images.unsplash.com/photo-1496857239036-1fb137683000?w=800&auto=format&fit=crop&q=60",
         potencies: ["Mother Tincture", "30C"],
         forms: ["Ointment", "Dilution", "Spray"],
+        packingSizes: ["25g", "50g", "30ml"],
         basePrice: 15.00,
         symptomsTags: ["wounds", "cuts", "burns", "skin", "antiseptic"],
         category: "Personal Care",
@@ -254,6 +272,7 @@ export const seedProducts = mutation({
         imageUrl: "https://images.unsplash.com/photo-1585435557343-3b092031a831?w=800&auto=format&fit=crop&q=60",
         potencies: ["6X", "12X"],
         forms: ["Tablets"],
+        packingSizes: ["25g", "450g"],
         basePrice: 10.00,
         symptomsTags: ["varicose veins", "skin", "teeth"],
         category: "Biochemics",
@@ -266,6 +285,7 @@ export const seedProducts = mutation({
         imageUrl: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=800&auto=format&fit=crop&q=60",
         potencies: ["6X"],
         forms: ["Tablets"],
+        packingSizes: ["25g", "450g"],
         basePrice: 18.00,
         symptomsTags: ["tonic", "weakness", "vitality"],
         category: "Bio Combinations",

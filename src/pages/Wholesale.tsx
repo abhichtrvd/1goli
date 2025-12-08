@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Minus, Plus, ShoppingCart, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Categories as requested
 const CATEGORIES = [
@@ -20,8 +21,12 @@ const CATEGORIES = [
   "Biochemics",
   "Bio Combinations",
   "Triturations",
-  "Patent"
+  "Patent",
+  "Cosmetics"
 ];
+
+// Specific potencies for Dilutions as requested
+const DILUTION_POTENCIES = ["1x", "2x", "3x", "6ch", "30ch", "200ch", "1000ch", "10m", "lm", "cm"];
 
 export default function Wholesale() {
   const products = useQuery(api.products.getProducts);
@@ -31,6 +36,9 @@ export default function Wholesale() {
   // Local state for quantities: { [productId]: quantity }
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [addingToCart, setAddingToCart] = useState<Record<string, boolean>>({});
+  
+  // Local state for selections: { [productId]: { potency: string, packingSize: string } }
+  const [selections, setSelections] = useState<Record<string, { potency: string, packingSize: string }>>({});
 
   useEffect(() => {
     seed();
@@ -59,14 +67,15 @@ export default function Wholesale() {
     if (product.category === "Patent") categoryBucket = "Patent";
     else if (product.category === "Biochemics") categoryBucket = "Biochemics";
     else if (product.category === "Bio Combinations") categoryBucket = "Bio Combinations";
-    else if (product.forms.includes("Dilution")) categoryBucket = "Dilution";
-    else if (product.potencies.includes("Mother Tincture")) categoryBucket = "Mother Tincture";
+    else if (product.category === "Personal Care") categoryBucket = "Cosmetics";
+    else if (product.forms.includes("Dilution") || product.potencies.some(p => p.includes("C") || p.includes("M"))) categoryBucket = "Dilution";
+    else if (product.potencies.includes("Mother Tincture") || product.potencies.includes("Q")) categoryBucket = "Mother Tincture";
     else if (product.forms.includes("Trituration") || product.forms.includes("Tablets")) categoryBucket = "Triturations";
     else {
-        // Fallback logic if not explicitly matched
+        // Fallback logic
         if (product.forms.some(f => f.toLowerCase().includes("dilution"))) categoryBucket = "Dilution";
         else if (product.name.toLowerCase().includes("bio")) categoryBucket = "Biochemics";
-        else categoryBucket = "Patent"; // Default to Patent if unsure for now
+        else categoryBucket = "Patent"; 
     }
 
     // Only add if it matches one of our target categories
@@ -85,28 +94,56 @@ export default function Wholesale() {
     });
   };
 
-  const handleAddToCart = async (product: any) => {
+  const handleSelectionChange = (productId: string, field: 'potency' | 'packingSize', value: string) => {
+    setSelections(prev => ({
+      ...prev,
+      [productId]: {
+        ...prev[productId],
+        [field]: value
+      }
+    }));
+  };
+
+  const handleAddToCart = async (product: any, category: string) => {
     const qty = quantities[product._id] || 1;
+    
+    // Determine Potency and Packing Size based on category and selection
+    let potency = "N/A";
+    let packingSize = "Standard";
+
+    const selection = selections[product._id] || {};
+
+    if (category === "Mother Tincture") {
+        potency = "Q";
+        packingSize = selection.packingSize || (product.packingSizes && product.packingSizes[0]) || "30ml";
+    } else if (category === "Dilution") {
+        potency = selection.potency || DILUTION_POTENCIES[4]; // Default to 30ch
+        packingSize = selection.packingSize || (product.packingSizes && product.packingSizes[0]) || "30ml";
+    } else if (category === "Patent" || category === "Cosmetics") {
+        potency = "N/A"; // Or use variant if applicable
+        packingSize = selection.packingSize || (product.packingSizes && product.packingSizes[0]) || "Standard";
+    } else {
+        // Biochemics, Bio Combinations, Triturations
+        potency = selection.potency || (product.potencies && product.potencies[0]) || "6X";
+        packingSize = selection.packingSize || (product.packingSizes && product.packingSizes[0]) || "25g";
+    }
+
     setAddingToCart(prev => ({ ...prev, [product._id]: true }));
     
     try {
-      // Defaulting potency/form for quick add. In a real wholesale app, 
-      // you might want selectors for these if the product has multiple variants.
-      // For this UI, we'll pick the first available or a default.
-      const potency = product.potencies[0] || "N/A";
-      const form = product.forms[0] || "N/A";
-
       await addToCart({
         productId: product._id,
         potency,
-        form,
+        form: category, // Using category as form for now to simplify
+        packingSize,
         quantity: qty
       });
       
-      toast.success(`Added ${qty} ${product.name} to cart`);
-      setQuantities(prev => ({ ...prev, [product._id]: 1 })); // Reset quantity
+      toast.success(`Added ${qty} ${product.name} (${potency}, ${packingSize}) to cart`);
+      setQuantities(prev => ({ ...prev, [product._id]: 1 })); 
     } catch (error) {
       toast.error("Failed to add to cart");
+      console.error(error);
     } finally {
       setAddingToCart(prev => ({ ...prev, [product._id]: false }));
     }
@@ -131,8 +168,12 @@ export default function Wholesale() {
                 {brand}
               </AccordionTrigger>
               <AccordionContent className="pt-2 pb-6">
-                <Accordion type="single" collapsible className="w-full pl-4 border-l-2 border-muted ml-2">
+                <Accordion type="single" collapsible className="w-full pl-2 md:pl-4 border-l-2 border-muted ml-1 md:ml-2">
                   {CATEGORIES.map((category) => {
+                    // Even if empty, we might want to show it? User said "each brand should have all sub categories"
+                    // But showing empty accordions is bad UX. I'll show them but indicate empty if needed, 
+                    // or just hide if truly no products match to keep it clean. 
+                    // Let's hide empty for now to avoid clutter unless strictly required to show empty.
                     const categoryProducts = categories[category];
                     if (!categoryProducts || categoryProducts.length === 0) return null;
 
@@ -143,61 +184,118 @@ export default function Wholesale() {
                         </AccordionTrigger>
                         <AccordionContent>
                           <div className="space-y-3 mt-2">
-                            {categoryProducts.map((product) => (
-                              <div key={product._id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-3 rounded-lg bg-secondary/30 border border-border/50">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <h4 className="font-semibold text-base">{product.name}</h4>
-                                    {product.availability === "out_of_stock" && (
-                                        <Badge variant="destructive" className="text-[10px] h-4 px-1">Out of Stock</Badge>
-                                    )}
-                                  </div>
-                                  <p className="text-xs text-muted-foreground line-clamp-1">{product.description}</p>
-                                  <p className="text-sm font-bold mt-1">₹{product.basePrice}</p>
-                                </div>
+                            {categoryProducts.map((product) => {
+                                const selection = selections[product._id] || {};
+                                const availablePackingSizes = product.packingSizes || ["30ml", "100ml", "450ml"];
+                                const availablePotencies = category === "Dilution" ? DILUTION_POTENCIES : (product.potencies || []);
 
-                                <div className="flex items-center gap-3 self-end sm:self-center">
-                                  <div className="flex items-center bg-background rounded-md border shadow-sm h-9">
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-full w-9 rounded-none rounded-l-md"
-                                      onClick={() => handleQuantityChange(product._id, -1)}
-                                      disabled={product.availability === "out_of_stock"}
-                                    >
-                                      <Minus className="h-3 w-3" />
-                                    </Button>
-                                    <div className="w-10 text-center font-medium text-sm">
-                                      {quantities[product._id] || 1}
+                                return (
+                                  <div key={product._id} className="flex flex-col gap-4 p-4 rounded-lg bg-secondary/30 border border-border/50">
+                                    <div className="flex justify-between items-start">
+                                      <div>
+                                        <div className="flex items-center gap-2">
+                                          <h4 className="font-semibold text-base">{product.name}</h4>
+                                          {product.availability === "out_of_stock" && (
+                                              <Badge variant="destructive" className="text-[10px] h-4 px-1">Out of Stock</Badge>
+                                          )}
+                                        </div>
+                                        <p className="text-xs text-muted-foreground line-clamp-1">{product.description}</p>
+                                      </div>
+                                      <p className="text-sm font-bold">₹{product.basePrice}</p>
                                     </div>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-full w-9 rounded-none rounded-r-md"
-                                      onClick={() => handleQuantityChange(product._id, 1)}
-                                      disabled={product.availability === "out_of_stock"}
-                                    >
-                                      <Plus className="h-3 w-3" />
-                                    </Button>
-                                  </div>
 
-                                  <Button 
-                                    size="sm" 
-                                    className="bg-[#A6FF00] text-black hover:bg-[#98f000] font-semibold h-9 px-4"
-                                    onClick={() => handleAddToCart(product)}
-                                    disabled={addingToCart[product._id] || product.availability === "out_of_stock"}
-                                  >
-                                    {addingToCart[product._id] ? (
-                                      <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                      <>
-                                        Add <ShoppingCart className="ml-2 h-3.5 w-3.5" />
-                                      </>
-                                    )}
-                                  </Button>
-                                </div>
-                              </div>
-                            ))}
+                                    {/* Selection Controls */}
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {/* Potency Selection */}
+                                        {category === "Mother Tincture" ? (
+                                            <div className="space-y-1">
+                                                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Potency</span>
+                                                <div className="h-9 px-3 flex items-center bg-muted rounded-md text-sm font-medium text-muted-foreground border border-transparent">
+                                                    Q (Mother Tincture)
+                                                </div>
+                                            </div>
+                                        ) : (category !== "Patent" && category !== "Cosmetics") && (
+                                            <div className="space-y-1">
+                                                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Potency</span>
+                                                <Select 
+                                                    value={selection.potency || (category === "Dilution" ? "30ch" : availablePotencies[0])} 
+                                                    onValueChange={(val) => handleSelectionChange(product._id, 'potency', val)}
+                                                >
+                                                    <SelectTrigger className="h-9 text-xs">
+                                                        <SelectValue placeholder="Select Potency" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {availablePotencies.map(p => (
+                                                            <SelectItem key={p} value={p} className="text-xs">{p}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        )}
+
+                                        {/* Packing Size Selection */}
+                                        <div className="space-y-1 col-span-1">
+                                            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Pack Size</span>
+                                            <Select 
+                                                value={selection.packingSize || availablePackingSizes[0]} 
+                                                onValueChange={(val) => handleSelectionChange(product._id, 'packingSize', val)}
+                                            >
+                                                <SelectTrigger className="h-9 text-xs">
+                                                    <SelectValue placeholder="Select Size" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {availablePackingSizes.map(s => (
+                                                        <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+
+                                    {/* Actions */}
+                                    <div className="flex items-center justify-between pt-2 border-t border-border/40">
+                                      <div className="flex items-center bg-background rounded-md border shadow-sm h-8">
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-full w-8 rounded-none rounded-l-md"
+                                          onClick={() => handleQuantityChange(product._id, -1)}
+                                          disabled={product.availability === "out_of_stock"}
+                                        >
+                                          <Minus className="h-3 w-3" />
+                                        </Button>
+                                        <div className="w-8 text-center font-medium text-xs">
+                                          {quantities[product._id] || 1}
+                                        </div>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-full w-8 rounded-none rounded-r-md"
+                                          onClick={() => handleQuantityChange(product._id, 1)}
+                                          disabled={product.availability === "out_of_stock"}
+                                        >
+                                          <Plus className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+
+                                      <Button 
+                                        size="sm" 
+                                        className="bg-[#A6FF00] text-black hover:bg-[#98f000] font-semibold h-8 px-4 text-xs"
+                                        onClick={() => handleAddToCart(product, category)}
+                                        disabled={addingToCart[product._id] || product.availability === "out_of_stock"}
+                                      >
+                                        {addingToCart[product._id] ? (
+                                          <Loader2 className="h-3 w-3 animate-spin" />
+                                        ) : (
+                                          <>
+                                            Add <ShoppingCart className="ml-2 h-3 w-3" />
+                                          </>
+                                        )}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                );
+                            })}
                           </div>
                         </AccordionContent>
                       </AccordionItem>
