@@ -132,7 +132,10 @@ const schema = defineSchema(
       services: v.array(v.string()),
       imageUrl: v.string(),
     })
-      .index("by_specialization", ["specialization"]),
+      .index("by_specialization", ["specialization"])
+      .searchIndex("search_city", {
+        searchField: "clinicCity",
+      }),
 
     consultationBookings: defineTable({
       doctorId: v.id("consultationDoctors"),

@@ -5,13 +5,19 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 export const listDoctors = query({
   args: { city: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const doctors = await ctx.db.query("consultationDoctors").collect();
     if (args.city) {
-      const searchCity = args.city.toLowerCase().trim();
-      if (!searchCity) return doctors;
-      return doctors.filter((d) => d.clinicCity.toLowerCase().includes(searchCity));
+      // Use search index for efficient filtering by city
+      // This scales well even with thousands of doctors
+      return await ctx.db
+        .query("consultationDoctors")
+        .withSearchIndex("search_city", (q) => 
+          q.search("clinicCity", args.city!)
+        )
+        .take(50); // Limit search results to 50
     }
-    return doctors;
+    
+    // Return suggested doctors (limit to 20 to avoid overfetching)
+    return await ctx.db.query("consultationDoctors").take(20);
   },
 });
 
