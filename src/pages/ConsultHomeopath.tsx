@@ -119,17 +119,17 @@ export default function ConsultHomeopath() {
 
   return (
     <div className="bg-gradient-to-b from-background via-secondary/30 to-background text-foreground min-h-screen">
-      <section className="container max-w-6xl mx-auto px-4 py-12">
-        <div className="text-center mb-12 space-y-4">
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
+      <section className="container max-w-7xl mx-auto px-4 py-8">
+        <div className="text-center mb-8 space-y-3">
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
             Consult Top <span className="text-lime-600">Homeopaths</span>
           </h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-base text-muted-foreground max-w-2xl mx-auto">
             Expert guidance for chronic conditions. Choose from our verified specialists for personalized holistic care.
           </p>
         </div>
 
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {doctors.map((doctor) => (
             <motion.div
               key={doctor._id}
@@ -137,65 +137,65 @@ export default function ConsultHomeopath() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
             >
-              <Card className="h-full flex flex-col overflow-hidden hover:shadow-lg transition-shadow border-border/60">
-                <div className="relative h-48 bg-secondary/50">
+              <Card className="h-full flex flex-col overflow-hidden hover:shadow-md transition-shadow border-border/60">
+                <div className="relative h-40 bg-secondary/50">
                   <img 
                     src={doctor.imageUrl} 
                     alt={doctor.name} 
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute top-4 right-4">
-                    <Badge className="bg-white/90 text-black hover:bg-white shadow-sm">
+                  <div className="absolute top-2 right-2">
+                    <Badge className="bg-white/90 text-black hover:bg-white shadow-sm text-[10px] px-1.5 h-5">
                       <Star className="h-3 w-3 text-amber-500 mr-1 fill-amber-500" />
                       {doctor.rating}
                     </Badge>
                   </div>
                 </div>
-                <CardHeader className="pb-2">
+                <CardHeader className="p-4 pb-2">
                   <div className="flex justify-between items-start">
                     <div>
-                      <CardTitle className="text-xl">{doctor.name}</CardTitle>
-                      <CardDescription className="text-lime-600 font-medium mt-1">
+                      <CardTitle className="text-lg leading-tight">{doctor.name}</CardTitle>
+                      <CardDescription className="text-lime-600 font-medium mt-0.5 text-xs">
                         {doctor.specialization}
                       </CardDescription>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-4 flex-1">
-                  <p className="text-sm text-muted-foreground line-clamp-2">
+                <CardContent className="p-4 pt-0 space-y-3 flex-1">
+                  <p className="text-xs text-muted-foreground line-clamp-2">
                     {doctor.bio}
                   </p>
                   
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <CalendarDays className="h-4 w-4" />
+                  <div className="grid grid-cols-2 gap-1.5 text-xs">
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <CalendarDays className="h-3.5 w-3.5" />
                       <span>{doctor.experienceYears}+ Years</span>
                     </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Users className="h-4 w-4" />
-                      <span>{doctor.totalConsultations}+ Consults</span>
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <Users className="h-3.5 w-3.5" />
+                      <span>{doctor.totalConsultations}+</span>
                     </div>
-                    <div className="flex items-center gap-2 text-muted-foreground col-span-2">
-                      <MapPin className="h-4 w-4" />
+                    <div className="flex items-center gap-1.5 text-muted-foreground col-span-2">
+                      <MapPin className="h-3.5 w-3.5" />
                       <span className="truncate">{doctor.clinicCity}</span>
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-2 pt-2">
-                    {doctor.services.slice(0, 3).map((service: string) => (
-                      <Badge key={service} variant="secondary" className="text-xs font-normal">
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {doctor.services.slice(0, 2).map((service: string) => (
+                      <Badge key={service} variant="secondary" className="text-[10px] font-normal px-1.5 h-5">
                         {service}
                       </Badge>
                     ))}
-                    {doctor.services.length > 3 && (
-                      <Badge variant="secondary" className="text-xs font-normal">
-                        +{doctor.services.length - 3} more
+                    {doctor.services.length > 2 && (
+                      <Badge variant="secondary" className="text-[10px] font-normal px-1.5 h-5">
+                        +{doctor.services.length - 2}
                       </Badge>
                     )}
                   </div>
                 </CardContent>
-                <CardFooter className="pt-2 pb-6">
-                  <Button className="w-full bg-[#A6FF00] text-black hover:bg-[#98f000]" onClick={() => handleBookClick(doctor)}>
+                <CardFooter className="p-4 pt-0">
+                  <Button size="sm" className="w-full bg-[#A6FF00] text-black hover:bg-[#98f000] h-9 text-xs font-semibold" onClick={() => handleBookClick(doctor)}>
                     Book Appointment
                   </Button>
                 </CardFooter>
