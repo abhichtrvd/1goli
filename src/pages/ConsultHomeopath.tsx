@@ -47,7 +47,8 @@ const initialForm = {
 };
 
 export default function ConsultHomeopath() {
-  const [citySearch, setCitySearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [executedSearch, setExecutedSearch] = useState("");
   
   // Fetch all doctors without filtering by city on the backend
   const doctors = useQuery(api.consultations.listDoctors, {});
@@ -75,6 +76,16 @@ export default function ConsultHomeopath() {
       consultationMode: doctor.consultationModes[0]?.mode || ""
     }));
     setShowBookingDialog(true);
+  };
+
+  const handleSearch = () => {
+    setExecutedSearch(searchInput);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSearch();
+    }
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -123,8 +134,8 @@ export default function ConsultHomeopath() {
   }
 
   // Client-side filtering for search results
-  const searchResults = citySearch.trim() 
-    ? doctors.filter(d => d.clinicCity.toLowerCase().includes(citySearch.toLowerCase()))
+  const searchResults = executedSearch.trim() 
+    ? doctors.filter(d => d.clinicCity.toLowerCase().includes(executedSearch.toLowerCase()))
     : [];
 
   return (
@@ -146,13 +157,14 @@ export default function ConsultHomeopath() {
             <Input 
               placeholder="Search by City (e.g. Hyderabad, Mumbai)..." 
               className="pl-9 pr-24 h-12 rounded-full shadow-sm border-lime-200 focus-visible:ring-lime-500 bg-white dark:bg-secondary/50"
-              value={citySearch}
-              onChange={(e) => setCitySearch(e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={handleKeyDown}
             />
             <Button 
               size="sm" 
               className="absolute right-1.5 h-9 rounded-full bg-[#A6FF00] text-black hover:bg-[#98f000] font-medium px-4"
-              onClick={() => {}} // Search is real-time, button is mostly visual/UX
+              onClick={handleSearch}
             >
               Search
             </Button>
@@ -160,18 +172,18 @@ export default function ConsultHomeopath() {
         </div>
 
         {/* Search Results Section - Only visible when searching */}
-        {citySearch.trim() && (
+        {executedSearch.trim() && (
           <div className="mb-12">
             <div className="mb-6">
               <h2 className="text-xl font-semibold tracking-tight flex items-center gap-2">
-                Doctors in "{citySearch}"
+                Doctors in "{executedSearch}"
               </h2>
             </div>
             
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {searchResults.length === 0 ? (
                 <div className="col-span-full text-center py-8 text-muted-foreground bg-secondary/20 rounded-xl border border-dashed">
-                  No doctors found in "{citySearch}". Check out our suggested doctors below.
+                  No doctors found in "{executedSearch}". Check out our suggested doctors below.
                 </div>
               ) : (
                 searchResults.map((doctor) => (
