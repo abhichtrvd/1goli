@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireAdmin } from "./users";
+import { paginationOptsValidator } from "convex/server";
 
 export const getProducts = query({
   args: {},
@@ -22,6 +23,36 @@ export const getProducts = query({
         };
       })
     );
+  },
+});
+
+export const getPaginatedProducts = query({
+  args: { 
+    paginationOpts: paginationOptsValidator,
+    brand: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    let query;
+    if (args.brand) {
+      query = ctx.db
+        .query("products")
+        .withIndex("by_brand", (q) => q.eq("brand", args.brand));
+    } else {
+      query = ctx.db.query("products").order("desc");
+    }
+
+    const result = await query.paginate(args.paginationOpts);
+
+    const pageWithUrls = await Promise.all(
+      result.page.map(async (p) => ({
+        ...p,
+        imageUrl: p.imageStorageId
+          ? (await ctx.storage.getUrl(p.imageStorageId)) || p.imageUrl || ""
+          : p.imageUrl || "",
+      }))
+    );
+
+    return { ...result, page: pageWithUrls };
   },
 });
 

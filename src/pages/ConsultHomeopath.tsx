@@ -61,7 +61,7 @@ export default function ConsultHomeopath() {
   // Fetch search results from backend based on debounced search
   // Skip query if search is empty to avoid double fetching
   const searchResults = useQuery(api.consultations.listDoctors, 
-    debouncedSearch.trim() ? { city: debouncedSearch } : "skip"
+    debouncedSearch.trim() ? { query: debouncedSearch } : "skip"
   );
 
   const seedDoctors = useMutation(api.consultations.seedDoctors);
@@ -163,7 +163,7 @@ export default function ConsultHomeopath() {
           <div className="relative flex items-center">
             <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
             <Input 
-              placeholder="Search by City (e.g. Hyderabad, Mumbai)..." 
+              placeholder="Search by Name, City, or Specialization..." 
               className="pl-9 pr-4 h-12 rounded-full shadow-sm border-lime-200 focus-visible:ring-lime-500 bg-white dark:bg-secondary/50"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}

@@ -4,17 +4,28 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { paginationOptsValidator } from "convex/server";
 
 export const listDoctors = query({
-  args: { city: v.optional(v.string()) },
+  args: { query: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    if (args.city) {
-      // Use search index for efficient filtering by city
-      // This scales well even with thousands of doctors
-      return await ctx.db
+    if (args.query) {
+      // Search by name and city
+      const byName = await ctx.db
+        .query("consultationDoctors")
+        .withSearchIndex("search_name", (q) => 
+          q.search("name", args.query!)
+        )
+        .take(20);
+
+      const byCity = await ctx.db
         .query("consultationDoctors")
         .withSearchIndex("search_city", (q) => 
-          q.search("clinicCity", args.city!)
+          q.search("clinicCity", args.query!)
         )
-        .take(50); // Limit search results to 50
+        .take(20);
+
+      // Merge and deduplicate based on _id
+      const map = new Map();
+      [...byName, ...byCity].forEach(d => map.set(d._id, d));
+      return Array.from(map.values());
     }
     
     // Return suggested doctors (limit to 20 to avoid overfetching)

@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, ChevronRight, ArrowRight, Upload, Activity, Heart, Pill, Thermometer, Stethoscope, FlaskConical } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useNavigate } from "react-router";
 import { Badge } from "@/components/ui/badge";
@@ -15,12 +15,19 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
+import { Loader2 } from "lucide-react";
 
 export default function Landing() {
   const [searchQuery, setSearchQuery] = useState("");
-  // Use empty query to get popular/all products initially or a specific "featured" query if available
-  // For now, we'll just fetch all (or a subset) for the "Popular" section without search filtering
-  const products = useQuery(api.products.searchProducts, { query: "" }); 
+  const [selectedBrand, setSelectedBrand] = useState<string | undefined>(undefined);
+  
+  // Use paginated query for products
+  const { results: products, status, loadMore, isLoading } = usePaginatedQuery(
+    api.products.getPaginatedProducts,
+    { brand: selectedBrand },
+    { initialNumItems: 10 }
+  );
+
   const seed = useMutation(api.products.seedProducts);
   const navigate = useNavigate();
 
@@ -57,6 +64,14 @@ export default function Landing() {
     "Bakson's", 
     "Bjain Pharma"
   ];
+
+  const handleBrandClick = (brand: string) => {
+    if (selectedBrand === brand) {
+      setSelectedBrand(undefined); // Deselect
+    } else {
+      setSelectedBrand(brand);
+    }
+  };
 
   return (
     <div className="bg-background min-h-screen">
@@ -184,9 +199,14 @@ export default function Landing() {
               <motion.div
                 key={index}
                 whileHover={{ scale: 1.05 }}
-                className="bg-white dark:bg-card p-6 rounded-2xl shadow-sm border border-border flex items-center justify-center text-center hover:shadow-md transition-all cursor-pointer h-24"
+                onClick={() => handleBrandClick(brand)}
+                className={`p-6 rounded-2xl shadow-sm border flex items-center justify-center text-center hover:shadow-md transition-all cursor-pointer h-24 ${
+                  selectedBrand === brand 
+                    ? "bg-lime-100 border-lime-500 text-lime-800 ring-2 ring-lime-500/20" 
+                    : "bg-white dark:bg-card border-border text-muted-foreground hover:text-lime-600"
+                }`}
               >
-                <span className="font-semibold text-muted-foreground hover:text-lime-600 transition-colors">{brand}</span>
+                <span className="font-semibold">{brand}</span>
               </motion.div>
             ))}
           </div>
@@ -196,13 +216,20 @@ export default function Landing() {
       {/* Products Grid - Bento Style */}
       <section id="products" className="py-20 bg-secondary">
         <div className="container max-w-6xl mx-auto px-4">
-          <div className="mb-12 text-center md:text-left">
-            <h3 className="text-3xl md:text-4xl font-semibold tracking-tight mb-2">
-              Popular Homeopathic Remedies
-            </h3>
-            <p className="text-muted-foreground text-lg">
-              Trusted formulations for your holistic health.
-            </p>
+          <div className="mb-12 text-center md:text-left flex flex-col md:flex-row justify-between items-end gap-4">
+            <div>
+              <h3 className="text-3xl md:text-4xl font-semibold tracking-tight mb-2">
+                {selectedBrand ? `${selectedBrand} Remedies` : "Popular Homeopathic Remedies"}
+              </h3>
+              <p className="text-muted-foreground text-lg">
+                Trusted formulations for your holistic health.
+              </p>
+            </div>
+            {selectedBrand && (
+              <Button variant="ghost" onClick={() => setSelectedBrand(undefined)} className="text-muted-foreground hover:text-foreground">
+                Clear Filter
+              </Button>
+            )}
           </div>
 
           {products === undefined ? (
@@ -216,66 +243,82 @@ export default function Landing() {
               <p className="text-muted-foreground text-xl">No remedies found.</p>
             </div>
           ) : (
-            <Carousel
-              opts={{
-                align: "start",
-                loop: true,
-              }}
-              className="w-full"
-            >
-              <CarouselContent className="-ml-2 md:-ml-4">
-                {products.map((product, index) => (
-                  <CarouselItem key={product._id} className="pl-2 md:pl-4 basis-1/2 md:basis-1/4 lg:basis-1/6">
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.5, delay: index * 0.05 }}
-                      className="group relative bg-white dark:bg-card rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer border border-border h-full"
-                      onClick={() => navigate(`/product/${product._id}`)}
-                    >
-                      <div className="p-3 h-full flex flex-col">
-                        <div className="relative aspect-square w-full flex items-center justify-center bg-secondary rounded-lg overflow-hidden mb-2">
-                          {product.imageUrl ? (
-                            <img 
-                              src={product.imageUrl} 
-                              alt={product.name}
-                              loading="lazy"
-                              className="w-full h-full object-cover mix-blend-multiply dark:mix-blend-normal transition-transform duration-500 group-hover:scale-105"
-                            />
-                          ) : (
-                            <div className="flex flex-col items-center justify-center text-muted-foreground/50">
-                              <Activity className="h-6 w-6 mb-1" />
-                              <span className="text-[10px]">No Image</span>
-                            </div>
-                          )}
-                          <Badge variant="secondary" className="absolute top-1 right-1 bg-white/80 backdrop-blur-sm text-black text-[9px] px-1.5 py-0 h-4">
-                            New
-                          </Badge>
-                        </div>
+            <div className="space-y-8">
+              <Carousel
+                opts={{
+                  align: "start",
+                  loop: false, // Loop false for pagination flow
+                }}
+                className="w-full"
+              >
+                <CarouselContent className="-ml-2 md:-ml-4">
+                  {products.map((product, index) => (
+                    <CarouselItem key={product._id} className="pl-2 md:pl-4 basis-1/2 md:basis-1/4 lg:basis-1/6">
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.5, delay: index * 0.05 }}
+                        className="group relative bg-white dark:bg-card rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer border border-border h-full"
+                        onClick={() => navigate(`/product/${product._id}`)}
+                      >
+                        <div className="p-3 h-full flex flex-col">
+                          <div className="relative aspect-square w-full flex items-center justify-center bg-secondary rounded-lg overflow-hidden mb-2">
+                            {product.imageUrl ? (
+                              <img 
+                                src={product.imageUrl} 
+                                alt={product.name}
+                                loading="lazy"
+                                className="w-full h-full object-cover mix-blend-multiply dark:mix-blend-normal transition-transform duration-500 group-hover:scale-105"
+                              />
+                            ) : (
+                              <div className="flex flex-col items-center justify-center text-muted-foreground/50">
+                                <Activity className="h-6 w-6 mb-1" />
+                                <span className="text-[10px]">No Image</span>
+                              </div>
+                            )}
+                            <Badge variant="secondary" className="absolute top-1 right-1 bg-white/80 backdrop-blur-sm text-black text-[9px] px-1.5 py-0 h-4">
+                              New
+                            </Badge>
+                          </div>
 
-                        <div className="mb-1">
-                          <h4 className="text-sm font-semibold mb-0.5 group-hover:text-primary transition-colors line-clamp-1" title={product.name}>{product.name}</h4>
-                          <p className="text-muted-foreground line-clamp-1 text-[10px]">
-                            {product.description}
-                          </p>
-                        </div>
+                          <div className="mb-1">
+                            <h4 className="text-sm font-semibold mb-0.5 group-hover:text-primary transition-colors line-clamp-1" title={product.name}>{product.name}</h4>
+                            <p className="text-muted-foreground line-clamp-1 text-[10px]">
+                              {product.description}
+                            </p>
+                          </div>
 
-                        <div className="flex items-center justify-between mt-auto pt-2 border-t border-border/50">
-                          <span className="text-xs font-bold text-lime-600">₹{product.basePrice}</span>
-                          <Button size="sm" className="rounded-full px-3 h-6 text-[10px] bg-primary text-primary-foreground hover:bg-primary/90">
-                            Add
-                          </Button>
+                          <div className="flex items-center justify-between mt-auto pt-2 border-t border-border/50">
+                            <span className="text-xs font-bold text-lime-600">₹{product.basePrice}</span>
+                            <Button size="sm" className="rounded-full px-3 h-6 text-[10px] bg-primary text-primary-foreground hover:bg-primary/90">
+                              Add
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    </motion.div>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              <div className="hidden md:block">
-                <CarouselPrevious className="-left-4" />
-                <CarouselNext className="-right-4" />
-              </div>
-            </Carousel>
+                      </motion.div>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                <div className="hidden md:block">
+                  <CarouselPrevious className="-left-4" />
+                  <CarouselNext className="-right-4" />
+                </div>
+              </Carousel>
+              
+              {status === "CanLoadMore" && (
+                <div className="flex justify-center pt-4">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => loadMore(10)} 
+                    disabled={isLoading}
+                    className="rounded-full px-8"
+                  >
+                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    Load More Remedies
+                  </Button>
+                </div>
+              )}
+            </div>
           )}
           
           <div className="mt-12 text-center">

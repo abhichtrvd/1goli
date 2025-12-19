@@ -63,7 +63,8 @@ const schema = defineSchema(
       .searchIndex("search_body", {
         searchField: "description",
         filterFields: ["name"], // simplified search
-      }),
+      })
+      .index("by_brand", ["brand"]),
 
     cartItems: defineTable({
       userId: v.string(),
@@ -135,6 +136,9 @@ const schema = defineSchema(
       .index("by_specialization", ["specialization"])
       .searchIndex("search_city", {
         searchField: "clinicCity",
+      })
+      .searchIndex("search_name", {
+        searchField: "name",
       }),
 
     consultationBookings: defineTable({
