@@ -43,8 +43,8 @@ export const createOrder = mutation({
       shippingAddress: args.shippingAddress,
       shippingDetails: args.shippingDetails,
       paymentMethod: args.paymentMethod,
-      paymentStatus: args.paymentMethod === "cod" ? "pending" : "paid", // Mocking online payment as paid immediately for now
-      paymentId: args.paymentMethod === "online" ? `PAY-${Date.now()}` : undefined,
+      paymentStatus: "pending", // Always pending initially
+      paymentId: undefined,
       statusHistory: [
         {
           status: "pending",
@@ -54,7 +54,9 @@ export const createOrder = mutation({
       ],
     });
 
-    // Clear cart after order
+    // Clear cart after order is created
+    // Note: For real payments, we might want to clear cart ONLY after payment success
+    // But for COD it's immediate. For now, we clear it here to reserve items.
     const cartItems = await ctx.db
       .query("cartItems")
       .withIndex("by_user", (q) => q.eq("userId", userId))
@@ -65,6 +67,48 @@ export const createOrder = mutation({
     }
 
     return orderId;
+  },
+});
+
+export const confirmOrderPayment = mutation({
+  args: {
+    orderId: v.id("orders"),
+    paymentId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const order = await ctx.db.get(args.orderId);
+    if (!order) throw new Error("Order not found");
+    if (order.userId !== userId) throw new Error("Unauthorized");
+
+    await ctx.db.patch(args.orderId, {
+      paymentStatus: "paid",
+      paymentId: args.paymentId,
+      status: "processing", // Move to processing once paid
+      statusHistory: [
+        ...(order.statusHistory || []),
+        {
+          status: "processing",
+          timestamp: Date.now(),
+          note: `Payment confirmed: ${args.paymentId}`,
+        },
+      ],
+    });
+  },
+});
+
+export const getOrder = query({
+  args: { orderId: v.id("orders") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+
+    const order = await ctx.db.get(args.orderId);
+    if (!order || order.userId !== userId) return null;
+
+    return order;
   },
 });
 

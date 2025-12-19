@@ -8,16 +8,19 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, ShieldCheck, Truck, CreditCard, Banknote } from "lucide-react";
+import { Loader2, ShieldCheck, Truck, CreditCard, Banknote, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function Checkout() {
   const navigate = useNavigate();
   const cartItems = useQuery(api.cart.getCart);
   const createOrder = useMutation(api.orders.createOrder);
+  const confirmPayment = useMutation(api.orders.confirmOrderPayment);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("online");
+  const [paymentError, setPaymentError] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     fullName: "",
@@ -61,9 +64,24 @@ export default function Checkout() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const simulatePaymentGateway = async (amount: number): Promise<{ success: boolean; paymentId?: string; error?: string }> => {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        // Simulate a 10% failure rate for robust error handling demonstration
+        const isSuccess = Math.random() > 0.1; 
+        if (isSuccess) {
+          resolve({ success: true, paymentId: `PAY-${Date.now()}-${Math.floor(Math.random() * 1000)}` });
+        } else {
+          resolve({ success: false, error: "Payment declined by bank. Please try a different card." });
+        }
+      }, 2000);
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setPaymentError(null);
 
     try {
       const validItems = cartItems.filter(item => item.product !== null);
@@ -79,7 +97,8 @@ export default function Checkout() {
 
       const formattedAddress = `${formData.addressLine1}, ${formData.addressLine2 ? formData.addressLine2 + ', ' : ''}${formData.city}, ${formData.state} - ${formData.zipCode}`;
 
-      await createOrder({
+      // 1. Create Order (Pending Payment)
+      const orderId = await createOrder({
         shippingAddress: formattedAddress,
         shippingDetails: formData,
         paymentMethod,
@@ -87,11 +106,38 @@ export default function Checkout() {
         items: orderItems
       });
 
-      toast.success("Order placed successfully!");
-      navigate("/"); // Ideally to an order success page
+      if (paymentMethod === "online") {
+        // 2. Process Payment
+        toast.info("Redirecting to secure payment gateway...");
+        
+        const paymentResult = await simulatePaymentGateway(subtotal);
+
+        if (paymentResult.success && paymentResult.paymentId) {
+          // 3. Confirm Payment
+          await confirmPayment({
+            orderId,
+            paymentId: paymentResult.paymentId
+          });
+          toast.success("Payment successful!");
+          navigate(`/order-confirmation/${orderId}`);
+        } else {
+          // Handle Payment Failure
+          setPaymentError(paymentResult.error || "Payment failed");
+          toast.error("Payment failed. Please try again.");
+          // Note: Order is created but remains pending/unpaid. 
+          // In a real app, we might want to allow retrying payment for the SAME orderId 
+          // instead of creating a new one, but for simplicity here we just show error.
+        }
+      } else {
+        // COD - Direct Success
+        toast.success("Order placed successfully!");
+        navigate(`/order-confirmation/${orderId}`);
+      }
+
     } catch (error) {
       toast.error("Failed to place order. Please try again.");
       console.error(error);
+      setPaymentError("An unexpected error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -106,6 +152,17 @@ export default function Checkout() {
           {/* Left Column: Forms */}
           <div className="lg:col-span-2 space-y-6">
             
+            {/* Error Alert */}
+            {paymentError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Payment Error</AlertTitle>
+                <AlertDescription>
+                  {paymentError}
+                </AlertDescription>
+              </Alert>
+            )}
+
             {/* Shipping Address */}
             <Card>
               <CardHeader>
@@ -286,7 +343,7 @@ export default function Checkout() {
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
-                  Place Order
+                  {paymentMethod === 'online' ? 'Pay Now' : 'Place Order'}
                 </Button>
               </CardFooter>
             </Card>
