@@ -9,6 +9,7 @@ import { useNavigate } from "react-router";
 
 export default function Cart() {
   const cartItems = useQuery(api.cart.getCart);
+  const settings = useQuery(api.settings.getSettings);
   const updateQuantity = useMutation(api.cart.updateQuantity);
   const removeFromCart = useMutation(api.cart.removeFromCart);
   const clearCart = useMutation(api.cart.clearCart);
@@ -35,6 +36,9 @@ export default function Cart() {
     if (!item.product) return acc;
     return acc + (calculateItemPrice(item) * item.quantity);
   }, 0);
+
+  const shippingFee = settings ? (subtotal >= settings.freeShippingThreshold ? 0 : settings.shippingFee) : 0;
+  const total = subtotal + shippingFee;
 
   const handleCheckout = () => {
     navigate("/checkout");
@@ -143,11 +147,18 @@ export default function Cart() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Shipping</span>
-                    <span className="text-green-600">Free</span>
+                    <span className={shippingFee === 0 ? "text-green-600" : ""}>
+                      {shippingFee === 0 ? "Free" : `₹${shippingFee.toFixed(2)}`}
+                    </span>
                   </div>
+                  {settings && shippingFee > 0 && (
+                    <div className="text-xs text-muted-foreground">
+                      Add ₹{(settings.freeShippingThreshold - subtotal).toFixed(2)} more for free shipping
+                    </div>
+                  )}
                   <div className="border-t pt-4 flex justify-between font-bold text-lg">
                     <span>Total</span>
-                    <span>₹{subtotal.toFixed(2)}</span>
+                    <span>₹{total.toFixed(2)}</span>
                   </div>
                 </CardContent>
                 <CardFooter>

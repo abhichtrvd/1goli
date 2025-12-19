@@ -68,6 +68,7 @@ function PaymentForm({
 export default function Checkout() {
   const navigate = useNavigate();
   const cartItems = useQuery(api.cart.getCart);
+  const settings = useQuery(api.settings.getSettings);
   const createOrder = useMutation(api.orders.createOrder);
   const confirmPayment = useMutation(api.orders.confirmOrderPayment);
   const createPaymentIntent = useAction(api.payments.createPaymentIntent);
@@ -102,11 +103,14 @@ export default function Checkout() {
     return acc + (calculateItemPrice(item) * item.quantity);
   }, 0) || 0;
 
+  const shippingFee = settings ? (subtotal >= settings.freeShippingThreshold ? 0 : settings.shippingFee) : 0;
+  const total = subtotal + shippingFee;
+
   useEffect(() => {
-    if (subtotal > 0 && paymentMethod === "online" && !clientSecret) {
+    if (total > 0 && paymentMethod === "online" && !clientSecret) {
       const fetchPaymentIntent = async () => {
         try {
-          const result = await createPaymentIntent({ amount: subtotal, currency: "inr" });
+          const result = await createPaymentIntent({ amount: total, currency: "inr" });
           if (result.error) {
             setStripeError(result.error);
           } else if (result.clientSecret) {
@@ -119,7 +123,7 @@ export default function Checkout() {
       };
       fetchPaymentIntent();
     }
-  }, [subtotal, paymentMethod, createPaymentIntent, clientSecret]);
+  }, [total, paymentMethod, createPaymentIntent, clientSecret]);
 
   if (cartItems === undefined) {
     return (
@@ -163,7 +167,7 @@ export default function Checkout() {
         shippingAddress: formattedAddress,
         shippingDetails: formData,
         paymentMethod,
-        total: subtotal,
+        total: total,
         items: orderItems
       });
 
@@ -293,7 +297,7 @@ export default function Checkout() {
           shippingAddress: formattedAddress,
           shippingDetails: formData,
           paymentMethod,
-          total: subtotal,
+          total: total,
           items: orderItems
         });
 
@@ -502,7 +506,9 @@ export default function Checkout() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Shipping</span>
-                    <span className="text-green-600">Free</span>
+                    <span className={shippingFee === 0 ? "text-green-600" : ""}>
+                      {shippingFee === 0 ? "Free" : `₹${shippingFee.toFixed(2)}`}
+                    </span>
                   </div>
                 </div>
                 
@@ -510,7 +516,7 @@ export default function Checkout() {
                 
                 <div className="flex justify-between font-bold text-lg">
                   <span>Total</span>
-                  <span>₹{subtotal.toFixed(2)}</span>
+                  <span>₹{total.toFixed(2)}</span>
                 </div>
               </CardContent>
               <CardFooter>
