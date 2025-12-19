@@ -327,6 +327,7 @@ function DoctorCard({ doctor, onBook }: { doctor: any, onBook: () => void }) {
             src={doctor.imageUrl} 
             alt={doctor.name} 
             className="w-full h-full object-cover"
+            loading="lazy"
           />
           <div className="absolute top-2 right-2">
             <Badge className="bg-white/90 text-black hover:bg-white shadow-sm text-[10px] px-1.5 h-5">

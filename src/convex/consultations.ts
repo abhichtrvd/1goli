@@ -47,7 +47,7 @@ export const seedDoctors = mutation({
           { mode: "Follow-up Call", price: 299, durationMinutes: 15, description: "Prescription tweaks, Supplement guidance" }
         ],
         services: ["Chronic Migraine", "Thyroid", "PCOS", "Skin & Hair", "Allergies", "Child Wellness"],
-        imageUrl: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?q=80&w=2070&auto=format&fit=crop"
+        imageUrl: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?q=80&w=500&auto=format&fit=crop"
       },
       {
         name: "Dr. Rajesh Kumar",
@@ -67,7 +67,7 @@ export const seedDoctors = mutation({
           { mode: "Video Consultation", price: 500, durationMinutes: 20, description: "Online consultation for parents" }
         ],
         services: ["Child Immunity", "Asthma", "Eczema", "Growth Issues"],
-        imageUrl: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=2070&auto=format&fit=crop"
+        imageUrl: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=500&auto=format&fit=crop"
       },
       {
         name: "Dr. Sarah Khan",
@@ -87,7 +87,7 @@ export const seedDoctors = mutation({
           { mode: "Video Consultation", price: 800, durationMinutes: 30, description: "Visual assessment via HD video" }
         ],
         services: ["Acne", "Psoriasis", "Hair Loss", "Pigmentation"],
-        imageUrl: "https://images.unsplash.com/photo-1594824476967-48c8b964273f?q=80&w=2070&auto=format&fit=crop"
+        imageUrl: "https://images.unsplash.com/photo-1594824476967-48c8b964273f?q=80&w=500&auto=format&fit=crop"
       }
     ];
 

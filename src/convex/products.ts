@@ -29,6 +29,7 @@ export const getWholesaleProducts = query({
   args: {},
   handler: async (ctx) => {
     // Lightweight query for wholesale - no image URL generation needed
+    // This significantly speeds up the load time by avoiding storage calls
     return await ctx.db.query("products").collect();
   },
 });
