@@ -123,6 +123,26 @@ const schema = defineSchema(
         searchField: "shippingAddress",
       }),
 
+    prescriptions: defineTable({
+      userId: v.optional(v.string()),
+      guestInfo: v.optional(v.object({
+        name: v.string(),
+        phone: v.string(),
+        email: v.optional(v.string()),
+      })),
+      imageStorageId: v.id("_storage"),
+      notes: v.optional(v.string()),
+      status: v.union(
+        v.literal("pending"),
+        v.literal("reviewed"),
+        v.literal("processed"),
+        v.literal("rejected")
+      ),
+      pharmacistNotes: v.optional(v.string()),
+    })
+      .index("by_user", ["userId"])
+      .index("by_status", ["status"]),
+
     consultationDoctors: defineTable({
       name: v.string(),
       credentials: v.string(),
