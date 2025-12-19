@@ -71,7 +71,7 @@ const getProductCategory = (product: any) => {
 };
 
 export default function Wholesale() {
-  const products = useQuery(api.products.getProducts);
+  const products = useQuery(api.products.getWholesaleProducts);
   const addToCart = useMutation(api.cart.addToCart);
   const seed = useMutation(api.products.seedProducts);
 

@@ -25,6 +25,14 @@ export const getProducts = query({
   },
 });
 
+export const getWholesaleProducts = query({
+  args: {},
+  handler: async (ctx) => {
+    // Lightweight query for wholesale - no image URL generation needed
+    return await ctx.db.query("products").collect();
+  },
+});
+
 export const getProduct = query({
   args: { id: v.id("products") },
   handler: async (ctx, args) => {

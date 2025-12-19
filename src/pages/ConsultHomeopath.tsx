@@ -55,9 +55,10 @@ export default function ConsultHomeopath() {
   const suggestedDoctors = useQuery(api.consultations.listDoctors, {});
   
   // Fetch search results from backend based on debounced search
-  const searchResults = useQuery(api.consultations.listDoctors, { 
-    city: debouncedSearch.trim() ? debouncedSearch : undefined 
-  });
+  // Skip query if search is empty to avoid double fetching
+  const searchResults = useQuery(api.consultations.listDoctors, 
+    debouncedSearch.trim() ? { city: debouncedSearch } : "skip"
+  );
 
   const seedDoctors = useMutation(api.consultations.seedDoctors);
   const bookAppointment = useMutation(api.consultations.bookAppointment);
