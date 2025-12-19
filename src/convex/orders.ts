@@ -35,6 +35,18 @@ export const createOrder = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
+    // Check and decrement stock
+    for (const item of args.items) {
+      const product = await ctx.db.get(item.productId);
+      if (!product) throw new Error(`Product not found: ${item.name}`);
+      if (product.stock < item.quantity) {
+        throw new Error(`Insufficient stock for ${item.name}. Available: ${product.stock}`);
+      }
+      await ctx.db.patch(item.productId, {
+        stock: product.stock - item.quantity,
+      });
+    }
+
     const orderId = await ctx.db.insert("orders", {
       userId,
       items: args.items,

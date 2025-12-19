@@ -302,6 +302,11 @@ export default function Landing() {
                             <Badge variant="secondary" className="absolute top-1 right-1 bg-white/80 backdrop-blur-sm text-black text-[9px] px-1.5 py-0 h-4">
                               New
                             </Badge>
+                            {product.stock !== undefined && product.stock <= 0 && (
+                              <div className="absolute inset-0 bg-white/60 flex items-center justify-center">
+                                <Badge variant="destructive">Out of Stock</Badge>
+                              </div>
+                            )}
                           </div>
 
                           <div className="mb-1">
@@ -313,7 +318,11 @@ export default function Landing() {
 
                           <div className="flex items-center justify-between mt-auto pt-2 border-t border-border/50">
                             <span className="text-xs font-bold text-lime-600">₹{product.basePrice}</span>
-                            <Button size="sm" className="rounded-full px-3 h-6 text-[10px] bg-primary text-primary-foreground hover:bg-primary/90">
+                            <Button 
+                              size="sm" 
+                              className="rounded-full px-3 h-6 text-[10px] bg-primary text-primary-foreground hover:bg-primary/90"
+                              disabled={product.stock !== undefined && product.stock <= 0}
+                            >
                               Add
                             </Button>
                           </div>

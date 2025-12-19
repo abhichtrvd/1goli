@@ -219,6 +219,10 @@ export function Navbar() {
                       Dev: Make Me Admin
                    </DropdownMenuItem>
                 )}
+                <DropdownMenuItem onClick={() => navigate("/orders")}>
+                  <ShoppingBag className="mr-2 h-4 w-4" />
+                  My Orders
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setIsProfileOpen(true)}>
                   <Settings className="mr-2 h-4 w-4" />
                   Profile Settings

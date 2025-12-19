@@ -39,6 +39,10 @@ export const addToCart = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
+    const product = await ctx.db.get(args.productId);
+    if (!product) throw new Error("Product not found");
+    if (product.stock < args.quantity) throw new Error("Insufficient stock");
+
     const packingSize = args.packingSize || "Standard";
 
     const [existing] = await ctx.db

@@ -229,150 +229,86 @@ export const deleteProduct = mutation({
 export const seedProducts = mutation({
   args: {},
   handler: async (ctx) => {
-    // Check if we need to backfill brands or packingSizes for existing products
-    const allProducts = await ctx.db.query("products").collect();
-    for (const p of allProducts) {
-      let updates: any = {};
-      if (!p.brand) {
-        const brands = ["Dr. Reckeweg", "SBL World Class", "Schwabe India", "Adel Pekana", "Bakson's", "Bjain Pharma"];
-        updates.brand = brands[Math.floor(Math.random() * brands.length)];
-      }
-      if (!p.packingSizes) {
-        // Assign default packing sizes based on form/category guess
-        if (p.forms.includes("Tablets") || p.category === "Biochemics") {
-            updates.packingSizes = ["25g", "450g"];
-        } else if (p.forms.includes("Ointment")) {
-            updates.packingSizes = ["25g", "50g"];
-        } else {
-            updates.packingSizes = ["30ml", "100ml", "450ml"];
-        }
-      }
-      
-      if (Object.keys(updates).length > 0) {
-        await ctx.db.patch(p._id, updates);
-      }
-    }
-
-    const existing = await ctx.db.query("products").take(1);
-    if (existing.length > 0) return; // Already seeded
+    const totalProducts = await ctx.db.query("products").collect();
+    if (totalProducts.length > 0) return;
 
     const products = [
       {
         name: "Arnica Montana",
-        description: "The premier remedy for trauma, bruising, and muscle soreness. Essential for any first aid kit to reduce swelling and pain.",
-        imageUrl: "https://images.unsplash.com/photo-1625591342274-013866180475?w=800&auto=format&fit=crop&q=60",
+        description: "Effective for bruises, sprains, and muscle soreness. A must-have for every first aid kit.",
+        brand: "Dr. Reckeweg",
         potencies: ["30C", "200C", "1M", "Mother Tincture"],
-        forms: ["Dilution", "Globules", "Ointment"],
-        packingSizes: ["30ml", "100ml", "450ml"],
-        basePrice: 12.99,
-        symptomsTags: ["injury", "bruise", "trauma", "muscle pain", "swelling"],
+        forms: ["Dilution", "Drops", "Tablets"],
+        basePrice: 150,
+        stock: 50,
+        symptomsTags: ["Injury", "Pain", "Bruises"],
         category: "Classical",
-        availability: "in_stock",
-        brand: "Dr. Reckeweg"
+        imageUrl: "https://images.unsplash.com/photo-1624454002302-36b824d7bd52?q=80&w=500&auto=format&fit=crop",
       },
       {
         name: "Nux Vomica",
-        description: "Effective for digestive issues, stress, and irritability. Often used for 'modern life' excesses like overeating or overworking.",
-        imageUrl: "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=800&auto=format&fit=crop&q=60",
-        potencies: ["30C", "200C", "1M"],
-        forms: ["Dilution", "Globules", "Drops"],
-        packingSizes: ["30ml", "100ml"],
-        basePrice: 14.50,
-        symptomsTags: ["indigestion", "stress", "hangover", "irritability", "constipation"],
+        description: "Relief from indigestion, bloating, and irritability caused by modern lifestyle.",
+        brand: "SBL World Class",
+        potencies: ["30C", "200C"],
+        forms: ["Dilution", "Tablets"],
+        basePrice: 120,
+        stock: 45,
+        symptomsTags: ["Digestion", "Stress", "Headache"],
         category: "Classical",
-        availability: "in_stock",
-        brand: "SBL World Class"
+        imageUrl: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?q=80&w=500&auto=format&fit=crop",
       },
       {
-        name: "Oscillococcinum",
-        description: "Clinically proven for flu-like symptoms. Reduces the duration and severity of body aches, headache, fever, and chills.",
-        imageUrl: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=800&auto=format&fit=crop&q=60",
-        potencies: ["200K"],
-        forms: ["Tube"],
-        packingSizes: ["6 Doses", "12 Doses", "30 Doses"],
-        basePrice: 29.99,
-        symptomsTags: ["flu", "body ache", "fever", "chills"],
+        name: "R89 Hair Care Drops",
+        description: "Specialized formulation for hair fall, premature graying, and weak roots.",
+        brand: "Dr. Reckeweg",
+        potencies: ["Mother Tincture"],
+        forms: ["Drops"],
+        basePrice: 280,
+        stock: 30,
+        symptomsTags: ["Hair Fall", "Scalp"],
         category: "Patent",
-        availability: "in_stock",
-        brand: "Boiron"
-      },
-      {
-        name: "Rhus Toxicodendron",
-        description: "Indicated for joint pain, arthritis, and rheumatic conditions that improve with motion and warmth.",
-        imageUrl: "https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=800&auto=format&fit=crop&q=60",
-        potencies: ["30C", "200C", "1M"],
-        forms: ["Dilution", "Globules"],
-        packingSizes: ["30ml", "100ml"],
-        basePrice: 13.50,
-        symptomsTags: ["joint pain", "arthritis", "stiffness", "back pain"],
-        category: "Classical",
-        availability: "in_stock",
-        brand: "Schwabe India"
+        imageUrl: "https://images.unsplash.com/photo-1626806749963-2c709d771e43?q=80&w=500&auto=format&fit=crop",
       },
       {
         name: "Belladonna",
-        description: "For sudden high fever, throbbing headaches, and inflammation with redness and heat.",
-        imageUrl: "https://images.unsplash.com/photo-1606041008023-472dfb5e530f?w=800&auto=format&fit=crop&q=60",
-        potencies: ["30C", "200C"],
-        forms: ["Dilution", "Globules", "Drops"],
-        packingSizes: ["30ml", "100ml"],
-        basePrice: 12.99,
-        symptomsTags: ["fever", "headache", "inflammation", "sore throat"],
+        description: "Quick relief for sudden high fever, throbbing headaches, and inflammation.",
+        brand: "Schwabe India",
+        potencies: ["30C", "200C", "1M"],
+        forms: ["Dilution"],
+        basePrice: 140,
+        stock: 60,
+        symptomsTags: ["Fever", "Inflammation", "Pain"],
         category: "Classical",
-        availability: "in_stock",
-        brand: "Dr. Reckeweg"
+        imageUrl: "https://images.unsplash.com/photo-1607619056574-7b8d3ee536b2?q=80&w=500&auto=format&fit=crop",
+      },
+      {
+        name: "Rhus Tox",
+        description: "Excellent for joint pains that improve with motion. Helpful in arthritis.",
+        brand: "Dr. Reckeweg",
+        potencies: ["30C", "200C"],
+        forms: ["Dilution", "Ointment"],
+        basePrice: 160,
+        stock: 40,
+        symptomsTags: ["Joint Pain", "Arthritis"],
+        category: "Classical",
+        imageUrl: "https://images.unsplash.com/photo-1550572017-edd951aa8f72?q=80&w=500&auto=format&fit=crop",
       },
       {
         name: "Calendula Officinalis",
-        description: "A powerful antiseptic healing agent for open wounds, cuts, and burns. Promotes rapid healing of skin.",
-        imageUrl: "https://images.unsplash.com/photo-1496857239036-1fb137683000?w=800&auto=format&fit=crop&q=60",
-        potencies: ["Mother Tincture", "30C"],
-        forms: ["Ointment", "Dilution", "Spray"],
-        packingSizes: ["25g", "50g", "30ml"],
-        basePrice: 15.00,
-        symptomsTags: ["wounds", "cuts", "burns", "skin", "antiseptic"],
+        description: "Natural antiseptic for cuts, wounds, and burns. Promotes rapid healing.",
+        brand: "SBL World Class",
+        potencies: ["Mother Tincture"],
+        forms: ["Cream", "Liquid"],
+        basePrice: 110,
+        stock: 100,
+        symptomsTags: ["Skin", "Wounds", "Antiseptic"],
         category: "Personal Care",
-        availability: "in_stock",
-        brand: "SBL World Class"
+        imageUrl: "https://images.unsplash.com/photo-1556228552-cabd363226e3?q=80&w=500&auto=format&fit=crop",
       },
-      {
-        name: "Calcarea Fluorica",
-        description: "Biochemic tissue salt for elasticity of blood vessels, tissues, and skin.",
-        imageUrl: "https://images.unsplash.com/photo-1585435557343-3b092031a831?w=800&auto=format&fit=crop&q=60",
-        potencies: ["6X", "12X"],
-        forms: ["Tablets"],
-        packingSizes: ["25g", "450g"],
-        basePrice: 10.00,
-        symptomsTags: ["varicose veins", "skin", "teeth"],
-        category: "Biochemics",
-        availability: "in_stock",
-        brand: "Schwabe India"
-      },
-      {
-        name: "Bio-Combination 28",
-        description: "General tonic for overall health and vitality.",
-        imageUrl: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=800&auto=format&fit=crop&q=60",
-        potencies: ["6X"],
-        forms: ["Tablets"],
-        packingSizes: ["25g", "450g"],
-        basePrice: 18.00,
-        symptomsTags: ["tonic", "weakness", "vitality"],
-        category: "Bio Combinations",
-        availability: "in_stock",
-        brand: "SBL World Class"
-      }
     ];
 
-    for (const p of products) {
-      // Check if product already exists to avoid duplicates on re-seed
-      const existingProduct = await ctx.db
-        .query("products")
-        .filter((q) => q.eq(q.field("name"), p.name))
-        .first();
-        
-      if (!existingProduct) {
-        await ctx.db.insert("products", p);
-      }
+    for (const product of products) {
+      await ctx.db.insert("products", product);
     }
   },
 });

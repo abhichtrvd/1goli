@@ -66,6 +66,8 @@ export default function ProductDetails() {
     return price.toFixed(2);
   };
 
+  const isOutOfStock = product.stock !== undefined && product.stock <= 0;
+
   const handleAddToCart = async () => {
     if (!isAuthenticated) {
       toast.error("Please sign in to add items to cart");
@@ -216,6 +218,14 @@ export default function ProductDetails() {
                   {tag}
                 </Badge>
               ))}
+              {isOutOfStock && (
+                <Badge variant="destructive">Out of Stock</Badge>
+              )}
+              {!isOutOfStock && product.stock !== undefined && product.stock < 10 && (
+                <Badge variant="outline" className="text-orange-600 border-orange-600">
+                  Only {product.stock} left
+                </Badge>
+              )}
             </div>
 
             <div className="prose prose-sm text-muted-foreground mb-8 leading-relaxed">
@@ -273,11 +283,11 @@ export default function ProductDetails() {
                 {/* Desktop Add to Cart */}
                 <Button 
                   className="w-full h-12 text-lg hidden md:flex" 
-                  disabled={!selectedPotency || !selectedForm || isAdding}
+                  disabled={!selectedPotency || !selectedForm || isAdding || isOutOfStock}
                   onClick={handleAddToCart}
                 >
                   {isAdding ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <ShoppingCart className="mr-2 h-5 w-5" />}
-                  Add to Cart
+                  {isOutOfStock ? "Out of Stock" : "Add to Cart"}
                 </Button>
               </CardContent>
             </Card>
@@ -294,10 +304,10 @@ export default function ProductDetails() {
           </div>
           <Button 
             className="flex-1 h-12" 
-            disabled={!selectedPotency || !selectedForm || isAdding}
+            disabled={!selectedPotency || !selectedForm || isAdding || isOutOfStock}
             onClick={handleAddToCart}
           >
-            Add to Cart
+            {isOutOfStock ? "Out of Stock" : "Add to Cart"}
           </Button>
         </div>
       </div>

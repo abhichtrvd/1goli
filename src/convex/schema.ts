@@ -56,6 +56,7 @@ const schema = defineSchema(
       forms: v.array(v.string()),
       packingSizes: v.optional(v.array(v.string())), // Added packing sizes (e.g., "30ml", "100ml")
       basePrice: v.number(),
+      stock: v.number(), // Added stock field
       symptomsTags: v.array(v.string()),
       category: v.optional(v.string()), // e.g., "Classical", "Patent", "Personal Care"
       availability: v.optional(v.string()), // "in_stock", "out_of_stock"
