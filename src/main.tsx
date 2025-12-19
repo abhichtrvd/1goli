@@ -24,6 +24,7 @@ const CategoryLanding = lazy(() => import("./pages/CategoryLanding.tsx"));
 const Checkout = lazy(() => import("./pages/Checkout.tsx"));
 const OrderConfirmation = lazy(() => import("./pages/OrderConfirmation.tsx"));
 const OrderHistory = lazy(() => import("./pages/OrderHistory.tsx"));
+const UserDashboard = lazy(() => import("./pages/UserDashboard.tsx"));
 
 // Admin Pages
 const AdminLayout = lazy(() => import("./components/AdminLayout.tsx"));
@@ -60,6 +61,7 @@ createRoot(document.getElementById("root")!).render(
               <Route path="/checkout" element={<Checkout />} />
               <Route path="/order-confirmation/:orderId" element={<OrderConfirmation />} />
               <Route path="/orders" element={<OrderHistory />} />
+              <Route path="/account" element={<UserDashboard />} />
               <Route path="/search" element={<SearchResults />} />
               <Route path="/category/:category" element={<CategoryLanding />} />
               <Route path="*" element={<NotFound />} />

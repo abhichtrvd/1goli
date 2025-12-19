@@ -179,7 +179,8 @@ const schema = defineSchema(
       amount: v.number(),
       notes: v.optional(v.string()),
     })
-      .index("by_doctor", ["doctorId"]),
+      .index("by_doctor", ["doctorId"])
+      .index("by_user", ["userId"]),
   },
   {
     schemaValidation: false,

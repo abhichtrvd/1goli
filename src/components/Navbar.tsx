@@ -37,9 +37,7 @@ export function Navbar() {
   const cartItems = useQuery(api.cart.getCart);
   const cartCount = cartItems?.reduce((acc, item) => acc + item.quantity, 0) || 0;
   
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
-  const updateProfile = useMutation(api.users.updateCurrentUser);
+  // Profile state removed in favor of /account page
   const promoteToAdmin = useMutation(api.users.promoteCurrentUserToAdmin);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -61,23 +59,7 @@ export function Navbar() {
     }
   };
 
-  const handleUpdateProfile = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsUpdatingProfile(true);
-    const formData = new FormData(e.currentTarget);
-    const name = formData.get("name") as string;
-    const address = formData.get("address") as string;
-
-    try {
-      await updateProfile({ name, address });
-      toast.success("Profile updated successfully");
-      setIsProfileOpen(false);
-    } catch (error) {
-      toast.error("Failed to update profile");
-    } finally {
-      setIsUpdatingProfile(false);
-    }
-  };
+  // Profile update handler removed
 
   return (
     <nav className="sticky top-0 z-50 w-full bg-background backdrop-blur-md border-b border-border/40">
@@ -120,12 +102,12 @@ export function Navbar() {
                         <LayoutDashboard className="h-5 w-5" /> Admin Dashboard
                       </Link>
                     )}
-                    <button
-                      onClick={() => setIsProfileOpen(true)}
+                    <Link
+                      to="/account"
                       className="text-lg font-medium text-left hover:text-lime-600 transition-colors flex items-center gap-3"
                     >
-                      <Settings className="h-5 w-5" /> Profile
-                    </button>
+                      <Settings className="h-5 w-5" /> My Account
+                    </Link>
                     <button
                       onClick={() => signOut()}
                       className="text-lg font-medium text-left hover:text-lime-600 transition-colors text-destructive flex items-center gap-3"
@@ -223,9 +205,9 @@ export function Navbar() {
                   <ShoppingBag className="mr-2 h-4 w-4" />
                   My Orders
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setIsProfileOpen(true)}>
+                <DropdownMenuItem onClick={() => navigate("/account")}>
                   <Settings className="mr-2 h-4 w-4" />
-                  Profile Settings
+                  My Account
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => signOut()} className="text-destructive focus:text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
@@ -255,66 +237,7 @@ export function Navbar() {
         </div>
       </div>
 
-      <Dialog open={isProfileOpen} onOpenChange={setIsProfileOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Edit Profile</DialogTitle>
-            <DialogDescription>
-              Make changes to your profile here. Click save when you're done.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleUpdateProfile}>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="name" className="text-right">
-                  Name
-                </Label>
-                <Input
-                  id="name"
-                  name="name"
-                  defaultValue={user?.name || ""}
-                  className="col-span-3"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="address" className="text-right">
-                  Address
-                </Label>
-                <Input
-                  id="address"
-                  name="address"
-                  defaultValue={user?.address || ""}
-                  className="col-span-3"
-                  placeholder="Your shipping address"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right text-muted-foreground">
-                  Email
-                </Label>
-                <div className="col-span-3 text-sm text-muted-foreground">
-                  {user?.email || "Not linked"}
-                </div>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right text-muted-foreground">
-                  Phone
-                </Label>
-                <div className="col-span-3 text-sm text-muted-foreground">
-                  {user?.phone || "Not linked"}
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="submit" disabled={isUpdatingProfile}>
-                {isUpdatingProfile && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save changes
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* Profile Dialog removed */}
     </nav>
   );
 }

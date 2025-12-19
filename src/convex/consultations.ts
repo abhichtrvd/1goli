@@ -152,7 +152,7 @@ export const bookAppointment = mutation({
     
     const bookingId = await ctx.db.insert("consultationBookings", {
       doctorId: args.doctorId,
-      userId: userId || undefined,
+      userId: userId || undefined, // Ensure null becomes undefined if needed, though optional handles it
       patientName: args.patientName,
       phone: args.phone,
       email: args.email,
@@ -168,6 +168,29 @@ export const bookAppointment = mutation({
     });
 
     return bookingId;
+  },
+});
+
+export const getUserBookings = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+    
+    const bookings = await ctx.db
+      .query("consultationBookings")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .order("desc")
+      .collect();
+      
+    const bookingsWithDoctor = await Promise.all(
+      bookings.map(async (booking) => {
+        const doctor = await ctx.db.get(booking.doctorId);
+        return { ...booking, doctor };
+      })
+    );
+    
+    return bookingsWithDoctor;
   },
 });
 
