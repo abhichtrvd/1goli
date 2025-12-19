@@ -36,8 +36,10 @@ const schema = defineSchema(
     })
       .index("email", ["email"])
       .index("phone", ["phone"])
+      .index("by_role", ["role"])
       .searchIndex("search_name", {
         searchField: "name",
+        filterFields: ["role"],
       }),
 
     products: defineTable({
@@ -186,6 +188,7 @@ const schema = defineSchema(
       })
       .searchIndex("search_name", {
         searchField: "name",
+        filterFields: ["specialization", "clinicCity"],
       }),
 
     consultationBookings: defineTable({

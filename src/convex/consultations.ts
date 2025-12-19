@@ -36,10 +36,27 @@ export const listDoctors = query({
 export const getPaginatedDoctors = query({
   args: { 
     paginationOpts: paginationOptsValidator,
+    search: v.optional(v.string()),
     specialization: v.optional(v.string()),
     city: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    if (args.search) {
+      return await ctx.db
+        .query("consultationDoctors")
+        .withSearchIndex("search_name", (q) => {
+          let search = q.search("name", args.search!);
+          if (args.specialization) {
+            search = search.eq("specialization", args.specialization);
+          }
+          if (args.city) {
+            search = search.eq("clinicCity", args.city);
+          }
+          return search;
+        })
+        .paginate(args.paginationOpts);
+    }
+
     let query;
     
     if (args.specialization) {

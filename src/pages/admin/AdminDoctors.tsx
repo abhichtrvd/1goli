@@ -4,15 +4,21 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { useQuery, useMutation } from "convex/react";
+import { useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Plus, Trash2, Edit, Loader2 } from "lucide-react";
+import { Plus, Trash2, Edit, Loader2, Search } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 
 export default function AdminDoctors() {
-  const doctors = useQuery(api.consultations.listDoctors, {});
+  const [search, setSearch] = useState("");
+  const { results: doctors, status, loadMore, isLoading } = usePaginatedQuery(
+    api.consultations.getPaginatedDoctors,
+    { search: search || undefined },
+    { initialNumItems: 10 }
+  );
+
   const createDoctor = useMutation(api.consultations.createDoctor);
   const updateDoctor = useMutation(api.consultations.updateDoctor);
   const deleteDoctor = useMutation(api.consultations.deleteDoctor);
@@ -138,6 +144,18 @@ export default function AdminDoctors() {
         </Dialog>
       </div>
 
+      <div className="flex items-center gap-2">
+        <div className="relative w-64">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input 
+            placeholder="Search doctors..." 
+            className="pl-8" 
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle>All Doctors</CardTitle>
@@ -175,8 +193,31 @@ export default function AdminDoctors() {
                   </TableCell>
                 </TableRow>
               ))}
+              {doctors?.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    No doctors found.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
+
+          <div className="flex items-center justify-center py-4">
+            {status === "CanLoadMore" && (
+              <Button
+                variant="outline"
+                onClick={() => loadMore(10)}
+                disabled={isLoading}
+              >
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Load More
+              </Button>
+            )}
+            {status === "LoadingFirstPage" && (
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

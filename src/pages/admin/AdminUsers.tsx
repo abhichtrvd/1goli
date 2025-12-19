@@ -11,12 +11,18 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Filter } from "lucide-react";
 
 export default function AdminUsers() {
   const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
+  
   const { results: users, status, loadMore, isLoading } = usePaginatedQuery(
     api.users.searchUsers,
-    { search },
+    { 
+      search, 
+      role: roleFilter === "all" ? undefined : roleFilter 
+    },
     { initialNumItems: 10 }
   );
   
@@ -38,14 +44,28 @@ export default function AdminUsers() {
           <h1 className="text-3xl font-bold tracking-tight">Users</h1>
           <p className="text-muted-foreground">Manage user roles and permissions.</p>
         </div>
-        <div className="relative w-64">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input 
-            placeholder="Search users by name..." 
-            className="pl-8" 
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+        <div className="flex items-center gap-2">
+          <div className="relative w-64">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="Search users by name..." 
+              className="pl-8" 
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <Select value={roleFilter} onValueChange={setRoleFilter}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Filter by role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Roles</SelectItem>
+              <SelectItem value="user">User</SelectItem>
+              <SelectItem value="member">Member</SelectItem>
+              <SelectItem value="admin">Admin</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

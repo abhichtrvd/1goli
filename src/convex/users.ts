@@ -56,6 +56,7 @@ export const getUsers = query({
 export const searchUsers = query({
   args: {
     search: v.string(),
+    role: v.optional(v.string()),
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
@@ -64,9 +65,21 @@ export const searchUsers = query({
     if (args.search) {
       return await ctx.db
         .query("users")
-        .withSearchIndex("search_name", (q) => 
-          q.search("name", args.search)
-        )
+        .withSearchIndex("search_name", (q) => {
+          let search = q.search("name", args.search);
+          if (args.role) {
+            search = search.eq("role", args.role as any);
+          }
+          return search;
+        })
+        .paginate(args.paginationOpts);
+    }
+
+    if (args.role) {
+      return await ctx.db
+        .query("users")
+        .withIndex("by_role", (q) => q.eq("role", args.role as any))
+        .order("desc")
         .paginate(args.paginationOpts);
     }
 
