@@ -96,9 +96,9 @@ export default function SearchResults() {
         </div>
 
         {products === undefined ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-              <div key={i} className="h-[280px] bg-muted animate-pulse rounded-2xl" />
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
+              <div key={i} className="h-[200px] bg-muted animate-pulse rounded-xl" />
             ))}
           </div>
         ) : products.length === 0 ? (
@@ -113,18 +113,18 @@ export default function SearchResults() {
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
             {products.map((product, index) => (
               <motion.div
                 key={product._id}
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.3, delay: index * 0.05 }}
-                className="group relative bg-white dark:bg-card rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer border border-border"
+                className="group relative bg-white dark:bg-card rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer border border-border flex flex-col h-full"
                 onClick={() => navigate(`/product/${product._id}`)}
               >
-                <div className="p-4 h-full flex flex-col">
-                  <div className="relative aspect-square w-full flex items-center justify-center bg-secondary rounded-xl overflow-hidden mb-3">
+                <div className="p-2.5 h-full flex flex-col">
+                  <div className="relative aspect-square w-full flex items-center justify-center bg-secondary rounded-lg overflow-hidden mb-2">
                     {product.imageUrl ? (
                       <img 
                         src={product.imageUrl} 
@@ -133,26 +133,26 @@ export default function SearchResults() {
                       />
                     ) : (
                       <div className="flex flex-col items-center justify-center text-muted-foreground/50">
-                        <Activity className="h-8 w-8 mb-1" />
-                        <span className="text-xs">No Image</span>
+                        <Activity className="h-5 w-5 mb-1" />
+                        <span className="text-[9px]">No Image</span>
                       </div>
                     )}
                   </div>
 
-                  <div className="mb-2">
-                    <Badge variant="secondary" className="mb-2 bg-secondary/50 text-secondary-foreground hover:bg-secondary/80 rounded-md px-1.5 py-0 text-[10px] font-normal truncate max-w-full inline-block">
+                  <div className="mb-1.5 flex-1">
+                    <Badge variant="secondary" className="mb-1 bg-secondary/50 text-secondary-foreground hover:bg-secondary/80 rounded-md px-1.5 py-0 text-[9px] font-normal truncate max-w-full inline-block">
                       {product.category || "Homeopathy"}
                     </Badge>
-                    <h4 className="text-base font-semibold leading-tight group-hover:text-primary transition-colors line-clamp-1" title={product.name}>{product.name}</h4>
-                    <p className="text-muted-foreground line-clamp-1 text-xs mt-1">
+                    <h4 className="text-xs font-semibold leading-tight group-hover:text-primary transition-colors line-clamp-2" title={product.name}>{product.name}</h4>
+                    <p className="text-muted-foreground line-clamp-1 text-[9px] mt-0.5">
                       {product.description}
                     </p>
                   </div>
                   
-                  <div className="flex items-center justify-between mt-auto pt-2 border-t border-border/50">
-                    <span className="text-sm font-medium text-lime-600">₹{product.basePrice}</span>
-                    <Button size="icon" className="h-8 w-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm">
-                      <ShoppingCart className="h-4 w-4" />
+                  <div className="flex items-center justify-between mt-auto pt-1.5 border-t border-border/50">
+                    <span className="text-xs font-medium text-lime-600">₹{product.basePrice}</span>
+                    <Button size="icon" className="h-6 w-6 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm">
+                      <ShoppingCart className="h-3 w-3" />
                     </Button>
                   </div>
                 </div>

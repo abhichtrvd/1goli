@@ -170,3 +170,79 @@ export const bookAppointment = mutation({
     return bookingId;
   },
 });
+
+export const createDoctor = mutation({
+  args: {
+    name: v.string(),
+    credentials: v.string(),
+    specialization: v.string(),
+    bio: v.string(),
+    experienceYears: v.number(),
+    clinicAddress: v.string(),
+    clinicCity: v.string(),
+    clinicPhone: v.string(),
+    imageUrl: v.optional(v.string()),
+    availability: v.array(v.string()),
+    languages: v.array(v.string()),
+    services: v.array(v.string()),
+    consultationModes: v.array(v.object({
+        mode: v.string(),
+        price: v.number(),
+        durationMinutes: v.number(),
+        description: v.string(),
+    })),
+  },
+  handler: async (ctx, args) => {
+    const { imageUrl, ...rest } = args;
+    await ctx.db.insert("consultationDoctors", {
+        ...rest,
+        imageUrl: imageUrl ?? "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=500&auto=format&fit=crop",
+        rating: 0,
+        totalConsultations: 0,
+    });
+  }
+});
+
+export const updateDoctor = mutation({
+    args: {
+        id: v.id("consultationDoctors"),
+        name: v.optional(v.string()),
+        credentials: v.optional(v.string()),
+        specialization: v.optional(v.string()),
+        bio: v.optional(v.string()),
+        experienceYears: v.optional(v.number()),
+        clinicAddress: v.optional(v.string()),
+        clinicCity: v.optional(v.string()),
+        clinicPhone: v.optional(v.string()),
+        imageUrl: v.optional(v.string()),
+        availability: v.optional(v.array(v.string())),
+        languages: v.optional(v.array(v.string())),
+        services: v.optional(v.array(v.string())),
+        consultationModes: v.optional(v.array(v.object({
+            mode: v.string(),
+            price: v.number(),
+            durationMinutes: v.number(),
+            description: v.string(),
+        }))),
+    },
+    handler: async (ctx, args) => {
+        const { id, ...fields } = args;
+        // Filter out undefined fields to avoid overwriting with undefined if that's an issue, 
+        // though Convex usually handles partial updates fine. 
+        // Explicitly handling it ensures safety.
+        const updates: any = {};
+        for (const [key, value] of Object.entries(fields)) {
+            if (value !== undefined) {
+                updates[key] = value;
+            }
+        }
+        await ctx.db.patch(id, updates);
+    }
+});
+
+export const deleteDoctor = mutation({
+    args: { id: v.id("consultationDoctors") },
+    handler: async (ctx, args) => {
+        await ctx.db.delete(args.id);
+    }
+});
