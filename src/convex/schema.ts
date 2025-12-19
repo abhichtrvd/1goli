@@ -64,7 +64,9 @@ const schema = defineSchema(
         searchField: "description",
         filterFields: ["name"], // simplified search
       })
-      .index("by_brand", ["brand"]),
+      .index("by_brand", ["brand"])
+      .index("by_price", ["basePrice"])
+      .index("by_name", ["name"]),
 
     cartItems: defineTable({
       userId: v.string(),
@@ -134,6 +136,7 @@ const schema = defineSchema(
       imageUrl: v.string(),
     })
       .index("by_specialization", ["specialization"])
+      .index("by_city", ["clinicCity"])
       .searchIndex("search_city", {
         searchField: "clinicCity",
       })

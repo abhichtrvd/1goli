@@ -15,16 +15,21 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowUpDown } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function Landing() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBrand, setSelectedBrand] = useState<string | undefined>(undefined);
+  const [sortBy, setSortBy] = useState<string>("newest");
   
   // Use paginated query for products
   const { results: products, status, loadMore, isLoading } = usePaginatedQuery(
     api.products.getPaginatedProducts,
-    { brand: selectedBrand },
+    { 
+      brand: selectedBrand,
+      sort: sortBy === "newest" ? undefined : sortBy 
+    },
     { initialNumItems: 10 }
   );
 
@@ -216,7 +221,7 @@ export default function Landing() {
       {/* Products Grid - Bento Style */}
       <section id="products" className="py-20 bg-secondary">
         <div className="container max-w-6xl mx-auto px-4">
-          <div className="mb-12 text-center md:text-left flex flex-col md:flex-row justify-between items-end gap-4">
+          <div className="mb-12 flex flex-col md:flex-row justify-between items-end gap-4">
             <div>
               <h3 className="text-3xl md:text-4xl font-semibold tracking-tight mb-2">
                 {selectedBrand ? `${selectedBrand} Remedies` : "Popular Homeopathic Remedies"}
@@ -225,11 +230,29 @@ export default function Landing() {
                 Trusted formulations for your holistic health.
               </p>
             </div>
-            {selectedBrand && (
-              <Button variant="ghost" onClick={() => setSelectedBrand(undefined)} className="text-muted-foreground hover:text-foreground">
-                Clear Filter
-              </Button>
-            )}
+            
+            <div className="flex items-center gap-2">
+              {selectedBrand && (
+                <Button variant="ghost" onClick={() => setSelectedBrand(undefined)} className="text-muted-foreground hover:text-foreground">
+                  Clear Filter
+                </Button>
+              )}
+              
+              {!selectedBrand && (
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="w-[180px] bg-white dark:bg-card">
+                    <ArrowUpDown className="w-4 h-4 mr-2 text-muted-foreground" />
+                    <SelectValue placeholder="Sort By" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="newest">Newest Arrivals</SelectItem>
+                    <SelectItem value="price_asc">Price: Low to High</SelectItem>
+                    <SelectItem value="price_desc">Price: High to Low</SelectItem>
+                    <SelectItem value="name_asc">Name: A to Z</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
           </div>
 
           {products === undefined ? (

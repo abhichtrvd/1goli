@@ -51,10 +51,16 @@ export default function ConsultHomeopath() {
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebounce(searchInput, 500);
   
+  const [filterSpecialization, setFilterSpecialization] = useState<string>("all");
+  const [filterCity, setFilterCity] = useState<string>("all");
+
   // Fetch suggested doctors (paginated)
   const { results: suggestedDoctors, status, loadMore } = usePaginatedQuery(
     api.consultations.getPaginatedDoctors,
-    {},
+    {
+      specialization: filterSpecialization !== "all" ? filterSpecialization : undefined,
+      city: filterCity !== "all" ? filterCity : undefined,
+    },
     { initialNumItems: 12 }
   );
   
@@ -100,6 +106,9 @@ export default function ConsultHomeopath() {
       handleSearch();
     }
   };
+
+  const specializations = ["Chronic Lifestyle Conditions", "Pediatrics & Allergies", "Dermatology", "Thyroid", "PCOS", "Hair Loss"];
+  const cities = ["Hyderabad", "Bangalore", "Mumbai", "Delhi", "Chennai", "Kolkata"];
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -159,7 +168,7 @@ export default function ConsultHomeopath() {
         </div>
 
         {/* Search Bar */}
-        <div className="max-w-md mx-auto mb-10 relative">
+        <div className="max-w-4xl mx-auto mb-10 space-y-4">
           <div className="relative flex items-center">
             <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
             <Input 
@@ -169,6 +178,28 @@ export default function ConsultHomeopath() {
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyDown={handleKeyDown}
             />
+          </div>
+          
+          <div className="flex flex-wrap gap-3 justify-center">
+             <Select value={filterSpecialization} onValueChange={setFilterSpecialization}>
+               <SelectTrigger className="w-[200px] rounded-full bg-white dark:bg-secondary/50 border-lime-200">
+                 <SelectValue placeholder="Filter by Specialization" />
+               </SelectTrigger>
+               <SelectContent>
+                 <SelectItem value="all">All Specializations</SelectItem>
+                 {specializations.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+               </SelectContent>
+             </Select>
+
+             <Select value={filterCity} onValueChange={setFilterCity}>
+               <SelectTrigger className="w-[180px] rounded-full bg-white dark:bg-secondary/50 border-lime-200">
+                 <SelectValue placeholder="Filter by City" />
+               </SelectTrigger>
+               <SelectContent>
+                 <SelectItem value="all">All Cities</SelectItem>
+                 {cities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+               </SelectContent>
+             </Select>
           </div>
         </div>
 

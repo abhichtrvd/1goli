@@ -3,18 +3,18 @@ import { VlyToolbar } from "../vly-toolbar-readonly.tsx";
 import { InstrumentationProvider } from "@/instrumentation.tsx";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
-import { StrictMode, useEffect, lazy, Suspense } from "react";
+import React, { StrictMode, useEffect, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router";
 import "./index.css";
 import "./types/global.d.ts";
 import Layout from "@/components/Layout";
+import ProductDetails from "./pages/ProductDetails";
 
 // Lazy load route components for better code splitting
 const Landing = lazy(() => import("./pages/Landing.tsx"));
 const AuthPage = lazy(() => import("./pages/Auth.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
-const ProductDetails = lazy(() => import("./pages/ProductDetails.tsx"));
 const Cart = lazy(() => import("./pages/Cart.tsx"));
 const UploadPrescription = lazy(() => import("./pages/UploadPrescription.tsx"));
 const SearchResults = lazy(() => import("./pages/SearchResults.tsx"));
@@ -40,67 +40,34 @@ function RouteLoading() {
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
-
-
-function RouteSyncer() {
-  const location = useLocation();
-  useEffect(() => {
-    window.parent.postMessage(
-      { type: "iframe-route-change", path: location.pathname },
-      "*",
-    );
-  }, [location.pathname]);
-
-  useEffect(() => {
-    function handleMessage(event: MessageEvent) {
-      if (event.data?.type === "navigate") {
-        if (event.data.direction === "back") window.history.back();
-        if (event.data.direction === "forward") window.history.forward();
-      }
-    }
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, []);
-
-  return null;
-}
-
-
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <VlyToolbar />
-    <InstrumentationProvider>
-      <ConvexAuthProvider client={convex}>
-        <BrowserRouter>
-          <RouteSyncer />
-          <Suspense fallback={<RouteLoading />}>
-            <Routes>
-              <Route element={<Layout />}>
-                <Route path="/" element={<Landing />} />
-                <Route path="/search" element={<SearchResults />} />
-                <Route path="/category/:category" element={<CategoryLanding />} />
-                <Route path="/product/:id" element={<ProductDetails />} />
-                <Route path="/cart" element={<Cart />} />
-                <Route path="/upload" element={<UploadPrescription />} />
-                <Route path="/consult" element={<ConsultHomeopath />} />
-                <Route path="/wholesale" element={<Wholesale />} />
-              </Route>
-              
-              {/* Admin Routes */}
-              <Route path="/admin" element={<AdminLayout />}>
-                <Route index element={<AdminDashboard />} />
-                <Route path="products" element={<AdminProducts />} />
-                <Route path="orders" element={<AdminOrders />} />
-                <Route path="users" element={<AdminUsers />} />
-              </Route>
-
-              <Route path="/auth" element={<AuthPage redirectAfterAuth="/" />} />
+    <ConvexAuthProvider client={convex}>
+      <BrowserRouter>
+        <Suspense fallback={<RouteLoading />}>
+          <Routes>
+            <Route element={<Layout />}>
+              <Route path="/" element={<Landing />} />
+              <Route path="/product/:id" element={<ProductDetails />} />
+              <Route path="/consult" element={<ConsultHomeopath />} />
+              <Route path="/wholesale" element={<Wholesale />} />
+              <Route path="/upload" element={<UploadPrescription />} />
+              <Route path="/cart" element={<Cart />} />
+              <Route path="/search" element={<SearchResults />} />
+              <Route path="/category/:category" element={<CategoryLanding />} />
               <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
-        <Toaster />
-      </ConvexAuthProvider>
-    </InstrumentationProvider>
+            </Route>
+            {/* Admin Routes */}
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="products" element={<AdminProducts />} />
+              <Route path="orders" element={<AdminOrders />} />
+              <Route path="users" element={<AdminUsers />} />
+            </Route>
+            <Route path="/auth" element={<AuthPage />} />
+          </Routes>
+        </Suspense>
+      </BrowserRouter>
+    </ConvexAuthProvider>
   </StrictMode>,
 );

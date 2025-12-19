@@ -30,6 +30,7 @@ export const getPaginatedProducts = query({
   args: { 
     paginationOpts: paginationOptsValidator,
     brand: v.optional(v.string()),
+    sort: v.optional(v.string()), // "price_asc", "price_desc", "name_asc", "name_desc"
   },
   handler: async (ctx, args) => {
     let query;
@@ -38,7 +39,17 @@ export const getPaginatedProducts = query({
         .query("products")
         .withIndex("by_brand", (q) => q.eq("brand", args.brand));
     } else {
-      query = ctx.db.query("products").order("desc");
+      if (args.sort === "price_asc") {
+        query = ctx.db.query("products").withIndex("by_price").order("asc");
+      } else if (args.sort === "price_desc") {
+        query = ctx.db.query("products").withIndex("by_price").order("desc");
+      } else if (args.sort === "name_asc") {
+        query = ctx.db.query("products").withIndex("by_name").order("asc");
+      } else if (args.sort === "name_desc") {
+        query = ctx.db.query("products").withIndex("by_name").order("desc");
+      } else {
+        query = ctx.db.query("products").order("desc");
+      }
     }
 
     const result = await query.paginate(args.paginationOpts);

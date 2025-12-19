@@ -34,12 +34,27 @@ export const listDoctors = query({
 });
 
 export const getPaginatedDoctors = query({
-  args: { paginationOpts: paginationOptsValidator },
+  args: { 
+    paginationOpts: paginationOptsValidator,
+    specialization: v.optional(v.string()),
+    city: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
-    return await ctx.db
-      .query("consultationDoctors")
-      .order("desc")
-      .paginate(args.paginationOpts);
+    let query;
+    
+    if (args.specialization) {
+      query = ctx.db
+        .query("consultationDoctors")
+        .withIndex("by_specialization", (q) => q.eq("specialization", args.specialization!));
+    } else if (args.city) {
+      query = ctx.db
+        .query("consultationDoctors")
+        .withIndex("by_city", (q) => q.eq("clinicCity", args.city!));
+    } else {
+      query = ctx.db.query("consultationDoctors").order("desc");
+    }
+
+    return await query.paginate(args.paginationOpts);
   },
 });
 
