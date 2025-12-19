@@ -83,12 +83,26 @@ export const getMyPrescriptions = query({
 
 // Admin functions
 
+export const getPendingCount = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const pending = await ctx.db
+      .query("prescriptions")
+      .withIndex("by_status", (q) => q.eq("status", "pending"))
+      .collect();
+    return pending.length;
+  },
+});
+
 export const getPaginatedPrescriptions = query({
   args: { 
     paginationOpts: paginationOptsValidator,
     status: v.optional(v.string()),
     search: v.optional(v.string()),
     sortOrder: v.optional(v.union(v.literal("asc"), v.literal("desc"))),
+    startDate: v.optional(v.number()),
+    endDate: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
@@ -98,11 +112,7 @@ export const getPaginatedPrescriptions = query({
     
     if (args.search) {
       // Use search index if search query is present
-      // Note: Search results are ranked by relevance, so explicit sortOrder might not apply 
-      // in the same way as database sort, but we can't easily combine search + sort by time in Convex yet
-      // without client side sorting or complex logic. 
-      // For now, we'll return search results as is (relevance).
-      
+      // Note: Date filtering is not applied to search results to maintain performance and simplicity
       if (args.status) {
         result = await ctx.db
           .query("prescriptions")
@@ -120,26 +130,48 @@ export const getPaginatedPrescriptions = query({
       }
     } else {
       // Standard filtering
-      let query;
+      let baseQuery;
+      
       if (args.status) {
-        query = ctx.db
-          .query("prescriptions")
-          .withIndex("by_status", (q) => q.eq("status", args.status as any))
-          .order(sortOrder);
+        baseQuery = ctx.db.query("prescriptions").withIndex("by_status", (q) => q.eq("status", args.status as any));
       } else {
-        query = ctx.db.query("prescriptions").order(sortOrder);
+        baseQuery = ctx.db.query("prescriptions");
       }
+      
+      let query = baseQuery.order(sortOrder);
+
+      // Apply date filter if provided
+      if (args.startDate || args.endDate) {
+        query = query.filter((q) => {
+          const conditions = [];
+          if (args.startDate) conditions.push(q.gte(q.field("_creationTime"), args.startDate));
+          if (args.endDate) conditions.push(q.lte(q.field("_creationTime"), args.endDate));
+          
+          if (conditions.length === 1) return conditions[0];
+          if (conditions.length > 1) return q.and(conditions[0], conditions[1]);
+          return q.eq(true, true); // Should not happen
+        });
+      }
+
       result = await query.paginate(args.paginationOpts);
     }
 
-    const pageWithUrls = await Promise.all(
-      result.page.map(async (p) => ({
-        ...p,
-        imageUrl: await ctx.storage.getUrl(p.imageStorageId),
-      }))
+    const pageWithDetails = await Promise.all(
+      result.page.map(async (p) => {
+        const imageUrl = await ctx.storage.getUrl(p.imageStorageId);
+        let user = null;
+        if (p.userId) {
+          user = await ctx.db.get(p.userId as Id<"users">);
+        }
+        return {
+          ...p,
+          imageUrl,
+          user,
+        };
+      })
     );
 
-    return { ...result, page: pageWithUrls };
+    return { ...result, page: pageWithDetails };
   },
 });
 

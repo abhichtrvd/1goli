@@ -33,17 +33,30 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Loader2, MoreHorizontal, FileText, CheckCircle, XCircle, Clock, Eye, Search, ArrowUpDown, Calendar } from "lucide-react";
+import { Loader2, MoreHorizontal, FileText, CheckCircle, XCircle, Clock, Eye, Search, ArrowUpDown, Calendar as CalendarIcon, User } from "lucide-react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { useDebounce } from "@/hooks/use-debounce";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
 
 export default function AdminPrescriptions() {
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
+    from: undefined,
+    to: undefined,
+  });
+  
   const debouncedSearch = useDebounce(searchQuery, 500);
 
   const { results, status, loadMore, isLoading } = usePaginatedQuery(
@@ -52,6 +65,8 @@ export default function AdminPrescriptions() {
       status: statusFilter,
       search: debouncedSearch || undefined,
       sortOrder: sortOrder,
+      startDate: dateRange.from ? dateRange.from.getTime() : undefined,
+      endDate: dateRange.to ? new Date(dateRange.to.setHours(23, 59, 59, 999)).getTime() : undefined,
     },
     { initialNumItems: 10 }
   );
@@ -106,6 +121,37 @@ export default function AdminPrescriptions() {
               className="pl-8"
             />
           </div>
+          
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-[240px] justify-start text-left font-normal">
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dateRange.from ? (
+                  dateRange.to ? (
+                    <>
+                      {format(dateRange.from, "LLL dd, y")} -{" "}
+                      {format(dateRange.to, "LLL dd, y")}
+                    </>
+                  ) : (
+                    format(dateRange.from, "LLL dd, y")
+                  )
+                ) : (
+                  <span>Filter by Date</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                initialFocus
+                mode="range"
+                defaultMonth={dateRange.from}
+                selected={dateRange}
+                onSelect={(range: any) => setDateRange(range || { from: undefined, to: undefined })}
+                numberOfMonths={2}
+              />
+            </PopoverContent>
+          </Popover>
+
           <Select value={sortOrder} onValueChange={(v: "asc" | "desc") => setSortOrder(v)}>
             <SelectTrigger className="w-[140px]">
               <ArrowUpDown className="w-4 h-4 mr-2 text-muted-foreground" />
@@ -159,6 +205,16 @@ export default function AdminPrescriptions() {
         >
           Rejected
         </Button>
+        {(dateRange.from || dateRange.to) && (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setDateRange({ from: undefined, to: undefined })}
+            className="ml-auto text-muted-foreground"
+          >
+            Clear Date Filter
+          </Button>
+        )}
       </div>
 
       <div className="rounded-md border bg-card">
@@ -189,11 +245,25 @@ export default function AdminPrescriptions() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="font-medium">
-                      {prescription.patientName || prescription.guestInfo?.name || "Registered User"}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {prescription.patientPhone || prescription.guestInfo?.phone || "View details"}
+                    <div className="flex items-center gap-3">
+                      {prescription.user ? (
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={prescription.user.image} />
+                          <AvatarFallback>{prescription.user.name?.charAt(0) || "U"}</AvatarFallback>
+                        </Avatar>
+                      ) : (
+                        <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div>
+                        <div className="font-medium">
+                          {prescription.patientName || prescription.guestInfo?.name || "Registered User"}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {prescription.patientPhone || prescription.guestInfo?.phone || prescription.user?.email || "View details"}
+                        </div>
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>{getStatusBadge(prescription.status)}</TableCell>
@@ -248,26 +318,44 @@ export default function AdminPrescriptions() {
           
           {selectedPrescription && (
             <div className="grid gap-6 py-4">
-              <div className="grid grid-cols-2 gap-4 p-4 bg-secondary/20 rounded-lg">
-                <div>
-                  <Label className="text-xs text-muted-foreground">Patient Name</Label>
-                  <p className="font-medium">{selectedPrescription.patientName || selectedPrescription.guestInfo?.name || "Registered User"}</p>
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">Phone</Label>
-                  <p className="font-medium">{selectedPrescription.patientPhone || selectedPrescription.guestInfo?.phone || "-"}</p>
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">Email</Label>
-                  <p className="font-medium">{selectedPrescription.guestInfo?.email || "-"}</p>
-                </div>
+              <div className="flex items-center gap-4 p-4 bg-secondary/20 rounded-lg">
+                 {selectedPrescription.user ? (
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={selectedPrescription.user.image} />
+                      <AvatarFallback>{selectedPrescription.user.name?.charAt(0) || "U"}</AvatarFallback>
+                    </Avatar>
+                  ) : (
+                    <div className="h-12 w-12 rounded-full bg-secondary flex items-center justify-center">
+                      <User className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div>
+                    <p className="font-medium text-lg">{selectedPrescription.patientName || selectedPrescription.guestInfo?.name || "Registered User"}</p>
+                    <div className="flex gap-2 text-sm text-muted-foreground">
+                       <span>{selectedPrescription.patientPhone || selectedPrescription.guestInfo?.phone || "-"}</span>
+                       <span>•</span>
+                       <span>{selectedPrescription.guestInfo?.email || selectedPrescription.user?.email || "-"}</span>
+                    </div>
+                    {selectedPrescription.user && (
+                      <Badge variant="secondary" className="mt-1 text-[10px]">Registered Member</Badge>
+                    )}
+                  </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="text-xs text-muted-foreground">Submitted On</Label>
                   <div className="flex items-center gap-1 font-medium">
-                    <Calendar className="h-3 w-3 text-muted-foreground" />
+                    <CalendarIcon className="h-3 w-3 text-muted-foreground" />
                     {new Date(selectedPrescription._creationTime).toLocaleString()}
                   </div>
                 </div>
+                {selectedPrescription.user?.address && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Shipping Address</Label>
+                    <p className="font-medium text-sm">{selectedPrescription.user.address}</p>
+                  </div>
+                )}
               </div>
               
               <div>

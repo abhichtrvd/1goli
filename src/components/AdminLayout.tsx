@@ -4,11 +4,15 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useEffect } from "react";
 import { toast } from "sonner";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Badge } from "@/components/ui/badge";
 
 export default function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, user, isLoading } = useAuth();
+  const pendingPrescriptions = useQuery(api.prescriptions.getPendingCount);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -94,10 +98,17 @@ export default function AdminLayout() {
           <Link to="/admin/prescriptions">
             <Button 
               variant={isActive("/admin/prescriptions") ? "secondary" : "ghost"} 
-              className="w-full justify-start"
+              className="w-full justify-start flex justify-between items-center"
             >
-              <FileText className="mr-2 h-4 w-4" />
-              Prescriptions
+              <div className="flex items-center">
+                <FileText className="mr-2 h-4 w-4" />
+                Prescriptions
+              </div>
+              {pendingPrescriptions !== undefined && pendingPrescriptions > 0 && (
+                <Badge variant="destructive" className="h-5 w-5 p-0 flex items-center justify-center rounded-full text-[10px]">
+                  {pendingPrescriptions}
+                </Badge>
+              )}
             </Button>
           </Link>
         </nav>
