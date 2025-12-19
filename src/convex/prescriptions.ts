@@ -188,6 +188,7 @@ export const updatePrescriptionStatus = mutation({
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
+    const userId = await getAuthUserId(ctx);
     
     const prescription = await ctx.db.get(args.id);
     if (!prescription) throw new Error("Prescription not found");
@@ -206,6 +207,60 @@ export const updatePrescriptionStatus = mutation({
       status: args.status,
       pharmacistNotes: args.pharmacistNotes,
       searchText,
+    });
+
+    await ctx.db.insert("auditLogs", {
+      action: "update_prescription_status",
+      entityId: args.id,
+      entityType: "prescription",
+      performedBy: userId || "admin",
+      details: `Updated prescription status to ${args.status}`,
+      timestamp: Date.now(),
+    });
+  },
+});
+
+export const bulkUpdatePrescriptionStatus = mutation({
+  args: {
+    ids: v.array(v.id("prescriptions")),
+    status: v.union(
+        v.literal("pending"),
+        v.literal("reviewed"),
+        v.literal("processed"),
+        v.literal("rejected")
+    ),
+    pharmacistNotes: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const userId = await getAuthUserId(ctx);
+
+    for (const id of args.ids) {
+      const prescription = await ctx.db.get(id);
+      if (prescription) {
+        const parts = [
+          prescription.patientName || "",
+          prescription.patientPhone || "",
+          prescription.notes || "",
+          prescription.guestInfo?.email || "",
+          args.pharmacistNotes || prescription.pharmacistNotes || ""
+        ];
+        const searchText = parts.join(" ");
+
+        await ctx.db.patch(id, {
+          status: args.status,
+          pharmacistNotes: args.pharmacistNotes !== undefined ? args.pharmacistNotes : prescription.pharmacistNotes,
+          searchText
+        });
+      }
+    }
+
+    await ctx.db.insert("auditLogs", {
+      action: "bulk_update_prescription_status",
+      entityType: "prescription",
+      performedBy: userId || "admin",
+      details: `Updated ${args.ids.length} prescriptions to ${args.status}`,
+      timestamp: Date.now(),
     });
   },
 });

@@ -25,6 +25,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -40,13 +41,14 @@ import {
 } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Loader2, MoreHorizontal, FileText, CheckCircle, XCircle, Clock, Eye, Search, ArrowUpDown, Calendar as CalendarIcon, User } from "lucide-react";
+import { Loader2, MoreHorizontal, FileText, CheckCircle, XCircle, Clock, Eye, Search, ArrowUpDown, Calendar as CalendarIcon, User, CheckSquare } from "lucide-react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { useDebounce } from "@/hooks/use-debounce";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function AdminPrescriptions() {
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
@@ -72,10 +74,54 @@ export default function AdminPrescriptions() {
   );
 
   const updateStatus = useMutation(api.prescriptions.updatePrescriptionStatus);
+  const bulkUpdateStatus = useMutation(api.prescriptions.bulkUpdatePrescriptionStatus);
   
   const [selectedPrescription, setSelectedPrescription] = useState<any>(null);
   const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [pharmacistNotes, setPharmacistNotes] = useState("");
+
+  // Bulk actions state
+  const [selectedIds, setSelectedIds] = useState<Id<"prescriptions">[]>([]);
+  const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
+  const [bulkStatus, setBulkStatus] = useState<string>("");
+  const [bulkNotes, setBulkNotes] = useState("");
+
+  const handleSelect = (id: Id<"prescriptions">, checked: boolean) => {
+    if (checked) {
+      setSelectedIds(prev => [...prev, id]);
+    } else {
+      setSelectedIds(prev => prev.filter(i => i !== id));
+    }
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked && results) {
+      const newIds = results.map(p => p._id);
+      setSelectedIds(prev => Array.from(new Set([...prev, ...newIds])));
+    } else if (results) {
+      const pageIds = results.map(p => p._id);
+      setSelectedIds(prev => prev.filter(id => !pageIds.includes(id)));
+    }
+  };
+
+  const handleBulkUpdate = async () => {
+    if (selectedIds.length === 0 || !bulkStatus) return;
+    
+    try {
+      await bulkUpdateStatus({
+        ids: selectedIds,
+        status: bulkStatus as any,
+        pharmacistNotes: bulkNotes || undefined
+      });
+      toast.success(`Updated ${selectedIds.length} prescriptions`);
+      setIsBulkDialogOpen(false);
+      setSelectedIds([]);
+      setBulkStatus("");
+      setBulkNotes("");
+    } catch (error) {
+      toast.error("Failed to update prescriptions");
+    }
+  };
 
   const handleStatusUpdate = async (id: Id<"prescriptions">, newStatus: "pending" | "reviewed" | "processed" | "rejected", notes?: string) => {
     try {
@@ -165,7 +211,7 @@ export default function AdminPrescriptions() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 items-center">
         <Button 
           variant={statusFilter === undefined ? "default" : "outline"} 
           onClick={() => setStatusFilter(undefined)}
@@ -215,12 +261,60 @@ export default function AdminPrescriptions() {
             Clear Date Filter
           </Button>
         )}
+        
+        {selectedIds.length > 0 && (
+          <Dialog open={isBulkDialogOpen} onOpenChange={setIsBulkDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="secondary" size="sm" className="ml-auto">
+                <CheckSquare className="mr-2 h-4 w-4" /> Update Selected ({selectedIds.length})
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Bulk Update Status</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>New Status</Label>
+                  <Select value={bulkStatus} onValueChange={setBulkStatus}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="reviewed">Reviewed</SelectItem>
+                      <SelectItem value="processed">Processed</SelectItem>
+                      <SelectItem value="rejected">Rejected</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Pharmacist Notes (Optional)</Label>
+                  <Textarea 
+                    placeholder="Add a note for all selected prescriptions..."
+                    value={bulkNotes}
+                    onChange={(e) => setBulkNotes(e.target.value)}
+                  />
+                </div>
+                <Button onClick={handleBulkUpdate} className="w-full">
+                  Update {selectedIds.length} Prescriptions
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <div className="rounded-md border bg-card">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[50px]">
+                <Checkbox 
+                  checked={results && results.length > 0 && results.every(p => selectedIds.includes(p._id))}
+                  onCheckedChange={(checked) => handleSelectAll(checked as boolean)}
+                />
+              </TableHead>
               <TableHead>Date</TableHead>
               <TableHead>Patient</TableHead>
               <TableHead>Status</TableHead>
@@ -231,13 +325,19 @@ export default function AdminPrescriptions() {
           <TableBody>
             {results?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
+                <TableCell colSpan={6} className="h-24 text-center">
                   No prescriptions found.
                 </TableCell>
               </TableRow>
             ) : (
               results?.map((prescription) => (
                 <TableRow key={prescription._id}>
+                  <TableCell>
+                    <Checkbox 
+                      checked={selectedIds.includes(prescription._id)}
+                      onCheckedChange={(checked) => handleSelect(prescription._id, checked as boolean)}
+                    />
+                  </TableCell>
                   <TableCell>
                     {new Date(prescription._creationTime).toLocaleDateString()}
                     <div className="text-xs text-muted-foreground">

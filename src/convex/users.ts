@@ -94,7 +94,40 @@ export const updateUserRole = mutation({
   args: { id: v.id("users"), role: roleValidator },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
+    const adminId = await getAuthUserId(ctx);
     await ctx.db.patch(args.id, { role: args.role });
+
+    await ctx.db.insert("auditLogs", {
+      action: "update_user_role",
+      entityId: args.id,
+      entityType: "user",
+      performedBy: adminId || "admin",
+      details: `Updated user role to ${args.role}`,
+      timestamp: Date.now(),
+    });
+  },
+});
+
+export const bulkUpdateUserRole = mutation({
+  args: {
+    ids: v.array(v.id("users")),
+    role: roleValidator,
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const adminId = await getAuthUserId(ctx);
+
+    for (const id of args.ids) {
+      await ctx.db.patch(id, { role: args.role });
+    }
+
+    await ctx.db.insert("auditLogs", {
+      action: "bulk_update_user_role",
+      entityType: "user",
+      performedBy: adminId || "admin",
+      details: `Updated ${args.ids.length} users to role ${args.role}`,
+      timestamp: Date.now(),
+    });
   },
 });
 

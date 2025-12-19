@@ -1,2 +1,1 @@
-import { BrowserRouter, Routes, Route } from "react-router";
-import ProductDetails from "./pages/ProductDetails";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
