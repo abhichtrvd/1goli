@@ -1,11 +1,12 @@
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Package, ShoppingCart, DollarSign, TrendingUp, Activity, Users, ArrowUpRight, ArrowDownRight, AlertCircle, Calendar } from "lucide-react";
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis, Pie, PieChart, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
-import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
+import { Calendar } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DashboardMetrics } from "./components/DashboardMetrics";
+import { DashboardCharts } from "./components/DashboardCharts";
+import { DashboardRecentOrders } from "./components/DashboardRecentOrders";
+import { DashboardTopProducts } from "./components/DashboardTopProducts";
 
 export default function AdminDashboard() {
   const products = useQuery(api.products.getProducts);
@@ -60,7 +61,7 @@ export default function AdminDashboard() {
       totalOrders: currentOrders.length,
       ordersChange: calculateChange(currentOrders.length, prevOrders.length),
       totalProducts: products.length,
-      totalUsers: users.length, // Total users is usually all-time, but we can show new users in period
+      totalUsers: users.length,
       newUsers: currentNewUsers,
       usersChange: calculateChange(currentNewUsers, prevNewUsers),
       avgOrderValue: currentOrders.length > 0 ? currentRevenue / currentOrders.length : 0,
@@ -146,29 +147,6 @@ export default function AdminDashboard() {
       .sort((a, b) => b.value - a.value);
   }, [orders, products, dateRangeDays]);
 
-  // 4. Order Status (Existing - All Time or Filtered? Usually Pipeline is current state, so All Time Pending/Processing is better, but let's keep it all time for status pipeline)
-  const statusData = useMemo(() => {
-    if (!orders) return [];
-    const counts: Record<string, number> = {};
-    orders.forEach(o => {
-      counts[o.status] = (counts[o.status] || 0) + 1;
-    });
-    
-    const statusColors: Record<string, string> = {
-      pending: "hsl(var(--chart-1))",
-      processing: "hsl(var(--chart-2))",
-      shipped: "hsl(var(--chart-3))",
-      delivered: "hsl(var(--chart-4))",
-      cancelled: "hsl(var(--destructive))"
-    };
-
-    return Object.entries(counts).map(([status, count]) => ({
-      status: status.charAt(0).toUpperCase() + status.slice(1),
-      count,
-      fill: statusColors[status] || "hsl(var(--muted))"
-    }));
-  }, [orders]);
-
   // 5. Inventory Data
   const inventoryData = useMemo(() => {
     if (!products) return [];
@@ -216,23 +194,6 @@ export default function AdminDashboard() {
       .slice(0, 5);
   }, [orders, dateRangeDays]);
 
-  const chartConfig = {
-    revenue: { label: "Revenue", color: "hsl(var(--primary))" },
-    orders: { label: "Orders", color: "hsl(var(--chart-2))" },
-    users: { label: "New Users", color: "hsl(var(--chart-2))" },
-  } satisfies ChartConfig;
-
-  // Helper for percentage badge
-  const PercentBadge = ({ value }: { value: number }) => {
-    const isPositive = value >= 0;
-    return (
-      <div className={`text-xs flex items-center ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-        {isPositive ? <ArrowUpRight className="h-3 w-3 mr-1" /> : <ArrowDownRight className="h-3 w-3 mr-1" />}
-        {Math.abs(value).toFixed(1)}% from previous period
-      </div>
-    );
-  };
-
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -255,277 +216,22 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Key Metrics Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">₹{metrics?.totalRevenue.toFixed(2) || "0.00"}</div>
-            {metrics && <PercentBadge value={metrics.revenueChange} />}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Orders</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">+{metrics?.totalOrders || 0}</div>
-            {metrics && <PercentBadge value={metrics.ordersChange} />}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">New Users</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">+{metrics?.newUsers || 0}</div>
-            {metrics && <PercentBadge value={metrics.usersChange} />}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg. Order Value</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              ₹{metrics?.avgOrderValue.toFixed(2) || "0.00"}
-            </div>
-            <p className="text-xs text-muted-foreground">Per order average</p>
-          </CardContent>
-        </Card>
-      </div>
+      <DashboardMetrics metrics={metrics} />
 
-      {/* Charts Section Row 1: Revenue & User Growth */}
+      <DashboardCharts 
+        revenueData={revenueData}
+        userGrowthData={userGrowthData}
+        categoryData={categoryData}
+        inventoryData={inventoryData}
+        outOfStockProducts={outOfStockProducts}
+        chartMetric={chartMetric}
+        setChartMetric={setChartMetric}
+        dateRangeDays={dateRangeDays}
+      />
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>{chartMetric === "revenue" ? "Revenue Overview" : "Orders Overview"}</CardTitle>
-                <CardDescription>
-                  {chartMetric === "revenue" ? "Daily revenue" : "Daily order volume"} for the past {dateRangeDays} days
-                </CardDescription>
-              </div>
-              <Select value={chartMetric} onValueChange={(v: any) => setChartMetric(v)}>
-                <SelectTrigger className="w-[120px] h-8">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="revenue">Revenue</SelectItem>
-                  <SelectItem value="orders">Orders</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardHeader>
-          <CardContent className="pl-2">
-            <ChartContainer config={chartConfig} className="h-[300px] w-full">
-              <AreaChart data={revenueData}>
-                <defs>
-                  <linearGradient id="fillMetric" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={chartMetric === "revenue" ? "var(--color-revenue)" : "var(--color-orders)"} stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor={chartMetric === "revenue" ? "var(--color-revenue)" : "var(--color-orders)"} stopOpacity={0.1}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="date" 
-                  tickLine={false} 
-                  axisLine={false} 
-                  tickMargin={8} 
-                  tickFormatter={(value) => value.slice(0, 3)}
-                />
-                <YAxis 
-                  tickLine={false} 
-                  axisLine={false} 
-                  tickFormatter={(value) => chartMetric === "revenue" ? `₹${value}` : value.toString()} 
-                />
-                <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
-                <Area 
-                  dataKey={chartMetric} 
-                  type="natural" 
-                  fill="url(#fillMetric)" 
-                  fillOpacity={0.4} 
-                  stroke={chartMetric === "revenue" ? "var(--color-revenue)" : "var(--color-orders)"} 
-                  stackId="a" 
-                />
-              </AreaChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        <Card className="col-span-3">
-          <CardHeader>
-            <CardTitle>User Growth</CardTitle>
-            <CardDescription>New user registrations</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={chartConfig} className="h-[300px] w-full">
-              <BarChart data={userGrowthData}>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="date"
-                  tickLine={false}
-                  tickMargin={10}
-                  axisLine={false}
-                  tickFormatter={(value) => value.slice(0, 3)}
-                />
-                <ChartTooltip
-                  cursor={false}
-                  content={<ChartTooltipContent hideLabel />}
-                />
-                <Bar dataKey="users" fill="var(--color-users)" radius={8} />
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Charts Section Row 2: Sales by Category & Inventory */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4">
-          <CardHeader>
-            <CardTitle>Sales by Category</CardTitle>
-            <CardDescription>Distribution of items sold</CardDescription>
-          </CardHeader>
-          <CardContent className="flex justify-center">
-             <ChartContainer config={{}} className="h-[300px] w-full">
-              <PieChart>
-                <Pie
-                  data={categoryData}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={100}
-                  label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
-                  labelLine={false}
-                >
-                  {categoryData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Pie>
-                <ChartTooltip content={<ChartTooltipContent />} />
-              </PieChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        <Card className="col-span-3">
-          <CardHeader>
-            <CardTitle>Inventory Health</CardTitle>
-            <CardDescription>Stock status overview</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <ChartContainer config={{}} className="h-[200px] w-full">
-              <PieChart>
-                <Pie
-                  data={inventoryData}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}
-                >
-                  {inventoryData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Pie>
-                <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                <Legend verticalAlign="bottom" height={36}/>
-              </PieChart>
-            </ChartContainer>
-            
-            {outOfStockProducts.length > 0 && (
-              <div className="mt-2 space-y-2">
-                <h4 className="text-sm font-semibold flex items-center text-destructive">
-                  <AlertCircle className="h-4 w-4 mr-2" />
-                  Out of Stock ({outOfStockProducts.length})
-                </h4>
-                <div className="max-h-[100px] overflow-y-auto space-y-1 pr-2">
-                  {outOfStockProducts.map(p => (
-                    <div key={p._id} className="text-xs flex justify-between items-center bg-destructive/10 p-2 rounded">
-                      <span className="truncate max-w-[150px]">{p.name}</span>
-                      <span className="font-mono text-destructive">₹{p.basePrice}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {outOfStockProducts.length === 0 && (
-              <div className="text-sm text-muted-foreground text-center py-4">
-                All products are in stock.
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Recent Orders & Top Products */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4">
-          <CardHeader>
-            <CardTitle>Recent Orders</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {orders?.slice(0, 5).map((order) => (
-                <div key={order._id} className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium leading-none">Order #{order._id.slice(-6)}</p>
-                    <p className="text-sm text-muted-foreground">{new Date(order._creationTime).toLocaleDateString()}</p>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className={`text-xs px-2 py-1 rounded-full ${
-                      order.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                      order.status === 'processing' ? 'bg-blue-100 text-blue-700' :
-                      order.status === 'shipped' ? 'bg-purple-100 text-purple-700' :
-                      'bg-green-100 text-green-700'
-                    }`}>
-                      {order.status}
-                    </div>
-                    <div className="font-medium">₹{order.total.toFixed(2)}</div>
-                  </div>
-                </div>
-              ))}
-              {(!orders || orders.length === 0) && (
-                <p className="text-sm text-muted-foreground">No orders yet.</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="col-span-3">
-          <CardHeader>
-            <CardTitle>Top Selling Products</CardTitle>
-            <CardDescription>By quantity sold (Selected Period)</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {topProducts.length > 0 ? (
-                topProducts.map((product, i) => (
-                  <div key={i} className="flex items-center gap-4">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-bold">
-                      {i + 1}
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <p className="text-sm font-medium leading-none truncate">{product.name}</p>
-                      <p className="text-xs text-muted-foreground">{product.sales} sold • ₹{product.revenue.toFixed(2)} rev</p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">No sales data for this period.</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        <DashboardRecentOrders orders={orders || []} />
+        <DashboardTopProducts topProducts={topProducts} />
       </div>
     </div>
   );

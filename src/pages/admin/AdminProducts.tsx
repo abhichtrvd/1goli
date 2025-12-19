@@ -1,28 +1,21 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Plus, Search, Trash2, Edit, Loader2, ChevronLeft, ChevronRight, ExternalLink, Eye, Upload, X, ArrowLeft, ArrowRight, Video, GripVertical } from "lucide-react";
-import { Link } from "react-router";
-import { useState, useEffect } from "react";
+import { Plus, Search } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Progress } from "@/components/ui/progress";
-import { Reorder, useDragControls } from "framer-motion";
+import { ProductForm } from "./components/ProductForm";
+import { ProductTable } from "./components/ProductTable";
+import { ProductViewDialog } from "./components/ProductViewDialog";
 
 export default function AdminProducts() {
   const products = useQuery(api.products.getProducts);
-  const createProduct = useMutation(api.products.createProduct);
-  const updateProduct = useMutation(api.products.updateProduct);
   const deleteProduct = useMutation(api.products.deleteProduct);
-  const generateUploadUrl = useMutation(api.products.generateUploadUrl);
   
   const [search, setSearch] = useState("");
   const [formFilter, setFormFilter] = useState<string>("all");
@@ -34,31 +27,10 @@ export default function AdminProducts() {
   const [maxPrice, setMaxPrice] = useState<string>("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [viewingProduct, setViewingProduct] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
   
-  // Temporary state for inputs to show badges
-  const [potenciesInput, setPotenciesInput] = useState("");
-  const [formsInput, setFormsInput] = useState("");
-  const [tagsInput, setTagsInput] = useState("");
-  const [imagePreview, setImagePreview] = useState("");
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [videoUrlInput, setVideoUrlInput] = useState("");
-  const [videoThumbnail, setVideoThumbnail] = useState("");
-  
-  // Gallery state - Unified for reordering
-  type GalleryItem = {
-    id: string;
-    type: 'existing' | 'new';
-    url: string;
-    storageId?: Id<"_storage">;
-    file?: File;
-  };
-  const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
-
   const itemsPerPage = 5;
 
   // Derive unique options from data for dynamic filters
@@ -95,259 +67,14 @@ export default function AdminProducts() {
     currentPage * itemsPerPage
   );
 
-  // Compression Utility
-  const compressImage = async (file: File): Promise<File> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.src = URL.createObjectURL(file);
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-        const maxWidth = 1200; 
-        const scale = maxWidth / img.width;
-        const width = scale < 1 ? maxWidth : img.width;
-        const height = scale < 1 ? img.height * scale : img.height;
-        
-        canvas.width = width;
-        canvas.height = height;
-        ctx?.drawImage(img, 0, 0, width, height);
-        
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", { type: "image/webp" });
-            resolve(newFile);
-          } else {
-            reject(new Error("Compression failed"));
-          }
-        }, "image/webp", 0.8);
-      };
-      img.onerror = reject;
-    });
-  };
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setUploadProgress(0);
-    const formData = new FormData(e.currentTarget);
-    
-    let imageStorageId: Id<"_storage"> | null | undefined = undefined;
-    let imageUrl: string | null | undefined = formData.get("imageUrl") as string | null;
-
-    // Handle Main Image Upload
-    if (selectedImage) {
-      try {
-        const compressed = await compressImage(selectedImage);
-        const postUrl = await generateUploadUrl();
-        
-        const uploadResult = await new Promise<{ storageId: Id<"_storage"> }>((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          xhr.open("POST", postUrl);
-          xhr.setRequestHeader("Content-Type", compressed.type);
-          xhr.upload.onprogress = (event) => {
-            if (event.lengthComputable) {
-              setUploadProgress((event.loaded / event.total) * 30); // 30% for main image
-            }
-          };
-          xhr.onload = () => xhr.status === 200 ? resolve(JSON.parse(xhr.responseText)) : reject(new Error("Upload failed"));
-          xhr.onerror = () => reject(new Error("Upload failed"));
-          xhr.send(compressed);
-        });
-
-        imageStorageId = uploadResult.storageId;
-        imageUrl = null;
-      } catch (error) {
-        toast.error("Failed to upload main image");
-        setIsSubmitting(false);
-        return;
-      }
-    } else if (!imageUrl && !imagePreview) {
-      imageUrl = null;
-      imageStorageId = null;
-    } else if (!imageUrl && imagePreview && editingProduct?.imageStorageId) {
-      imageStorageId = undefined;
-      imageUrl = undefined;
-    }
-
-    // Handle Gallery Uploads & Reordering
-    const finalGalleryImages: { storageId?: Id<"_storage">, url: string }[] = [];
-    
-    try {
-      const newItems = galleryItems.filter(item => item.type === 'new');
-      const totalNewItems = newItems.length;
-      let processedNewItems = 0;
-
-      for (const item of galleryItems) {
-        if (item.type === 'existing') {
-          finalGalleryImages.push({ storageId: item.storageId, url: item.url });
-        } else if (item.type === 'new' && item.file) {
-          const compressed = await compressImage(item.file);
-          const postUrl = await generateUploadUrl();
-          
-          const uploadResult = await new Promise<{ storageId: Id<"_storage"> }>((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-            xhr.open("POST", postUrl);
-            xhr.setRequestHeader("Content-Type", compressed.type);
-            xhr.onload = () => xhr.status === 200 ? resolve(JSON.parse(xhr.responseText)) : reject(new Error("Upload failed"));
-            xhr.send(compressed);
-          });
-          
-          finalGalleryImages.push({ storageId: uploadResult.storageId, url: "" });
-          processedNewItems++;
-          setUploadProgress(30 + (processedNewItems / totalNewItems) * 70);
-        }
-      }
-    } catch (error) {
-      toast.error("Failed to upload gallery images");
-      setIsSubmitting(false);
-      return;
-    }
-
-    const productData = {
-      name: formData.get("name") as string,
-      description: formData.get("description") as string,
-      imageUrl: imageUrl,
-      imageStorageId: imageStorageId,
-      images: finalGalleryImages,
-      videoUrl: videoUrlInput,
-      videoThumbnail: videoThumbnail,
-      basePrice: parseFloat(formData.get("basePrice") as string),
-      category: formData.get("category") as string,
-      availability: formData.get("availability") as string,
-      potencies: (formData.get("potencies") as string).split(",").map(s => s.trim()).filter(Boolean),
-      forms: (formData.get("forms") as string).split(",").map(s => s.trim()).filter(Boolean),
-      symptomsTags: (formData.get("symptomsTags") as string).split(",").map(s => s.trim()).filter(Boolean),
-    };
-
-    try {
-      if (editingProduct) {
-        await updateProduct({
-          id: editingProduct._id,
-          ...productData,
-        });
-        toast.success("Product updated successfully");
-      } else {
-        await createProduct(productData as any);
-        toast.success("Product created successfully");
-      }
-      setIsDialogOpen(false);
-      setEditingProduct(null);
-      setSelectedImage(null);
-      setGalleryItems([]);
-      setVideoUrlInput("");
-      setVideoThumbnail("");
-      setUploadProgress(0);
-    } catch (error) {
-      console.error(error);
-      toast.error(editingProduct ? "Failed to update product" : "Failed to create product");
-    } finally {
-      setIsSubmitting(false);
-      setUploadProgress(0);
-    }
-  };
-
   const openEditDialog = (product: any) => {
     setEditingProduct(product);
-    setPotenciesInput(product.potencies.join(", "));
-    setFormsInput(product.forms.join(", "));
-    setTagsInput(product.symptomsTags.join(", "));
-    setImagePreview(product.imageUrl || "");
-    setVideoUrlInput(product.videoUrl || "");
-    setVideoThumbnail(product.videoThumbnail || "");
-    
-    // Initialize gallery items
-    const items: GalleryItem[] = (product.images || []).map((img: any, index: number) => ({
-      id: `existing-${index}-${Date.now()}`,
-      type: 'existing',
-      url: img.url,
-      storageId: img.storageId
-    }));
-    setGalleryItems(items);
-    
-    setSelectedImage(null);
-    setUploadProgress(0);
     setIsDialogOpen(true);
   };
 
   const openCreateDialog = () => {
     setEditingProduct(null);
-    setPotenciesInput("");
-    setFormsInput("");
-    setTagsInput("");
-    setImagePreview("");
-    setVideoUrlInput("");
-    setVideoThumbnail("");
-    setGalleryItems([]);
-    setSelectedImage(null);
-    setUploadProgress(0);
     setIsDialogOpen(true);
-  };
-
-  // Auto-generate thumbnail from YouTube URL
-  useEffect(() => {
-    if (!videoUrlInput) {
-      setVideoThumbnail("");
-      return;
-    }
-    
-    // Simple YouTube ID extraction
-    const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
-    const match = videoUrlInput.match(youtubeRegex);
-    
-    if (match && match[1]) {
-      setVideoThumbnail(`https://img.youtube.com/vi/${match[1]}/0.jpg`);
-    }
-  }, [videoUrlInput]);
-
-  const handleGallerySelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length > 0) {
-      const validFiles = files.filter(f => f.type.startsWith("image/"));
-      
-      validFiles.forEach(file => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setGalleryItems(prev => [...prev, {
-            id: `new-${Date.now()}-${Math.random()}`,
-            type: 'new',
-            url: reader.result as string,
-            file: file
-          }]);
-        };
-        reader.readAsDataURL(file);
-      });
-    }
-    e.target.value = ""; // Reset input
-  };
-
-  const removeGalleryItem = (index: number) => {
-    setGalleryItems(prev => prev.filter((_, i) => i !== index));
-  };
-
-  // Replaced moveGalleryItem with Reorder component logic
-  
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Validation
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error("Image size must be less than 5MB");
-        e.target.value = ""; // Reset input
-        return;
-      }
-      if (!file.type.startsWith("image/")) {
-        toast.error("File must be an image");
-        e.target.value = "";
-        return;
-      }
-
-      setSelectedImage(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
   };
 
   const openViewDialog = (product: any) => {
@@ -386,334 +113,21 @@ export default function AdminProducts() {
             <DialogHeader>
               <DialogTitle>{editingProduct ? "Edit Product" : "Add New Product"}</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Product Name</Label>
-                  <Input id="name" name="name" required defaultValue={editingProduct?.name} placeholder="e.g. Arnica Montana" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="basePrice">Base Price (₹)</Label>
-                  <Input id="basePrice" name="basePrice" type="number" step="0.01" required defaultValue={editingProduct?.basePrice} placeholder="1299" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="category">Category</Label>
-                  <Select name="category" defaultValue={editingProduct?.category || "Classical"}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Classical">Classical</SelectItem>
-                      <SelectItem value="Patent">Patent</SelectItem>
-                      <SelectItem value="Biochemic">Biochemic</SelectItem>
-                      <SelectItem value="Personal Care">Personal Care</SelectItem>
-                      <SelectItem value="Mother Tincture">Mother Tincture</SelectItem>
-                      <SelectItem value="Bach Flower">Bach Flower</SelectItem>
-                      <SelectItem value="Bio-Combinations">Bio-Combinations</SelectItem>
-                      <SelectItem value="Triturations">Triturations</SelectItem>
-                      <SelectItem value="Drops">Drops</SelectItem>
-                      <SelectItem value="Syrups">Syrups</SelectItem>
-                      <SelectItem value="Ointments">Ointments</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="availability">Availability</Label>
-                  <Select name="availability" defaultValue={editingProduct?.availability || "in_stock"}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="in_stock">In Stock</SelectItem>
-                      <SelectItem value="out_of_stock">Out of Stock</SelectItem>
-                      <SelectItem value="discontinued">Discontinued</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea id="description" name="description" required defaultValue={editingProduct?.description} placeholder="Product description..." />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Product Image</Label>
-                <div className="flex gap-4 items-start">
-                  <div className="flex-1 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Input 
-                        id="imageFile" 
-                        type="file" 
-                        accept="image/*"
-                        onChange={handleImageSelect}
-                        className="cursor-pointer"
-                      />
-                    </div>
-                    {uploadProgress > 0 && uploadProgress < 100 && (
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>Uploading...</span>
-                          <span>{Math.round(uploadProgress)}%</span>
-                        </div>
-                        <Progress value={uploadProgress} className="h-1" />
-                      </div>
-                    )}
-                    <div className="relative">
-                      <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t" />
-                      </div>
-                      <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-background px-2 text-muted-foreground">Or use URL</span>
-                      </div>
-                    </div>
-                    <Input 
-                      id="imageUrl" 
-                      name="imageUrl" 
-                      value={selectedImage ? "" : (imagePreview === editingProduct?.imageUrl ? "" : imagePreview)} 
-                      onChange={(e) => {
-                        setImagePreview(e.target.value);
-                        setSelectedImage(null);
-                      }}
-                      placeholder="https://..." 
-                      disabled={!!selectedImage}
-                    />
-                    <p className="text-[10px] text-muted-foreground">
-                      Max size 5MB. Supported formats: JPG, PNG, WebP.
-                    </p>
-                  </div>
-                  <div className="h-24 w-24 rounded-md border bg-secondary/20 overflow-hidden flex-shrink-0 flex items-center justify-center relative group">
-                    {imagePreview ? (
-                      <>
-                        <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" onError={(e) => (e.currentTarget.style.display = 'none')} />
-                        <button 
-                          type="button"
-                          onClick={() => {
-                            setImagePreview("");
-                            setSelectedImage(null);
-                            const fileInput = document.getElementById('imageFile') as HTMLInputElement;
-                            if (fileInput) fileInput.value = '';
-                          }}
-                          className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
-                          title="Remove image"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </>
-                    ) : (
-                      <span className="text-[10px] text-muted-foreground">No Image</span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Gallery Images (Drag to Reorder)</Label>
-                  <div className="space-y-3">
-                    <Input 
-                      type="file" 
-                      accept="image/*"
-                      multiple
-                      onChange={handleGallerySelect}
-                      className="cursor-pointer"
-                    />
-                    <Reorder.Group 
-                      axis="x" 
-                      values={galleryItems} 
-                      onReorder={setGalleryItems} 
-                      className="flex flex-wrap gap-2 list-none p-0"
-                    >
-                      {galleryItems.map((item, i) => (
-                        <Reorder.Item 
-                          key={item.id} 
-                          value={item}
-                          className="h-24 w-24 rounded-md border bg-secondary/20 overflow-hidden relative group flex flex-col cursor-move touch-none"
-                          whileDrag={{ scale: 1.1, zIndex: 10, boxShadow: "0 5px 15px rgba(0,0,0,0.15)" }}
-                        >
-                          <div className="h-full w-full relative">
-                            <img src={item.url} alt={`Gallery ${i}`} className="h-full w-full object-cover pointer-events-none" />
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                               <GripVertical className="text-white drop-shadow-md" />
-                            </div>
-                            <button 
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation(); // Prevent drag start
-                                removeGalleryItem(i);
-                              }}
-                              className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive cursor-pointer"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </div>
-                        </Reorder.Item>
-                      ))}
-                    </Reorder.Group>
-                    {galleryItems.length === 0 && (
-                      <p className="text-xs text-muted-foreground italic">No gallery images added.</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="videoUrl">Video URL (Optional)</Label>
-                  <div className="flex gap-4">
-                    <div className="flex-1 space-y-2">
-                      <div className="relative">
-                        <Video className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                          id="videoUrl" 
-                          name="videoUrl" 
-                          value={videoUrlInput}
-                          onChange={(e) => setVideoUrlInput(e.target.value)}
-                          placeholder="https://youtube.com/..." 
-                          className="pl-8"
-                        />
-                      </div>
-                      <p className="text-[10px] text-muted-foreground">Supports YouTube. Thumbnail auto-generated.</p>
-                    </div>
-                    {videoThumbnail && (
-                      <div className="h-16 w-24 bg-black rounded overflow-hidden relative flex-shrink-0 border">
-                        <img src={videoThumbnail} alt="Video Thumbnail" className="w-full h-full object-cover opacity-80" />
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-0 h-0 border-t-[6px] border-t-transparent border-l-[10px] border-l-white border-b-[6px] border-b-transparent ml-1 drop-shadow-md" />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="potencies">Potencies</Label>
-                  <Input 
-                    id="potencies" 
-                    name="potencies" 
-                    required 
-                    value={potenciesInput}
-                    onChange={(e) => setPotenciesInput(e.target.value)}
-                    placeholder="30C, 200C, 1M" 
-                  />
-                  <div className="flex flex-wrap gap-1 mt-2 min-h-[24px]">
-                    {potenciesInput.split(",").map(s => s.trim()).filter(Boolean).map((tag, i) => (
-                      <Badge key={i} variant="secondary" className="text-[10px]">{tag}</Badge>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="forms">Forms</Label>
-                  <Input 
-                    id="forms" 
-                    name="forms" 
-                    required 
-                    value={formsInput}
-                    onChange={(e) => setFormsInput(e.target.value)}
-                    placeholder="Dilution, Globules" 
-                  />
-                  <div className="flex flex-wrap gap-1 mt-2 min-h-[24px]">
-                    {formsInput.split(",").map(s => s.trim()).filter(Boolean).map((tag, i) => (
-                      <Badge key={i} variant="secondary" className="text-[10px]">{tag}</Badge>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="symptomsTags">Tags</Label>
-                <Input 
-                  id="symptomsTags" 
-                  name="symptomsTags" 
-                  required 
-                  value={tagsInput}
-                  onChange={(e) => setTagsInput(e.target.value)}
-                  placeholder="fever, pain, flu" 
-                />
-                <div className="flex flex-wrap gap-1 mt-2 min-h-[24px]">
-                  {tagsInput.split(",").map(s => s.trim()).filter(Boolean).map((tag, i) => (
-                    <Badge key={i} variant="outline" className="text-[10px]">{tag}</Badge>
-                  ))}
-                </div>
-              </div>
-
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                {editingProduct ? "Update Product" : "Create Product"}
-              </Button>
-            </form>
+            <ProductForm 
+              initialData={editingProduct} 
+              onSuccess={() => {
+                setIsDialogOpen(false);
+                setEditingProduct(null);
+              }} 
+            />
           </DialogContent>
         </Dialog>
 
-        {/* View Product Dialog */}
-        <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-          <DialogContent className="max-w-3xl">
-            <DialogHeader>
-              <DialogTitle>Product Details</DialogTitle>
-            </DialogHeader>
-            {viewingProduct && (
-              <div className="grid md:grid-cols-2 gap-8 mt-4">
-                <div className="aspect-square bg-secondary/20 rounded-lg overflow-hidden flex items-center justify-center">
-                  <img src={viewingProduct.imageUrl} alt={viewingProduct.name} className="w-full h-full object-cover" />
-                </div>
-                <div className="space-y-6">
-                  <div>
-                    <h2 className="text-2xl font-bold">{viewingProduct.name}</h2>
-                    <div className="flex items-center gap-2 mt-2">
-                      <p className="text-2xl font-semibold text-primary">₹{viewingProduct.basePrice}</p>
-                      {viewingProduct.availability === "out_of_stock" && (
-                        <Badge variant="destructive">Out of Stock</Badge>
-                      )}
-                      {viewingProduct.category && (
-                        <Badge variant="outline">{viewingProduct.category}</Badge>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h3 className="font-semibold mb-2">Description</h3>
-                    <p className="text-muted-foreground text-sm leading-relaxed">{viewingProduct.description}</p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <h3 className="font-semibold mb-2 text-sm">Available Potencies</h3>
-                      <div className="flex flex-wrap gap-1">
-                        {viewingProduct.potencies.map((p: string) => (
-                          <Badge key={p} variant="secondary">{p}</Badge>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold mb-2 text-sm">Available Forms</h3>
-                      <div className="flex flex-wrap gap-1">
-                        {viewingProduct.forms.map((f: string) => (
-                          <Badge key={f} variant="secondary">{f}</Badge>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="font-semibold mb-2 text-sm">Tags</h3>
-                    <div className="flex flex-wrap gap-1">
-                      {viewingProduct.symptomsTags.map((t: string) => (
-                        <Badge key={t} variant="outline">{t}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div className="pt-4 border-t">
-                    <p className="text-xs text-muted-foreground">Product ID: {viewingProduct._id}</p>
-                    <p className="text-xs text-muted-foreground">Created: {new Date(viewingProduct._creationTime).toLocaleDateString()}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
+        <ProductViewDialog 
+          product={viewingProduct} 
+          open={isViewDialogOpen} 
+          onOpenChange={setIsViewDialogOpen} 
+        />
       </div>
 
       <Card>
@@ -814,89 +228,15 @@ export default function AdminProducts() {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Potencies</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedProducts?.map((product) => (
-                <TableRow key={product._id}>
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-3">
-                      <img src={product.imageUrl} alt={product.name} className="h-8 w-8 rounded object-cover bg-secondary" />
-                      <div className="flex flex-col">
-                        <span>{product.name}</span>
-                        <Link to={`/product/${product._id}`} target="_blank" className="text-xs text-primary flex items-center hover:underline">
-                          View on site <ExternalLink className="h-3 w-3 ml-1" />
-                        </Link>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="font-normal">{product.category || "Classical"}</Badge>
-                  </TableCell>
-                  <TableCell>₹{product.basePrice}</TableCell>
-                  <TableCell>
-                    {product.availability === "out_of_stock" ? (
-                      <Badge variant="destructive" className="text-[10px]">Out of Stock</Badge>
-                    ) : product.availability === "discontinued" ? (
-                      <Badge variant="secondary" className="text-[10px]">Discontinued</Badge>
-                    ) : (
-                      <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-[10px]">In Stock</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>{product.potencies.join(", ")}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => openViewDialog(product)}>
-                        <Eye className="h-4 w-4 text-muted-foreground" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => openEditDialog(product)}>
-                        <Edit className="h-4 w-4 text-muted-foreground" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(product._id)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-
-          {/* Pagination Controls */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-end space-x-2 py-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Previous
-              </Button>
-              <div className="text-sm font-medium">
-                Page {currentPage} of {totalPages}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
+          <ProductTable 
+            products={paginatedProducts || []}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            setCurrentPage={setCurrentPage}
+            onView={openViewDialog}
+            onEdit={openEditDialog}
+            onDelete={handleDelete}
+          />
         </CardContent>
       </Card>
     </div>
