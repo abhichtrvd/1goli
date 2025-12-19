@@ -27,7 +27,21 @@ export default function UploadPrescription() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+      const selectedFile = e.target.files[0];
+      
+      // Validation
+      const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+      if (!validTypes.includes(selectedFile.type)) {
+        toast.error("Invalid file type. Please upload JPG, PNG, or PDF.");
+        return;
+      }
+
+      if (selectedFile.size > 5 * 1024 * 1024) { // 5MB
+        toast.error("File is too large. Maximum size is 5MB.");
+        return;
+      }
+
+      setFile(selectedFile);
     }
   };
 

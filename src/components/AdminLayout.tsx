@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router";
-import { LayoutDashboard, Package, ShoppingCart, LogOut, Home, Loader2, Users, Stethoscope } from "lucide-react";
+import { LayoutDashboard, Package, ShoppingCart, LogOut, Home, Loader2, Users, Stethoscope, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useEffect } from "react";
@@ -89,6 +89,15 @@ export default function AdminLayout() {
             >
               <Stethoscope className="mr-2 h-4 w-4" />
               Doctors
+            </Button>
+          </Link>
+          <Link to="/admin/prescriptions">
+            <Button 
+              variant={isActive("/admin/prescriptions") ? "secondary" : "ghost"} 
+              className="w-full justify-start"
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              Prescriptions
             </Button>
           </Link>
         </nav>

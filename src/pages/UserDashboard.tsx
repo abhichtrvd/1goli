@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ShoppingBag, Calendar, LogOut, Shield } from "lucide-react";
+import { Loader2, ShoppingBag, Calendar, LogOut, Shield, FileText, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useState } from "react";
 import React from "react";
@@ -19,6 +19,7 @@ export default function UserDashboard() {
   const navigate = useNavigate();
   const orders = useQuery(api.orders.getOrders);
   const bookings = useQuery(api.consultations.getUserBookings);
+  const prescriptions = useQuery(api.prescriptions.getMyPrescriptions);
   const updateProfile = useMutation(api.users.updateCurrentUser);
   
   const [isUpdating, setIsUpdating] = useState(false);
@@ -28,7 +29,7 @@ export default function UserDashboard() {
     return null;
   }
 
-  if (user === undefined || orders === undefined || bookings === undefined) {
+  if (user === undefined || orders === undefined || bookings === undefined || prescriptions === undefined) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -95,10 +96,11 @@ export default function UserDashboard() {
           {/* Main Content */}
           <div className="w-full md:w-3/4">
             <Tabs defaultValue="profile" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 mb-8">
+              <TabsList className="grid w-full grid-cols-4 mb-8">
                 <TabsTrigger value="profile">Profile</TabsTrigger>
                 <TabsTrigger value="orders">Orders</TabsTrigger>
                 <TabsTrigger value="consultations">Consultations</TabsTrigger>
+                <TabsTrigger value="prescriptions">Prescriptions</TabsTrigger>
               </TabsList>
 
               {/* Profile Tab */}
@@ -224,6 +226,59 @@ export default function UserDashboard() {
                                {booking.status === 'confirmed' && (
                                  <Button size="sm" variant="outline">Join Call</Button>
                                )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Prescriptions Tab */}
+              <TabsContent value="prescriptions">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>My Prescriptions</CardTitle>
+                    <CardDescription>Track status of your uploaded prescriptions.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {prescriptions.length === 0 ? (
+                      <div className="text-center py-12">
+                        <FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                        <h3 className="text-lg font-medium">No prescriptions uploaded</h3>
+                        <p className="text-muted-foreground mb-4">Upload a prescription to get medicines delivered.</p>
+                        <Button onClick={() => navigate("/upload")}>Upload Now</Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {prescriptions.map((p) => (
+                          <div key={p._id} className="flex flex-col sm:flex-row justify-between p-4 border rounded-lg hover:bg-secondary/10 transition-colors gap-4">
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold">Uploaded on {new Date(p._creationTime).toLocaleDateString()}</span>
+                                <Badge 
+                                  variant={p.status === 'processed' ? 'default' : p.status === 'rejected' ? 'destructive' : 'secondary'}
+                                  className={p.status === 'processed' ? 'bg-green-600' : ''}
+                                >
+                                  {p.status.toUpperCase()}
+                                </Badge>
+                              </div>
+                              {p.notes && (
+                                <p className="text-sm text-muted-foreground line-clamp-2">
+                                  <span className="font-medium">Note:</span> {p.notes}
+                                </p>
+                              )}
+                              {p.pharmacistNotes && (
+                                <div className="bg-secondary/50 p-2 rounded text-sm">
+                                  <span className="font-medium text-primary">Pharmacist:</span> {p.pharmacistNotes}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                               <Button size="sm" variant="outline" onClick={() => p.imageUrl && window.open(p.imageUrl, '_blank')} disabled={!p.imageUrl}>
+                                 View Image <ExternalLink className="ml-2 h-3 w-3" />
+                               </Button>
                             </div>
                           </div>
                         ))}
