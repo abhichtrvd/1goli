@@ -86,6 +86,9 @@ export default function Wholesale() {
   // Local state for selections: { [productId]: { potency: string, packingSize: string } }
   const [selections, setSelections] = useState<Record<string, { potency: string, packingSize: string }>>({});
 
+  // State for category-level search queries
+  const [categorySearchQueries, setCategorySearchQueries] = useState<Record<string, string>>({});
+
   useEffect(() => {
     seed();
   }, []);
@@ -258,14 +261,37 @@ export default function Wholesale() {
                         const categoryProducts = categories[category];
                         if (!categoryProducts || categoryProducts.length === 0) return null;
 
+                        const sectionKey = `${brand}-${category}`;
+                        const searchQuery = categorySearchQueries[sectionKey] || "";
+                        
+                        const filteredCategoryProducts = categoryProducts.filter((p: any) => 
+                          p.name.toLowerCase().includes(searchQuery.toLowerCase())
+                        );
+
                         return (
-                          <AccordionItem key={category} value={`${brand}-${category}`} className="border-b-0 mb-2">
+                          <AccordionItem key={category} value={sectionKey} className="border-b-0 mb-2">
                             <AccordionTrigger className="text-lg font-medium text-lime-700 hover:text-lime-800 hover:no-underline py-3">
                               {category}
                             </AccordionTrigger>
                             <AccordionContent>
+                              <div className="mb-4 px-1">
+                                <div className="relative">
+                                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                  <Input 
+                                    placeholder={`Search ${category}...`}
+                                    className="pl-9 bg-background"
+                                    value={searchQuery}
+                                    onChange={(e) => setCategorySearchQueries(prev => ({...prev, [sectionKey]: e.target.value}))}
+                                  />
+                                </div>
+                              </div>
                               <div className="space-y-3 mt-2">
-                                {categoryProducts.map((product) => {
+                                {filteredCategoryProducts.length === 0 ? (
+                                  <div className="text-center py-8 text-muted-foreground text-sm">
+                                    No products found matching "{searchQuery}" in {category}
+                                  </div>
+                                ) : (
+                                  filteredCategoryProducts.map((product: any) => {
                                     const selection = selections[product._id] || {};
                                     const availablePackingSizes = product.packingSizes || ["30ml", "100ml", "450ml"];
                                     const availablePotencies = category === "Dilution" ? DILUTION_POTENCIES : (product.potencies || []);
@@ -376,7 +402,8 @@ export default function Wholesale() {
                                         </div>
                                       </div>
                                     );
-                                })}
+                                })
+                                )}
                               </div>
                             </AccordionContent>
                           </AccordionItem>
