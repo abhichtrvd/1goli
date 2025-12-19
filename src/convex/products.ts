@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireAdmin } from "./users";
 import { paginationOptsValidator } from "convex/server";
+import { getAuthUserId } from "@convex-dev/auth/server";
 
 export const getProducts = query({
   args: {},
@@ -180,13 +181,26 @@ export const createProduct = mutation({
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
-    await ctx.db.insert("products", {
+    const userId = await getAuthUserId(ctx);
+    
+    const productId = await ctx.db.insert("products", {
       ...args,
       category: args.category || "Classical",
       availability: args.availability || "in_stock",
       images: args.images || [],
-      packingSizes: args.packingSizes || ["30ml", "100ml"], // Default if not provided
+      packingSizes: args.packingSizes || ["30ml", "100ml"],
     });
+
+    await ctx.db.insert("auditLogs", {
+      action: "create_product",
+      entityId: productId,
+      entityType: "product",
+      performedBy: userId || "admin",
+      details: `Created product: ${args.name}`,
+      timestamp: Date.now(),
+    });
+    
+    return productId;
   },
 });
 
@@ -215,8 +229,18 @@ export const updateProduct = mutation({
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
+    const userId = await getAuthUserId(ctx);
     const { id, ...updates } = args;
     await ctx.db.patch(id, updates);
+
+    await ctx.db.insert("auditLogs", {
+      action: "update_product",
+      entityId: id,
+      entityType: "product",
+      performedBy: userId || "admin",
+      details: `Updated product: ${id}`,
+      timestamp: Date.now(),
+    });
   },
 });
 
@@ -224,7 +248,37 @@ export const deleteProduct = mutation({
   args: { id: v.id("products") },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
+    const userId = await getAuthUserId(ctx);
     await ctx.db.delete(args.id);
+
+    await ctx.db.insert("auditLogs", {
+      action: "delete_product",
+      entityId: args.id,
+      entityType: "product",
+      performedBy: userId || "admin",
+      details: `Deleted product: ${args.id}`,
+      timestamp: Date.now(),
+    });
+  },
+});
+
+export const bulkDeleteProducts = mutation({
+  args: { ids: v.array(v.id("products")) },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const userId = await getAuthUserId(ctx);
+    
+    for (const id of args.ids) {
+      await ctx.db.delete(id);
+    }
+
+    await ctx.db.insert("auditLogs", {
+      action: "bulk_delete_products",
+      entityType: "product",
+      performedBy: userId || "admin",
+      details: `Deleted ${args.ids.length} products`,
+      timestamp: Date.now(),
+    });
   },
 });
 

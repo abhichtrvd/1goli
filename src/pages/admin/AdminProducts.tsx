@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Download, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
@@ -16,6 +16,7 @@ import { ProductViewDialog } from "./components/ProductViewDialog";
 export default function AdminProducts() {
   const products = useQuery(api.products.getProducts);
   const deleteProduct = useMutation(api.products.deleteProduct);
+  const bulkDeleteProducts = useMutation(api.products.bulkDeleteProducts);
   
   const [search, setSearch] = useState("");
   const [formFilter, setFormFilter] = useState<string>("all");
@@ -30,6 +31,7 @@ export default function AdminProducts() {
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [viewingProduct, setViewingProduct] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedIds, setSelectedIds] = useState<Id<"products">[]>([]);
   
   const itemsPerPage = 5;
 
@@ -93,6 +95,68 @@ export default function AdminProducts() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (confirm(`Are you sure you want to delete ${selectedIds.length} products?`)) {
+      try {
+        await bulkDeleteProducts({ ids: selectedIds });
+        toast.success(`${selectedIds.length} products deleted`);
+        setSelectedIds([]);
+      } catch (error) {
+        toast.error("Failed to delete products");
+      }
+    }
+  };
+
+  const handleSelect = (id: Id<"products">, checked: boolean) => {
+    if (checked) {
+      setSelectedIds(prev => [...prev, id]);
+    } else {
+      setSelectedIds(prev => prev.filter(i => i !== id));
+    }
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked && paginatedProducts) {
+      const newIds = paginatedProducts.map(p => p._id);
+      setSelectedIds(prev => Array.from(new Set([...prev, ...newIds])));
+    } else if (paginatedProducts) {
+      const pageIds = paginatedProducts.map(p => p._id);
+      setSelectedIds(prev => prev.filter(id => !pageIds.includes(id)));
+    }
+  };
+
+  const handleExportCSV = () => {
+    if (!filteredProducts || filteredProducts.length === 0) {
+      toast.error("No data to export");
+      return;
+    }
+
+    const headers = ["Name", "Category", "Price", "Stock", "Availability", "Brand", "Potencies", "Forms"];
+    const csvContent = [
+      headers.join(","),
+      ...filteredProducts.map(p => [
+        `"${p.name.replace(/"/g, '""')}"`,
+        `"${p.category || ""}"`,
+        p.basePrice,
+        p.stock,
+        p.availability,
+        `"${p.brand || ""}"`,
+        `"${p.potencies.join("; ")}"`,
+        `"${p.forms.join("; ")}"`
+      ].join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `products_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -100,28 +164,33 @@ export default function AdminProducts() {
           <h1 className="text-3xl font-bold tracking-tight">Products</h1>
           <p className="text-muted-foreground">Manage your product inventory.</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={(open) => {
-          setIsDialogOpen(open);
-          if (!open) setEditingProduct(null);
-        }}>
-          <DialogTrigger asChild>
-            <Button onClick={openCreateDialog}>
-              <Plus className="mr-2 h-4 w-4" /> Add Product
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingProduct ? "Edit Product" : "Add New Product"}</DialogTitle>
-            </DialogHeader>
-            <ProductForm 
-              initialData={editingProduct} 
-              onSuccess={() => {
-                setIsDialogOpen(false);
-                setEditingProduct(null);
-              }} 
-            />
-          </DialogContent>
-        </Dialog>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleExportCSV}>
+            <Download className="mr-2 h-4 w-4" /> Export CSV
+          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) setEditingProduct(null);
+          }}>
+            <DialogTrigger asChild>
+              <Button onClick={openCreateDialog}>
+                <Plus className="mr-2 h-4 w-4" /> Add Product
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{editingProduct ? "Edit Product" : "Add New Product"}</DialogTitle>
+              </DialogHeader>
+              <ProductForm 
+                initialData={editingProduct} 
+                onSuccess={() => {
+                  setIsDialogOpen(false);
+                  setEditingProduct(null);
+                }} 
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
 
         <ProductViewDialog 
           product={viewingProduct} 
@@ -135,6 +204,11 @@ export default function AdminProducts() {
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <CardTitle>All Products</CardTitle>
+              {selectedIds.length > 0 && (
+                <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete Selected ({selectedIds.length})
+                </Button>
+              )}
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
@@ -236,6 +310,9 @@ export default function AdminProducts() {
             onView={openViewDialog}
             onEdit={openEditDialog}
             onDelete={handleDelete}
+            selectedIds={selectedIds}
+            onSelect={handleSelect}
+            onSelectAll={handleSelectAll}
           />
         </CardContent>
       </Card>

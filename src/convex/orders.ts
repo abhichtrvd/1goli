@@ -205,6 +205,7 @@ export const updateOrderStatus = mutation({
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
+    const userId = await getAuthUserId(ctx);
     const order = await ctx.db.get(args.orderId);
     if (!order) throw new Error("Order not found");
 
@@ -218,6 +219,52 @@ export const updateOrderStatus = mutation({
     await ctx.db.patch(args.orderId, { 
       status: args.status,
       statusHistory: history
+    });
+
+    await ctx.db.insert("auditLogs", {
+      action: "update_order_status",
+      entityId: args.orderId,
+      entityType: "order",
+      performedBy: userId || "admin",
+      details: `Updated order status to ${args.status}`,
+      timestamp: Date.now(),
+    });
+  },
+});
+
+export const bulkUpdateOrderStatus = mutation({
+  args: {
+    orderIds: v.array(v.id("orders")),
+    status: v.string(),
+    note: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const userId = await getAuthUserId(ctx);
+
+    for (const orderId of args.orderIds) {
+      const order = await ctx.db.get(orderId);
+      if (order) {
+        const history = order.statusHistory || [];
+        history.push({
+          status: args.status,
+          timestamp: Date.now(),
+          note: args.note || "Bulk update"
+        });
+
+        await ctx.db.patch(orderId, {
+          status: args.status,
+          statusHistory: history
+        });
+      }
+    }
+
+    await ctx.db.insert("auditLogs", {
+      action: "bulk_update_order_status",
+      entityType: "order",
+      performedBy: userId || "admin",
+      details: `Updated ${args.orderIds.length} orders to ${args.status}`,
+      timestamp: Date.now(),
     });
   },
 });

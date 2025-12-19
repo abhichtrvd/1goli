@@ -1,17 +1,19 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useMutation, usePaginatedQuery } from "convex/react";
+import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Filter, Clock, Package, Truck, CheckCircle, Search, Loader2 } from "lucide-react";
+import { Filter, Clock, Package, Truck, CheckCircle, Search, Loader2, Download, CheckSquare } from "lucide-react";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Eye } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Id } from "@/convex/_generated/dataModel";
 
 export default function AdminOrders() {
   const [search, setSearch] = useState("");
@@ -20,8 +22,10 @@ export default function AdminOrders() {
     { search: search || undefined },
     { initialNumItems: 10 }
   );
-
+  
   const updateStatus = useMutation(api.orders.updateOrderStatus);
+  const bulkUpdateStatus = useMutation(api.orders.bulkUpdateOrderStatus);
+  
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   
@@ -30,6 +34,11 @@ export default function AdminOrders() {
   const [orderToUpdate, setOrderToUpdate] = useState<any>(null);
   const [newStatus, setNewStatus] = useState<string>("");
   const [statusNote, setStatusNote] = useState("");
+
+  // Bulk actions
+  const [selectedIds, setSelectedIds] = useState<Id<"orders">[]>([]);
+  const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
+  const [bulkStatus, setBulkStatus] = useState<string>("");
 
   const handleStatusUpdateSubmit = async () => {
     if (!orderToUpdate || !newStatus) return;
@@ -47,6 +56,24 @@ export default function AdminOrders() {
       setStatusNote("");
     } catch (error) {
       toast.error("Failed to update status");
+    }
+  };
+
+  const handleBulkUpdateSubmit = async () => {
+    if (selectedIds.length === 0 || !bulkStatus) return;
+
+    try {
+      await bulkUpdateStatus({
+        orderIds: selectedIds,
+        status: bulkStatus,
+        note: "Bulk update via admin panel"
+      });
+      toast.success(`Updated ${selectedIds.length} orders`);
+      setIsBulkDialogOpen(false);
+      setSelectedIds([]);
+      setBulkStatus("");
+    } catch (error) {
+      toast.error("Failed to update orders");
     }
   };
 
@@ -92,6 +119,55 @@ export default function AdminOrders() {
     statusFilter === "all" ? true : order.status === statusFilter
   );
 
+  const handleSelect = (id: Id<"orders">, checked: boolean) => {
+    if (checked) {
+      setSelectedIds(prev => [...prev, id]);
+    } else {
+      setSelectedIds(prev => prev.filter(i => i !== id));
+    }
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked && filteredOrders) {
+      const newIds = filteredOrders.map(o => o._id);
+      setSelectedIds(prev => Array.from(new Set([...prev, ...newIds])));
+    } else if (filteredOrders) {
+      const pageIds = filteredOrders.map(o => o._id);
+      setSelectedIds(prev => prev.filter(id => !pageIds.includes(id)));
+    }
+  };
+
+  const handleExportCSV = () => {
+    if (!filteredOrders || filteredOrders.length === 0) {
+      toast.error("No data to export");
+      return;
+    }
+
+    const headers = ["Order ID", "Date", "Customer Name", "Contact", "Shipping Address", "Total", "Status", "Items"];
+    const csvContent = [
+      headers.join(","),
+      ...filteredOrders.map(o => [
+        o._id,
+        new Date(o._creationTime).toISOString(),
+        `"${o.userName.replace(/"/g, '""')}"`,
+        `"${o.userContact.replace(/"/g, '""')}"`,
+        `"${o.shippingAddress.replace(/"/g, '""')}"`,
+        o.total,
+        o.status,
+        `"${o.items.map((i: any) => `${i.name} (${i.quantity})`).join("; ").replace(/"/g, '""')}"`
+      ].join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `orders_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -100,6 +176,9 @@ export default function AdminOrders() {
           <p className="text-muted-foreground">Manage customer orders and shipments.</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleExportCSV}>
+            <Download className="mr-2 h-4 w-4" /> Export CSV
+          </Button>
           <div className="relative w-64">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input 
@@ -127,12 +206,53 @@ export default function AdminOrders() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Recent Orders</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Recent Orders</CardTitle>
+            {selectedIds.length > 0 && (
+              <Dialog open={isBulkDialogOpen} onOpenChange={setIsBulkDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="secondary" size="sm">
+                    <CheckSquare className="mr-2 h-4 w-4" /> Update Selected ({selectedIds.length})
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Bulk Update Status</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label>New Status</Label>
+                      <Select value={bulkStatus} onValueChange={setBulkStatus}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="processing">Processing</SelectItem>
+                          <SelectItem value="shipped">Shipped</SelectItem>
+                          <SelectItem value="delivered">Delivered</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button onClick={handleBulkUpdateSubmit} className="w-full">
+                      Update {selectedIds.length} Orders
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[50px]">
+                  <Checkbox 
+                    checked={filteredOrders && filteredOrders.length > 0 && filteredOrders.every(o => selectedIds.includes(o._id))}
+                    onCheckedChange={(checked) => handleSelectAll(checked as boolean)}
+                  />
+                </TableHead>
                 <TableHead>Order ID</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Customer</TableHead>
@@ -145,6 +265,12 @@ export default function AdminOrders() {
             <TableBody>
               {filteredOrders?.map((order) => (
                 <TableRow key={order._id}>
+                  <TableCell>
+                    <Checkbox 
+                      checked={selectedIds.includes(order._id)}
+                      onCheckedChange={(checked) => handleSelect(order._id, checked as boolean)}
+                    />
+                  </TableCell>
                   <TableCell className="font-mono text-xs">{order._id.slice(-6)}</TableCell>
                   <TableCell>{new Date(order._creationTime).toLocaleDateString()}</TableCell>
                   <TableCell>
@@ -274,7 +400,7 @@ export default function AdminOrders() {
               ))}
               {filteredOrders?.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     No orders found.
                   </TableCell>
                 </TableRow>

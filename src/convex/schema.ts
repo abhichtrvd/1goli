@@ -225,6 +225,16 @@ const schema = defineSchema(
       maintenanceMode: v.boolean(),
       bannerMessage: v.optional(v.string()),
     }),
+
+    auditLogs: defineTable({
+      action: v.string(),
+      entityId: v.optional(v.string()),
+      entityType: v.string(),
+      performedBy: v.string(),
+      details: v.optional(v.string()),
+      timestamp: v.number(),
+    })
+      .index("by_timestamp", ["timestamp"]),
   },
   {
     schemaValidation: false,
