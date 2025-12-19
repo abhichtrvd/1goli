@@ -13,7 +13,7 @@ export const createPaymentIntent = action({
     }
 
     const stripe = new Stripe(stripeKey, {
-      apiVersion: "2024-06-20",
+      apiVersion: "2024-06-20" as any, // Cast to any to avoid strict type mismatch with specific library versions
     });
 
     try {
