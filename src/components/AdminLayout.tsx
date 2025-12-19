@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router";
-import { LayoutDashboard, Package, ShoppingCart, LogOut, Home, Loader2, Users, Stethoscope, FileText } from "lucide-react";
+import { LayoutDashboard, Package, ShoppingCart, LogOut, Home, Loader2, Users, Stethoscope, FileText, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useEffect } from "react";
@@ -109,6 +109,15 @@ export default function AdminLayout() {
                   {pendingPrescriptions}
                 </Badge>
               )}
+            </Button>
+          </Link>
+          <Link to="/admin/settings">
+            <Button 
+              variant={isActive("/admin/settings") ? "secondary" : "ghost"} 
+              className="w-full justify-start"
+            >
+              <Settings className="mr-2 h-4 w-4" />
+              Settings
             </Button>
           </Link>
         </nav>

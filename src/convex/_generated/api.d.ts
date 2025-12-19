@@ -18,6 +18,7 @@ import type * as orders from "../orders.js";
 import type * as payments from "../payments.js";
 import type * as prescriptions from "../prescriptions.js";
 import type * as products from "../products.js";
+import type * as settings from "../settings.js";
 import type * as test_integration from "../test_integration.js";
 import type * as users from "../users.js";
 
@@ -38,6 +39,7 @@ declare const fullApi: ApiFromModules<{
   payments: typeof payments;
   prescriptions: typeof prescriptions;
   products: typeof products;
+  settings: typeof settings;
   test_integration: typeof test_integration;
   users: typeof users;
 }>;

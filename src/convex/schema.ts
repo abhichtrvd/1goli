@@ -215,6 +215,16 @@ const schema = defineSchema(
     })
       .index("by_doctor", ["doctorId"])
       .index("by_user", ["userId"]),
+
+    siteSettings: defineTable({
+      siteName: v.string(),
+      supportEmail: v.string(),
+      supportPhone: v.string(),
+      shippingFee: v.number(),
+      freeShippingThreshold: v.number(),
+      maintenanceMode: v.boolean(),
+      bannerMessage: v.optional(v.string()),
+    }),
   },
   {
     schemaValidation: false,
