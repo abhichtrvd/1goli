@@ -141,11 +141,16 @@ const schema = defineSchema(
         v.literal("rejected")
       ),
       pharmacistNotes: v.optional(v.string()),
+      searchText: v.optional(v.string()), // Added for comprehensive search
     })
       .index("by_user", ["userId"])
       .index("by_status", ["status"])
       .searchIndex("search_patient_name", {
         searchField: "patientName",
+        filterFields: ["status"],
+      })
+      .searchIndex("search_all", {
+        searchField: "searchText",
         filterFields: ["status"],
       }),
 

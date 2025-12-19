@@ -26,9 +26,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Loader2, MoreHorizontal, FileText, CheckCircle, XCircle, Clock, Eye, Search } from "lucide-react";
+import { Loader2, MoreHorizontal, FileText, CheckCircle, XCircle, Clock, Eye, Search, ArrowUpDown, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -36,13 +43,15 @@ import { useDebounce } from "@/hooks/use-debounce";
 export default function AdminPrescriptions() {
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const debouncedSearch = useDebounce(searchQuery, 500);
 
   const { results, status, loadMore, isLoading } = usePaginatedQuery(
     api.prescriptions.getPaginatedPrescriptions,
     { 
       status: statusFilter,
-      search: debouncedSearch || undefined
+      search: debouncedSearch || undefined,
+      sortOrder: sortOrder,
     },
     { initialNumItems: 10 }
   );
@@ -87,16 +96,26 @@ export default function AdminPrescriptions() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h1 className="text-3xl font-bold tracking-tight">Prescriptions</h1>
-        <div className="flex items-center gap-2 w-full md:w-auto">
+        <div className="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto">
           <div className="relative w-full md:w-64">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search patient name..."
+              placeholder="Search patient, notes..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-8"
             />
           </div>
+          <Select value={sortOrder} onValueChange={(v: "asc" | "desc") => setSortOrder(v)}>
+            <SelectTrigger className="w-[140px]">
+              <ArrowUpDown className="w-4 h-4 mr-2 text-muted-foreground" />
+              <SelectValue placeholder="Sort" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="desc">Newest First</SelectItem>
+              <SelectItem value="asc">Oldest First</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -194,7 +213,7 @@ export default function AdminPrescriptions() {
                           <FileText className="mr-2 h-4 w-4" /> View Image
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => openReviewDialog(prescription)}>
-                          <Eye className="mr-2 h-4 w-4" /> Review & Update
+                          <Eye className="mr-2 h-4 w-4" /> View Details & Update
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -216,17 +235,20 @@ export default function AdminPrescriptions() {
       )}
 
       <Dialog open={isReviewOpen} onOpenChange={setIsReviewOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Review Prescription</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              Prescription Details
+              {selectedPrescription && getStatusBadge(selectedPrescription.status)}
+            </DialogTitle>
             <DialogDescription>
-              Update status and add notes for the patient.
+              Review patient details, prescription image, and update status.
             </DialogDescription>
           </DialogHeader>
           
           {selectedPrescription && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-6 py-4">
+              <div className="grid grid-cols-2 gap-4 p-4 bg-secondary/20 rounded-lg">
                 <div>
                   <Label className="text-xs text-muted-foreground">Patient Name</Label>
                   <p className="font-medium">{selectedPrescription.patientName || selectedPrescription.guestInfo?.name || "Registered User"}</p>
@@ -235,11 +257,22 @@ export default function AdminPrescriptions() {
                   <Label className="text-xs text-muted-foreground">Phone</Label>
                   <p className="font-medium">{selectedPrescription.patientPhone || selectedPrescription.guestInfo?.phone || "-"}</p>
                 </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Email</Label>
+                  <p className="font-medium">{selectedPrescription.guestInfo?.email || "-"}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Submitted On</Label>
+                  <div className="flex items-center gap-1 font-medium">
+                    <Calendar className="h-3 w-3 text-muted-foreground" />
+                    {new Date(selectedPrescription._creationTime).toLocaleString()}
+                  </div>
+                </div>
               </div>
               
               <div>
                 <Label className="text-xs text-muted-foreground">Patient Notes</Label>
-                <div className="bg-muted p-3 rounded-md text-sm mt-1">
+                <div className="bg-muted p-3 rounded-md text-sm mt-1 border border-border/50">
                   {selectedPrescription.notes || "No notes provided."}
                 </div>
               </div>
@@ -257,6 +290,7 @@ export default function AdminPrescriptions() {
                   value={pharmacistNotes} 
                   onChange={(e) => setPharmacistNotes(e.target.value)}
                   placeholder="Instructions, medicines added to cart, etc."
+                  className="min-h-[100px]"
                 />
               </div>
             </div>
