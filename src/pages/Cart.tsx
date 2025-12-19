@@ -12,11 +12,8 @@ export default function Cart() {
   const updateQuantity = useMutation(api.cart.updateQuantity);
   const removeFromCart = useMutation(api.cart.removeFromCart);
   const clearCart = useMutation(api.cart.clearCart);
-  const createOrder = useMutation(api.orders.createOrder);
   const navigate = useNavigate();
   
-  const [isCheckingOut, setIsCheckingOut] = useState(false);
-
   if (cartItems === undefined) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -39,33 +36,8 @@ export default function Cart() {
     return acc + (calculateItemPrice(item) * item.quantity);
   }, 0);
 
-  const handleCheckout = async () => {
-    setIsCheckingOut(true);
-    try {
-      const validItems = cartItems.filter(item => item.product !== null);
-      const orderItems = validItems.map(item => ({
-        productId: item.productId,
-        name: item.product!.name,
-        potency: item.potency,
-        form: item.form,
-        quantity: item.quantity,
-        price: calculateItemPrice(item)
-      }));
-
-      await createOrder({
-        shippingAddress: "123 Homeopathy Lane, Wellness City", // Mock address
-        total: subtotal,
-        items: orderItems
-      });
-
-      toast.success("Order placed successfully!");
-      navigate("/"); // Or to an order success page
-    } catch (error) {
-      toast.error("Failed to place order");
-      console.error(error);
-    } finally {
-      setIsCheckingOut(false);
-    }
+  const handleCheckout = () => {
+    navigate("/checkout");
   };
 
   const handleClearCart = async () => {
@@ -182,10 +154,8 @@ export default function Cart() {
                   <Button 
                     className="w-full h-12 text-lg" 
                     onClick={handleCheckout}
-                    disabled={isCheckingOut}
                   >
-                    {isCheckingOut ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
-                    Checkout
+                    Proceed to Checkout
                   </Button>
                 </CardFooter>
               </Card>

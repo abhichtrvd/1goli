@@ -8,6 +8,16 @@ import { paginationOptsValidator } from "convex/server";
 export const createOrder = mutation({
   args: {
     shippingAddress: v.string(),
+    shippingDetails: v.optional(v.object({
+      fullName: v.string(),
+      addressLine1: v.string(),
+      addressLine2: v.optional(v.string()),
+      city: v.string(),
+      state: v.string(),
+      zipCode: v.string(),
+      phone: v.string(),
+    })),
+    paymentMethod: v.string(),
     total: v.number(),
     items: v.array(
       v.object({
@@ -15,6 +25,7 @@ export const createOrder = mutation({
         name: v.string(),
         potency: v.string(),
         form: v.string(),
+        packingSize: v.optional(v.string()),
         quantity: v.number(),
         price: v.number(),
       })
@@ -30,6 +41,10 @@ export const createOrder = mutation({
       total: args.total,
       status: "pending",
       shippingAddress: args.shippingAddress,
+      shippingDetails: args.shippingDetails,
+      paymentMethod: args.paymentMethod,
+      paymentStatus: args.paymentMethod === "cod" ? "pending" : "paid", // Mocking online payment as paid immediately for now
+      paymentId: args.paymentMethod === "online" ? `PAY-${Date.now()}` : undefined,
       statusHistory: [
         {
           status: "pending",

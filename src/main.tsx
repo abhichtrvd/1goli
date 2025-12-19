@@ -21,6 +21,7 @@ const SearchResults = lazy(() => import("./pages/SearchResults.tsx"));
 const ConsultHomeopath = lazy(() => import("./pages/ConsultHomeopath.tsx"));
 const Wholesale = lazy(() => import("./pages/Wholesale.tsx"));
 const CategoryLanding = lazy(() => import("./pages/CategoryLanding.tsx"));
+const Checkout = lazy(() => import("./pages/Checkout.tsx"));
 
 // Admin Pages
 const AdminLayout = lazy(() => import("./components/AdminLayout.tsx"));
@@ -54,6 +55,7 @@ createRoot(document.getElementById("root")!).render(
               <Route path="/wholesale" element={<Wholesale />} />
               <Route path="/upload" element={<UploadPrescription />} />
               <Route path="/cart" element={<Cart />} />
+              <Route path="/checkout" element={<Checkout />} />
               <Route path="/search" element={<SearchResults />} />
               <Route path="/category/:category" element={<CategoryLanding />} />
               <Route path="*" element={<NotFound />} />

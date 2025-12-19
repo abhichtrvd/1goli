@@ -95,6 +95,18 @@ const schema = defineSchema(
       total: v.number(),
       status: v.string(),
       shippingAddress: v.string(),
+      shippingDetails: v.optional(v.object({
+        fullName: v.string(),
+        addressLine1: v.string(),
+        addressLine2: v.optional(v.string()),
+        city: v.string(),
+        state: v.string(),
+        zipCode: v.string(),
+        phone: v.string(),
+      })),
+      paymentMethod: v.optional(v.string()),
+      paymentStatus: v.optional(v.string()),
+      paymentId: v.optional(v.string()),
       statusHistory: v.optional(
         v.array(
           v.object({
