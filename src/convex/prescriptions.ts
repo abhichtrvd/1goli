@@ -3,6 +3,7 @@ import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { requireAdmin } from "./users";
 import { paginationOptsValidator } from "convex/server";
+import { Id } from "./_generated/dataModel";
 
 export const generateUploadUrl = mutation({
   args: {},
@@ -24,12 +25,22 @@ export const submitPrescription = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     
-    // If not authenticated, guestInfo is required (enforced by UI logic, but good to check)
-    // For now we allow the schema flexibility.
+    let patientName = args.guestInfo?.name;
+    let patientPhone = args.guestInfo?.phone;
+
+    if (userId) {
+      const user = await ctx.db.get(userId as Id<"users">);
+      if (user) {
+        patientName = user.name;
+        patientPhone = user.phone;
+      }
+    }
 
     const prescriptionId = await ctx.db.insert("prescriptions", {
       userId: userId || undefined,
       guestInfo: args.guestInfo,
+      patientName,
+      patientPhone,
       imageStorageId: args.imageStorageId,
       notes: args.notes,
       status: "pending",
@@ -66,20 +77,42 @@ export const getPaginatedPrescriptions = query({
   args: { 
     paginationOpts: paginationOptsValidator,
     status: v.optional(v.string()),
+    search: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
     
-    let query;
-    if (args.status) {
-      query = ctx.db
-        .query("prescriptions")
-        .withIndex("by_status", (q) => q.eq("status", args.status as any));
+    let result;
+    
+    if (args.search) {
+      // Use search index if search query is present
+      if (args.status) {
+        result = await ctx.db
+          .query("prescriptions")
+          .withSearchIndex("search_patient_name", (q) => 
+            q.search("patientName", args.search!).eq("status", args.status as any)
+          )
+          .paginate(args.paginationOpts);
+      } else {
+        result = await ctx.db
+          .query("prescriptions")
+          .withSearchIndex("search_patient_name", (q) => 
+            q.search("patientName", args.search!)
+          )
+          .paginate(args.paginationOpts);
+      }
     } else {
-      query = ctx.db.query("prescriptions").order("desc");
+      // Standard filtering
+      let query;
+      if (args.status) {
+        query = ctx.db
+          .query("prescriptions")
+          .withIndex("by_status", (q) => q.eq("status", args.status as any));
+      } else {
+        query = ctx.db.query("prescriptions").order("desc");
+      }
+      result = await query.paginate(args.paginationOpts);
     }
-
-    const result = await query.paginate(args.paginationOpts);
 
     const pageWithUrls = await Promise.all(
       result.page.map(async (p) => ({

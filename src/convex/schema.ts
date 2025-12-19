@@ -130,6 +130,8 @@ const schema = defineSchema(
         phone: v.string(),
         email: v.optional(v.string()),
       })),
+      patientName: v.optional(v.string()), // Added for search
+      patientPhone: v.optional(v.string()), // Added for search
       imageStorageId: v.id("_storage"),
       notes: v.optional(v.string()),
       status: v.union(
@@ -141,7 +143,11 @@ const schema = defineSchema(
       pharmacistNotes: v.optional(v.string()),
     })
       .index("by_user", ["userId"])
-      .index("by_status", ["status"]),
+      .index("by_status", ["status"])
+      .searchIndex("search_patient_name", {
+        searchField: "patientName",
+        filterFields: ["status"],
+      }),
 
     consultationDoctors: defineTable({
       name: v.string(),

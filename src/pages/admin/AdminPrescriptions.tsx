@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,15 +28,22 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Loader2, MoreHorizontal, FileText, CheckCircle, XCircle, Clock, Eye } from "lucide-react";
+import { Loader2, MoreHorizontal, FileText, CheckCircle, XCircle, Clock, Eye, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
+import { useDebounce } from "@/hooks/use-debounce";
 
 export default function AdminPrescriptions() {
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
+  const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 500);
+
   const { results, status, loadMore, isLoading } = usePaginatedQuery(
     api.prescriptions.getPaginatedPrescriptions,
-    { status: statusFilter },
+    { 
+      status: statusFilter,
+      search: debouncedSearch || undefined
+    },
     { initialNumItems: 10 }
   );
 
@@ -77,31 +85,61 @@ export default function AdminPrescriptions() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h1 className="text-3xl font-bold tracking-tight">Prescriptions</h1>
-        <div className="flex gap-2">
-          <Button 
-            variant={statusFilter === undefined ? "default" : "outline"} 
-            onClick={() => setStatusFilter(undefined)}
-            size="sm"
-          >
-            All
-          </Button>
-          <Button 
-            variant={statusFilter === "pending" ? "default" : "outline"} 
-            onClick={() => setStatusFilter("pending")}
-            size="sm"
-          >
-            Pending
-          </Button>
-          <Button 
-            variant={statusFilter === "processed" ? "default" : "outline"} 
-            onClick={() => setStatusFilter("processed")}
-            size="sm"
-          >
-            Processed
-          </Button>
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <div className="relative w-full md:w-64">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search patient name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8"
+            />
+          </div>
         </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <Button 
+          variant={statusFilter === undefined ? "default" : "outline"} 
+          onClick={() => setStatusFilter(undefined)}
+          size="sm"
+        >
+          All
+        </Button>
+        <Button 
+          variant={statusFilter === "pending" ? "default" : "outline"} 
+          onClick={() => setStatusFilter("pending")}
+          size="sm"
+          className={statusFilter === "pending" ? "bg-yellow-600 hover:bg-yellow-700" : ""}
+        >
+          Pending
+        </Button>
+        <Button 
+          variant={statusFilter === "reviewed" ? "default" : "outline"} 
+          onClick={() => setStatusFilter("reviewed")}
+          size="sm"
+          className={statusFilter === "reviewed" ? "bg-blue-600 hover:bg-blue-700" : ""}
+        >
+          Reviewed
+        </Button>
+        <Button 
+          variant={statusFilter === "processed" ? "default" : "outline"} 
+          onClick={() => setStatusFilter("processed")}
+          size="sm"
+          className={statusFilter === "processed" ? "bg-green-600 hover:bg-green-700" : ""}
+        >
+          Processed
+        </Button>
+        <Button 
+          variant={statusFilter === "rejected" ? "default" : "outline"} 
+          onClick={() => setStatusFilter("rejected")}
+          size="sm"
+          className={statusFilter === "rejected" ? "bg-red-600 hover:bg-red-700" : ""}
+        >
+          Rejected
+        </Button>
       </div>
 
       <div className="rounded-md border bg-card">
@@ -133,10 +171,10 @@ export default function AdminPrescriptions() {
                   </TableCell>
                   <TableCell>
                     <div className="font-medium">
-                      {prescription.guestInfo?.name || "Registered User"}
+                      {prescription.patientName || prescription.guestInfo?.name || "Registered User"}
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      {prescription.guestInfo?.phone || "View details"}
+                      {prescription.patientPhone || prescription.guestInfo?.phone || "View details"}
                     </div>
                   </TableCell>
                   <TableCell>{getStatusBadge(prescription.status)}</TableCell>
@@ -191,11 +229,11 @@ export default function AdminPrescriptions() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="text-xs text-muted-foreground">Patient Name</Label>
-                  <p className="font-medium">{selectedPrescription.guestInfo?.name || "Registered User"}</p>
+                  <p className="font-medium">{selectedPrescription.patientName || selectedPrescription.guestInfo?.name || "Registered User"}</p>
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground">Phone</Label>
-                  <p className="font-medium">{selectedPrescription.guestInfo?.phone || "-"}</p>
+                  <p className="font-medium">{selectedPrescription.patientPhone || selectedPrescription.guestInfo?.phone || "-"}</p>
                 </div>
               </div>
               
