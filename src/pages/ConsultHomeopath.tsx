@@ -27,7 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -51,8 +51,12 @@ export default function ConsultHomeopath() {
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebounce(searchInput, 500);
   
-  // Fetch suggested doctors (always visible)
-  const suggestedDoctors = useQuery(api.consultations.listDoctors, {});
+  // Fetch suggested doctors (paginated)
+  const { results: suggestedDoctors, status, loadMore } = usePaginatedQuery(
+    api.consultations.getPaginatedDoctors,
+    {},
+    { initialNumItems: 12 }
+  );
   
   // Fetch search results from backend based on debounced search
   // Skip query if search is empty to avoid double fetching
@@ -138,7 +142,7 @@ export default function ConsultHomeopath() {
     }
   };
 
-  if (suggestedDoctors === undefined) {
+  if (status === "LoadingFirstPage") {
     return <div className="min-h-screen flex items-center justify-center">Loading doctors...</div>;
   }
 
@@ -201,10 +205,23 @@ export default function ConsultHomeopath() {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {suggestedDoctors.map((doctor) => (
+          {suggestedDoctors?.map((doctor) => (
             <DoctorCard key={doctor._id} doctor={doctor} onBook={() => handleBookClick(doctor)} />
           ))}
         </div>
+
+        {/* Pagination Controls */}
+        {status === "CanLoadMore" && (
+          <div className="mt-8 text-center">
+            <Button 
+              variant="outline" 
+              onClick={() => loadMore(12)}
+              className="min-w-[200px] rounded-full"
+            >
+              Load More Doctors
+            </Button>
+          </div>
+        )}
       </section>
 
       {/* Booking Dialog */}

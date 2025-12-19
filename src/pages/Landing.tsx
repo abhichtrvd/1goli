@@ -239,6 +239,7 @@ export default function Landing() {
                             <img 
                               src={product.imageUrl} 
                               alt={product.name}
+                              loading="lazy"
                               className="w-full h-full object-cover mix-blend-multiply dark:mix-blend-normal transition-transform duration-500 group-hover:scale-105"
                             />
                           ) : (

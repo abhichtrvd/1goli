@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { paginationOptsValidator } from "convex/server";
 
 export const listDoctors = query({
   args: { city: v.optional(v.string()) },
@@ -18,6 +19,16 @@ export const listDoctors = query({
     
     // Return suggested doctors (limit to 20 to avoid overfetching)
     return await ctx.db.query("consultationDoctors").take(20);
+  },
+});
+
+export const getPaginatedDoctors = query({
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("consultationDoctors")
+      .order("desc")
+      .paginate(args.paginationOpts);
   },
 });
 
