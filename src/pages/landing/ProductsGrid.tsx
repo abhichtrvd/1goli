@@ -8,7 +8,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import { Loader2, ArrowUpDown, Activity } from "lucide-react";
+import { Loader2, ArrowUpDown, Activity, Star } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router";
 
@@ -135,6 +135,16 @@ export function ProductsGrid({
                             )}
                           </div>
                           <h4 className="text-sm font-semibold mb-0.5 group-hover:text-primary transition-colors line-clamp-1" title={product.name}>{product.name}</h4>
+                          
+                          <div className="flex items-center gap-1 mb-1">
+                            <div className="flex items-center bg-green-700 text-white px-1 py-0 rounded-[2px] text-[9px] font-bold">
+                              {product.averageRating ? product.averageRating.toFixed(1) : "0.0"} <Star className="h-2 w-2 ml-0.5 fill-current" />
+                            </div>
+                            <span className="text-[9px] text-muted-foreground">
+                              ({product.ratingCount || 0})
+                            </span>
+                          </div>
+
                           <p className="text-muted-foreground line-clamp-1 text-[10px]">
                             {product.description}
                           </p>

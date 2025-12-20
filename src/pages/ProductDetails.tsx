@@ -392,8 +392,8 @@ export default function ProductDetails() {
         {/* Reviews Section */}
         <ProductReviews 
           productId={product._id} 
-          averageRating={product.averageRating} 
-          ratingCount={product.ratingCount} 
+          averageRating={product.averageRating || 0} 
+          ratingCount={product.ratingCount || 0} 
         />
       </div>
 

@@ -1,6 +1,25 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { requireAdmin } from "./users";
+
+// Helper to update product rating stats
+async function updateProductRating(ctx: any, productId: any) {
+  const reviews = await ctx.db
+    .query("reviews")
+    .withIndex("by_product", (q: any) => q.eq("productId", productId))
+    .collect();
+  
+  const ratingCount = reviews.length;
+  const averageRating = ratingCount > 0 
+    ? reviews.reduce((acc: number, r: any) => acc + r.rating, 0) / ratingCount 
+    : 0;
+
+  await ctx.db.patch(productId, {
+    ratingCount,
+    averageRating,
+  });
+}
 
 export const submitReview = mutation({
   args: {
@@ -37,6 +56,8 @@ export const submitReview = mutation({
       verifiedPurchase: true, // In a real app, we would verify against orders
       helpfulCount: 0,
     });
+
+    await updateProductRating(ctx, args.productId);
   },
 });
 
@@ -62,6 +83,8 @@ export const editReview = mutation({
       isEdited: true,
       lastEditedAt: Date.now(),
     });
+
+    await updateProductRating(ctx, review.productId);
   },
 });
 
@@ -162,5 +185,67 @@ export const getReviews = query({
       currentUserInteraction: userInteractions.get(r._id),
       isCurrentUser: r.userId === userId,
     }));
+  },
+});
+
+export const getAllReviews = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const reviews = await ctx.db.query("reviews").order("desc").take(100);
+    
+    // Enrich with product names
+    return await Promise.all(reviews.map(async (r) => {
+      const product = await ctx.db.get(r.productId);
+      const reports = await ctx.db
+        .query("reviewInteractions")
+        .withIndex("by_review_type", (q) => q.eq("reviewId", r._id).eq("type", "report"))
+        .collect();
+        
+      return {
+        ...r,
+        productName: product?.name || "Unknown Product",
+        reportCount: reports.length,
+      };
+    }));
+  },
+});
+
+export const deleteReview = mutation({
+  args: { reviewId: v.id("reviews") },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const review = await ctx.db.get(args.reviewId);
+    if (!review) return;
+
+    await ctx.db.delete(args.reviewId);
+    
+    // Clean up interactions
+    const interactions = await ctx.db
+      .query("reviewInteractions")
+      .withIndex("by_review_user", (q) => q.eq("reviewId", args.reviewId))
+      .collect();
+      
+    for (const i of interactions) {
+      await ctx.db.delete(i._id);
+    }
+
+    await updateProductRating(ctx, review.productId);
+  },
+});
+
+export const dismissReports = mutation({
+  args: { reviewId: v.id("reviews") },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    
+    const reports = await ctx.db
+      .query("reviewInteractions")
+      .withIndex("by_review_type", (q) => q.eq("reviewId", args.reviewId).eq("type", "report"))
+      .collect();
+      
+    for (const report of reports) {
+      await ctx.db.delete(report._id);
+    }
   },
 });

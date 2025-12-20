@@ -3,9 +3,13 @@ import { action } from "./_generated/server";
 import { v } from "convex/values";
 
 export const checkAvailability = action({
-  args: { pincode: v.string() },
+  args: { 
+    pincode: v.string(),
+    weight: v.optional(v.number()), // Weight in kg
+    orderValue: v.optional(v.number()), // For free shipping calculation
+  },
   handler: async (ctx, args) => {
-    const { pincode } = args;
+    const { pincode, weight = 0.5, orderValue = 0 } = args;
 
     if (!/^\d{6}$/.test(pincode)) {
       return { available: false, error: "Invalid pincode format" };
@@ -20,16 +24,35 @@ export const checkAvailability = action({
         const district = data[0].PostOffice[0].District;
         const state = data[0].PostOffice[0].State;
         
-        // Simulate logistics logic based on region
-        // In a real app, this would call Shiprocket/Delhivery API
+        // Enhanced Logistics Simulation
         
-        const isMetro = ["Delhi", "Mumbai", "Bangalore", "Chennai", "Kolkata"].some(city => 
+        const metros = ["Delhi", "Mumbai", "Bangalore", "Chennai", "Kolkata", "Hyderabad", "Pune", "Ahmedabad"];
+        const isMetro = metros.some(city => 
           district.includes(city) || state.includes(city)
         );
 
-        const daysToDeliver = isMetro ? 2 : 4;
+        // Calculate delivery days
+        let daysToDeliver = isMetro ? 2 : 4;
+        // Add delay for remote states
+        if (["Jammu & Kashmir", "Assam", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Tripura", "Arunachal Pradesh", "Sikkim"].includes(state)) {
+          daysToDeliver += 3;
+        }
+
         const deliveryDate = new Date();
         deliveryDate.setDate(deliveryDate.getDate() + daysToDeliver);
+
+        // Calculate Shipping Charge
+        let baseRate = isMetro ? 40 : 60;
+        
+        // Weight surcharge (every 500g over 0.5kg adds Rs. 20)
+        const weightSurcharge = Math.max(0, Math.ceil((weight - 0.5) / 0.5)) * 20;
+        
+        let shippingCharge = baseRate + weightSurcharge;
+
+        // Free shipping logic
+        if (orderValue > 999) {
+          shippingCharge = 0;
+        }
 
         return {
           available: true,
@@ -37,10 +60,11 @@ export const checkAvailability = action({
           days: daysToDeliver,
           estimatedDate: deliveryDate.toISOString(),
           courier: isMetro ? "Express BlueDart" : "Standard DTDC",
-          shippingCharge: isMetro ? 0 : 40, // Free shipping for metros
+          shippingCharge: shippingCharge,
+          isCodAvailable: isMetro, // COD only in metros for this simulation
         };
       } else {
-        return { available: false, error: "Pincode not found" };
+        return { available: false, error: "Pincode not found or not serviceable" };
       }
     } catch (error) {
       return { available: false, error: "Failed to verify pincode" };

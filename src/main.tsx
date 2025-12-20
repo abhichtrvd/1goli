@@ -36,6 +36,7 @@ const AdminDoctors = lazy(() => import("./pages/admin/AdminDoctors.tsx"));
 const AdminPrescriptions = lazy(() => import("./pages/admin/AdminPrescriptions.tsx"));
 const AdminSettings = lazy(() => import("./pages/admin/AdminSettings.tsx"));
 const AdminAuditLogs = lazy(() => import("./pages/admin/AdminAuditLogs.tsx"));
+const AdminReviews = lazy(() => import("./pages/admin/AdminReviews.tsx"));
 
 // Simple loading fallback for route transitions
 function RouteLoading() {
@@ -77,6 +78,7 @@ createRoot(document.getElementById("root")!).render(
               <Route path="users" element={<AdminUsers />} />
               <Route path="doctors" element={<AdminDoctors />} />
               <Route path="prescriptions" element={<AdminPrescriptions />} />
+              <Route path="reviews" element={<AdminReviews />} />
               <Route path="settings" element={<AdminSettings />} />
               <Route path="audit-logs" element={<AdminAuditLogs />} />
             </Route>

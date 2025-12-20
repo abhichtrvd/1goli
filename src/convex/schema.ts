@@ -45,33 +45,37 @@ const schema = defineSchema(
     products: defineTable({
       name: v.string(),
       description: v.string(),
-      brand: v.optional(v.string()), // Added brand field
-      imageUrl: v.optional(v.union(v.string(), v.null())), // Allow null for deletion
-      imageStorageId: v.optional(v.union(v.id("_storage"), v.null())), // Allow null for deletion
+      brand: v.optional(v.string()),
+      imageUrl: v.optional(v.union(v.string(), v.null())),
+      imageStorageId: v.optional(v.union(v.id("_storage"), v.null())),
       images: v.optional(v.array(v.object({ 
         storageId: v.optional(v.id("_storage")),
         url: v.string() 
-      }))), // Gallery images
-      videoUrl: v.optional(v.string()), // Video URL (YouTube, Vimeo, etc.)
-      videoThumbnail: v.optional(v.string()), // Auto-generated or custom thumbnail
+      }))),
+      videoUrl: v.optional(v.string()),
+      videoThumbnail: v.optional(v.string()),
       potencies: v.array(v.string()),
       forms: v.array(v.string()),
-      packingSizes: v.optional(v.array(v.string())), // Added packing sizes (e.g., "30ml", "100ml")
+      packingSizes: v.optional(v.array(v.string())),
       basePrice: v.number(),
-      stock: v.number(), // Added stock field
+      stock: v.number(),
       symptomsTags: v.array(v.string()),
-      category: v.optional(v.string()), // e.g., "Classical", "Patent", "Personal Care"
-      availability: v.optional(v.string()), // "in_stock", "out_of_stock"
+      category: v.optional(v.string()),
+      availability: v.optional(v.string()),
       
       // New Retail Fields
       keyBenefits: v.optional(v.array(v.string())),
       directionsForUse: v.optional(v.string()),
       safetyInformation: v.optional(v.string()),
       ingredients: v.optional(v.string()),
+
+      // Rating Fields (Cached for performance)
+      ratingCount: v.optional(v.number()),
+      averageRating: v.optional(v.number()),
     })
       .searchIndex("search_body", {
         searchField: "description",
-        filterFields: ["name"], // simplified search
+        filterFields: ["name"],
       })
       .index("by_brand", ["brand"])
       .index("by_price", ["basePrice"])

@@ -21,6 +21,7 @@ export const getProducts = query({
             ? (await ctx.storage.getUrl(p.imageStorageId)) || p.imageUrl || ""
             : p.imageUrl || "",
           images: gallery,
+          // ratingCount and averageRating are now on the document
         };
       })
     );
@@ -88,16 +89,21 @@ export const getProduct = query({
       url: img.storageId ? (await ctx.storage.getUrl(img.storageId)) || img.url : img.url
     }))) : [];
 
-    // Fetch reviews summary
-    const reviews = await ctx.db
-      .query("reviews")
-      .withIndex("by_product", (q) => q.eq("productId", product._id))
-      .collect();
-    
-    const ratingCount = reviews.length;
-    const averageRating = ratingCount > 0 
-      ? reviews.reduce((acc, r) => acc + r.rating, 0) / ratingCount 
-      : 0;
+    // Fallback calculation if fields are missing (migration support)
+    let ratingCount = product.ratingCount;
+    let averageRating = product.averageRating;
+
+    if (ratingCount === undefined) {
+      const reviews = await ctx.db
+        .query("reviews")
+        .withIndex("by_product", (q) => q.eq("productId", product._id))
+        .collect();
+      
+      ratingCount = reviews.length;
+      averageRating = ratingCount > 0 
+        ? reviews.reduce((acc, r) => acc + r.rating, 0) / ratingCount 
+        : 0;
+    }
 
     return {
       ...product,
