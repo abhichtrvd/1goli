@@ -1,33 +1,45 @@
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Eye, Edit, Trash2, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
-import { Link } from "react-router";
-import { Id } from "@/convex/_generated/dataModel";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { Edit, Trash2, Eye, MoreHorizontal, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Id } from "@/convex/_generated/dataModel";
 
 interface ProductTableProps {
   products: any[];
   currentPage: number;
   totalPages: number;
-  setCurrentPage: (page: number | ((prev: number) => number)) => void;
+  setCurrentPage: (page: number) => void;
   onView: (product: any) => void;
   onEdit: (product: any) => void;
   onDelete: (id: Id<"products">) => void;
-  selectedIds?: Id<"products">[];
-  onSelect?: (id: Id<"products">, checked: boolean) => void;
-  onSelectAll?: (checked: boolean) => void;
+  selectedIds: Id<"products">[];
+  onSelect: (id: Id<"products">, checked: boolean) => void;
+  onSelectAll: (checked: boolean) => void;
 }
 
-export function ProductTable({ 
-  products, 
-  currentPage, 
-  totalPages, 
-  setCurrentPage, 
-  onView, 
-  onEdit, 
+export function ProductTable({
+  products,
+  currentPage,
+  totalPages,
+  setCurrentPage,
+  onView,
+  onEdit,
   onDelete,
-  selectedIds = [],
+  selectedIds,
   onSelect,
   onSelectAll
 }: ProductTableProps) {
@@ -35,97 +47,116 @@ export function ProductTable({
 
   return (
     <div className="space-y-4">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            {onSelect && (
+      <div className="rounded-md border bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow>
               <TableHead className="w-[50px]">
                 <Checkbox 
                   checked={allSelected}
-                  onCheckedChange={(checked) => onSelectAll && onSelectAll(checked as boolean)}
+                  onCheckedChange={(checked) => onSelectAll(checked as boolean)}
                 />
               </TableHead>
-            )}
-            <TableHead>Name</TableHead>
-            <TableHead>Category</TableHead>
-            <TableHead>Price</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Potencies</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {products.map((product) => (
-            <TableRow key={product._id}>
-              {onSelect && (
-                <TableCell>
-                  <Checkbox 
-                    checked={selectedIds.includes(product._id)}
-                    onCheckedChange={(checked) => onSelect(product._id, checked as boolean)}
-                  />
-                </TableCell>
-              )}
-              <TableCell className="font-medium">
-                <div className="flex items-center gap-3">
-                  <img src={product.imageUrl} alt={product.name} className="h-8 w-8 rounded object-cover bg-secondary" />
-                  <div className="flex flex-col">
-                    <span>{product.name}</span>
-                    <Link to={`/product/${product._id}`} target="_blank" className="text-xs text-primary flex items-center hover:underline">
-                      View on site <ExternalLink className="h-3 w-3 ml-1" />
-                    </Link>
-                  </div>
-                </div>
-              </TableCell>
-              <TableCell>
-                <Badge variant="outline" className="font-normal">{product.category || "Classical"}</Badge>
-              </TableCell>
-              <TableCell>₹{product.basePrice}</TableCell>
-              <TableCell>
-                {product.availability === "out_of_stock" ? (
-                  <Badge variant="destructive" className="text-[10px]">Out of Stock</Badge>
-                ) : product.availability === "discontinued" ? (
-                  <Badge variant="secondary" className="text-[10px]">Discontinued</Badge>
-                ) : (
-                  <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-[10px]">In Stock</Badge>
-                )}
-              </TableCell>
-              <TableCell>{product.potencies.join(", ")}</TableCell>
-              <TableCell className="text-right">
-                <div className="flex justify-end gap-2">
-                  <Button variant="ghost" size="icon" onClick={() => onView(product)}>
-                    <Eye className="h-4 w-4 text-muted-foreground" />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => onEdit(product)}>
-                    <Edit className="h-4 w-4 text-muted-foreground" />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => onDelete(product._id)}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
-              </TableCell>
+              <TableHead>Name</TableHead>
+              <TableHead>Category</TableHead>
+              <TableHead>Brand</TableHead>
+              <TableHead>Price</TableHead>
+              <TableHead>Stock</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {products.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="h-24 text-center">
+                  No products found.
+                </TableCell>
+              </TableRow>
+            ) : (
+              products.map((product) => (
+                <TableRow key={product._id}>
+                  <TableCell>
+                    <Checkbox 
+                      checked={selectedIds.includes(product._id)}
+                      onCheckedChange={(checked) => onSelect(product._id, checked as boolean)}
+                    />
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex flex-col">
+                      <span>{product.name}</span>
+                      <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                        {product.description}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell>{product.category}</TableCell>
+                  <TableCell>{product.brand || "-"}</TableCell>
+                  <TableCell>₹{product.basePrice}</TableCell>
+                  <TableCell>{product.stock}</TableCell>
+                  <TableCell>
+                    <Badge 
+                      variant={
+                        product.availability === "in_stock" ? "default" : 
+                        product.availability === "out_of_stock" ? "destructive" : "secondary"
+                      }
+                      className={
+                        product.availability === "in_stock" ? "bg-green-600 hover:bg-green-700" : ""
+                      }
+                    >
+                      {product.availability === "in_stock" ? "In Stock" : 
+                       product.availability === "out_of_stock" ? "Out of Stock" : "Discontinued"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Open menu</span>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => onView(product)}>
+                          <Eye className="mr-2 h-4 w-4" /> View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onEdit(product)}>
+                          <Edit className="mr-2 h-4 w-4" /> Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => onDelete(product._id)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" /> Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-end space-x-2 py-4">
+        <div className="flex items-center justify-end space-x-2">
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            onClick={() => setCurrentPage(currentPage - 1)}
             disabled={currentPage === 1}
           >
             <ChevronLeft className="h-4 w-4" />
             Previous
           </Button>
-          <div className="text-sm font-medium">
+          <div className="text-sm text-muted-foreground">
             Page {currentPage} of {totalPages}
           </div>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            onClick={() => setCurrentPage(currentPage + 1)}
             disabled={currentPage === totalPages}
           >
             Next

@@ -129,16 +129,45 @@ export const searchProducts = query({
 
     if (args.query) {
       const lowerQuery = args.query.toLowerCase();
-      filtered = filtered.filter((product) => {
-        const nameMatch = product.name.toLowerCase().includes(lowerQuery);
-        const tagMatch = product.symptomsTags.some(tag => tag.toLowerCase().includes(lowerQuery));
-        const descMatch = product.description.toLowerCase().includes(lowerQuery);
-        const brandMatch = product.brand?.toLowerCase().includes(lowerQuery);
-        const categoryMatch = product.category?.toLowerCase().includes(lowerQuery);
-        const formMatch = product.forms?.some(f => f.toLowerCase().includes(lowerQuery));
+      
+      // Calculate relevance score
+      const scoredProducts = filtered.map((product) => {
+        let score = 0;
+        const name = product.name.toLowerCase();
+        const brand = product.brand?.toLowerCase() || "";
+        const category = product.category?.toLowerCase() || "";
+        const description = product.description.toLowerCase();
         
-        return nameMatch || tagMatch || descMatch || brandMatch || categoryMatch || formMatch;
+        // Exact name match gets highest priority
+        if (name === lowerQuery) score += 100;
+        // Starts with query
+        else if (name.startsWith(lowerQuery)) score += 50;
+        // Name contains query
+        else if (name.includes(lowerQuery)) score += 25;
+        
+        // Brand match
+        if (brand.includes(lowerQuery)) score += 15;
+        
+        // Category match
+        if (category.includes(lowerQuery)) score += 15;
+        
+        // Tag match
+        if (product.symptomsTags.some(tag => tag.toLowerCase().includes(lowerQuery))) score += 10;
+        
+        // Description match (lowest priority)
+        if (description.includes(lowerQuery)) score += 5;
+        
+        // Form match
+        if (product.forms?.some(f => f.toLowerCase().includes(lowerQuery))) score += 5;
+
+        return { product, score };
       });
+
+      // Filter out non-matches and sort by score
+      filtered = scoredProducts
+        .filter(item => item.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .map(item => item.product);
     }
 
     return await Promise.all(
