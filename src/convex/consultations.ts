@@ -286,3 +286,12 @@ export const deleteDoctor = mutation({
         await ctx.db.delete(args.id);
     }
 });
+
+export const bulkDeleteDoctors = mutation({
+  args: { ids: v.array(v.id("consultationDoctors")) },
+  handler: async (ctx, args) => {
+    for (const id of args.ids) {
+      await ctx.db.delete(id);
+    }
+  }
+});

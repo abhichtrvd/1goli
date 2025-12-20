@@ -4,9 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Plus, Trash2, Edit, Loader2, Search } from "lucide-react";
+import { Plus, Trash2, Edit, Loader2, Search, Download } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
@@ -22,10 +23,12 @@ export default function AdminDoctors() {
   const createDoctor = useMutation(api.consultations.createDoctor);
   const updateDoctor = useMutation(api.consultations.updateDoctor);
   const deleteDoctor = useMutation(api.consultations.deleteDoctor);
+  const bulkDeleteDoctors = useMutation(api.consultations.bulkDeleteDoctors);
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingDoctor, setEditingDoctor] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Id<"consultationDoctors">[]>([]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -80,6 +83,66 @@ export default function AdminDoctors() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (confirm(`Are you sure you want to delete ${selectedIds.length} doctors?`)) {
+      try {
+        await bulkDeleteDoctors({ ids: selectedIds });
+        toast.success(`${selectedIds.length} doctors deleted`);
+        setSelectedIds([]);
+      } catch (error) {
+        toast.error("Failed to delete doctors");
+      }
+    }
+  };
+
+  const handleSelect = (id: Id<"consultationDoctors">, checked: boolean) => {
+    if (checked) {
+      setSelectedIds(prev => [...prev, id]);
+    } else {
+      setSelectedIds(prev => prev.filter(i => i !== id));
+    }
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked && doctors) {
+      const newIds = doctors.map(d => d._id);
+      setSelectedIds(prev => Array.from(new Set([...prev, ...newIds])));
+    } else if (doctors) {
+      const pageIds = doctors.map(d => d._id);
+      setSelectedIds(prev => prev.filter(id => !pageIds.includes(id)));
+    }
+  };
+
+  const handleExportCSV = () => {
+    if (!doctors || doctors.length === 0) {
+      toast.error("No data to export");
+      return;
+    }
+
+    const headers = ["Name", "Specialization", "City", "Experience", "Clinic Address", "Phone"];
+    const csvContent = [
+      headers.join(","),
+      ...doctors.map(d => [
+        `"${d.name.replace(/"/g, '""')}"`,
+        `"${d.specialization.replace(/"/g, '""')}"`,
+        `"${d.clinicCity.replace(/"/g, '""')}"`,
+        d.experienceYears,
+        `"${d.clinicAddress.replace(/"/g, '""')}"`,
+        `"${d.clinicPhone.replace(/"/g, '""')}"`
+      ].join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `doctors_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -87,61 +150,66 @@ export default function AdminDoctors() {
           <h1 className="text-3xl font-bold tracking-tight">Doctors</h1>
           <p className="text-muted-foreground">Manage your panel of homeopaths.</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => setEditingDoctor(null)}>
-              <Plus className="mr-2 h-4 w-4" /> Add Doctor
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>{editingDoctor ? "Edit Doctor" : "Add New Doctor"}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Name</Label>
-                  <Input id="name" name="name" required defaultValue={editingDoctor?.name} placeholder="Dr. Name" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="specialization">Specialization</Label>
-                  <Input id="specialization" name="specialization" required defaultValue={editingDoctor?.specialization} placeholder="e.g. Dermatology" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="credentials">Credentials</Label>
-                  <Input id="credentials" name="credentials" required defaultValue={editingDoctor?.credentials} placeholder="BHMS, MD" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="experienceYears">Experience (Years)</Label>
-                  <Input id="experienceYears" name="experienceYears" type="number" required defaultValue={editingDoctor?.experienceYears} />
-                </div>
-              </div>
-              <div className="space-y-2">
-                  <Label htmlFor="clinicCity">City</Label>
-                  <Input id="clinicCity" name="clinicCity" required defaultValue={editingDoctor?.clinicCity} />
-              </div>
-              <div className="space-y-2">
-                  <Label htmlFor="clinicAddress">Clinic Address</Label>
-                  <Input id="clinicAddress" name="clinicAddress" required defaultValue={editingDoctor?.clinicAddress} />
-              </div>
-              <div className="space-y-2">
-                  <Label htmlFor="clinicPhone">Phone</Label>
-                  <Input id="clinicPhone" name="clinicPhone" required defaultValue={editingDoctor?.clinicPhone} />
-              </div>
-              <div className="space-y-2">
-                  <Label htmlFor="bio">Bio</Label>
-                  <Input id="bio" name="bio" required defaultValue={editingDoctor?.bio} />
-              </div>
-              
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                {editingDoctor ? "Update Doctor" : "Create Doctor"}
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleExportCSV}>
+            <Download className="mr-2 h-4 w-4" /> Export CSV
+          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={() => setEditingDoctor(null)}>
+                <Plus className="mr-2 h-4 w-4" /> Add Doctor
               </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>{editingDoctor ? "Edit Doctor" : "Add New Doctor"}</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Name</Label>
+                    <Input id="name" name="name" required defaultValue={editingDoctor?.name} placeholder="Dr. Name" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="specialization">Specialization</Label>
+                    <Input id="specialization" name="specialization" required defaultValue={editingDoctor?.specialization} placeholder="e.g. Dermatology" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="credentials">Credentials</Label>
+                    <Input id="credentials" name="credentials" required defaultValue={editingDoctor?.credentials} placeholder="BHMS, MD" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="experienceYears">Experience (Years)</Label>
+                    <Input id="experienceYears" name="experienceYears" type="number" required defaultValue={editingDoctor?.experienceYears} />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="clinicCity">City</Label>
+                    <Input id="clinicCity" name="clinicCity" required defaultValue={editingDoctor?.clinicCity} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="clinicAddress">Clinic Address</Label>
+                    <Input id="clinicAddress" name="clinicAddress" required defaultValue={editingDoctor?.clinicAddress} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="clinicPhone">Phone</Label>
+                    <Input id="clinicPhone" name="clinicPhone" required defaultValue={editingDoctor?.clinicPhone} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="bio">Bio</Label>
+                    <Input id="bio" name="bio" required defaultValue={editingDoctor?.bio} />
+                </div>
+                
+                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                  {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  {editingDoctor ? "Update Doctor" : "Create Doctor"}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="flex items-center gap-2">
@@ -158,12 +226,25 @@ export default function AdminDoctors() {
 
       <Card>
         <CardHeader>
-          <CardTitle>All Doctors</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>All Doctors</CardTitle>
+            {selectedIds.length > 0 && (
+              <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
+                <Trash2 className="mr-2 h-4 w-4" /> Delete Selected ({selectedIds.length})
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[50px]">
+                  <Checkbox 
+                    checked={doctors && doctors.length > 0 && doctors.every(d => selectedIds.includes(d._id))}
+                    onCheckedChange={(checked) => handleSelectAll(checked as boolean)}
+                  />
+                </TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Specialization</TableHead>
                 <TableHead>City</TableHead>
@@ -174,6 +255,12 @@ export default function AdminDoctors() {
             <TableBody>
               {doctors?.map((doctor) => (
                 <TableRow key={doctor._id}>
+                  <TableCell>
+                    <Checkbox 
+                      checked={selectedIds.includes(doctor._id)}
+                      onCheckedChange={(checked) => handleSelect(doctor._id, checked as boolean)}
+                    />
+                  </TableCell>
                   <TableCell className="font-medium">{doctor.name}</TableCell>
                   <TableCell>{doctor.specialization}</TableCell>
                   <TableCell>{doctor.clinicCity}</TableCell>

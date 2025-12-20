@@ -41,7 +41,7 @@ import {
 } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Loader2, MoreHorizontal, FileText, CheckCircle, XCircle, Clock, Eye, Search, ArrowUpDown, Calendar as CalendarIcon, User, CheckSquare } from "lucide-react";
+import { Loader2, MoreHorizontal, FileText, CheckCircle, XCircle, Clock, Eye, Search, ArrowUpDown, Calendar as CalendarIcon, User, CheckSquare, Download } from "lucide-react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -123,6 +123,35 @@ export default function AdminPrescriptions() {
     }
   };
 
+  const handleExportCSV = () => {
+    if (!results || results.length === 0) {
+      toast.error("No data to export");
+      return;
+    }
+
+    const headers = ["Date", "Patient Name", "Patient Phone", "Status", "Notes", "Pharmacist Notes"];
+    const csvContent = [
+      headers.join(","),
+      ...results.map(p => [
+        new Date(p._creationTime).toISOString().split('T')[0],
+        `"${(p.patientName || p.guestInfo?.name || "Registered User").replace(/"/g, '""')}"`,
+        `"${(p.patientPhone || p.guestInfo?.phone || "").replace(/"/g, '""')}"`,
+        p.status,
+        `"${(p.notes || "").replace(/"/g, '""')}"`,
+        `"${(p.pharmacistNotes || "").replace(/"/g, '""')}"`
+      ].join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `prescriptions_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleStatusUpdate = async (id: Id<"prescriptions">, newStatus: "pending" | "reviewed" | "processed" | "rejected", notes?: string) => {
     try {
       await updateStatus({
@@ -158,6 +187,9 @@ export default function AdminPrescriptions() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h1 className="text-3xl font-bold tracking-tight">Prescriptions</h1>
         <div className="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto">
+          <Button variant="outline" onClick={handleExportCSV}>
+            <Download className="mr-2 h-4 w-4" /> Export CSV
+          </Button>
           <div className="relative w-full md:w-64">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input

@@ -9,8 +9,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Loader2, ShieldAlert } from "lucide-react";
+import { Loader2, ShieldAlert, Download } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "sonner";
 
 export default function AdminAuditLogs() {
   const { results, status, loadMore, isLoading } = usePaginatedQuery(
@@ -19,11 +20,45 @@ export default function AdminAuditLogs() {
     { initialNumItems: 20 }
   );
 
+  const handleExportCSV = () => {
+    if (!results || results.length === 0) {
+      toast.error("No data to export");
+      return;
+    }
+
+    const headers = ["Timestamp", "Action", "Entity Type", "Entity ID", "Performed By", "Details"];
+    const csvContent = [
+      headers.join(","),
+      ...results.map(log => [
+        new Date(log.timestamp).toISOString(),
+        `"${log.action.replace(/"/g, '""')}"`,
+        log.entityType,
+        log.entityId || "",
+        `"${log.performedBy.replace(/"/g, '""')}"`,
+        `"${(log.details || "").replace(/"/g, '""')}"`
+      ].join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `audit_logs_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Audit Logs</h1>
-        <p className="text-muted-foreground">Track administrative actions and system events.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Audit Logs</h1>
+          <p className="text-muted-foreground">Track administrative actions and system events.</p>
+        </div>
+        <Button variant="outline" onClick={handleExportCSV}>
+          <Download className="mr-2 h-4 w-4" /> Export CSV
+        </Button>
       </div>
 
       <Card>
