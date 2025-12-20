@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useState } from "react";
 
 const CATEGORIES = [
   "Dilution",
@@ -24,13 +25,25 @@ const CATEGORIES = [
   "Cosmetics"
 ];
 
+const BRANDS = [
+  "Dr. Reckeweg", 
+  "SBL World Class", 
+  "Schwabe India", 
+  "Adel Pekana", 
+  "Bakson's", 
+  "Bjain Pharma"
+];
+
 export default function SearchResults() {
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get("q") || "";
   const category = searchParams.get("category") || undefined;
   const navigate = useNavigate();
   
-  const products = useQuery(api.products.searchProducts, { query, category });
+  const [selectedBrand, setSelectedBrand] = useState<string>("all");
+  
+  const brandsArg = selectedBrand !== "all" ? [selectedBrand] : undefined;
+  const products = useQuery(api.products.searchProducts, { query, category, brands: brandsArg });
 
   const handleCategoryChange = (value: string) => {
     const newParams = new URLSearchParams(searchParams);
@@ -42,11 +55,16 @@ export default function SearchResults() {
     setSearchParams(newParams);
   };
 
+  const handleBrandChange = (value: string) => {
+    setSelectedBrand(value);
+  };
+
   const clearFilters = () => {
     const newParams = new URLSearchParams(searchParams);
     newParams.delete("category");
     newParams.delete("q");
     setSearchParams(newParams);
+    setSelectedBrand("all");
   };
 
   return (
@@ -71,11 +89,11 @@ export default function SearchResults() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Select value={category || "all"} onValueChange={handleCategoryChange}>
               <SelectTrigger className="w-[180px]">
                 <Filter className="w-4 h-4 mr-2 text-muted-foreground" />
-                <SelectValue placeholder="Filter by Category" />
+                <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
@@ -86,8 +104,23 @@ export default function SearchResults() {
                 ))}
               </SelectContent>
             </Select>
+
+            <Select value={selectedBrand} onValueChange={handleBrandChange}>
+              <SelectTrigger className="w-[180px]">
+                <Filter className="w-4 h-4 mr-2 text-muted-foreground" />
+                <SelectValue placeholder="Brand" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Brands</SelectItem>
+                {BRANDS.map((brand) => (
+                  <SelectItem key={brand} value={brand}>
+                    {brand}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             
-            {(query || category) && (
+            {(query || category || selectedBrand !== "all") && (
               <Button variant="ghost" size="icon" onClick={clearFilters} title="Clear filters">
                 <X className="h-4 w-4" />
               </Button>
@@ -140,9 +173,16 @@ export default function SearchResults() {
                   </div>
 
                   <div className="mb-1.5 flex-1">
-                    <Badge variant="secondary" className="mb-1 bg-secondary/50 text-secondary-foreground hover:bg-secondary/80 rounded-md px-1.5 py-0 text-[9px] font-normal truncate max-w-full inline-block">
-                      {product.category || "Homeopathy"}
-                    </Badge>
+                    <div className="flex flex-wrap gap-1 mb-1">
+                      <Badge variant="secondary" className="bg-secondary/50 text-secondary-foreground hover:bg-secondary/80 rounded-md px-1.5 py-0 text-[9px] font-normal truncate max-w-full inline-block">
+                        {product.category || "Homeopathy"}
+                      </Badge>
+                      {product.brand && (
+                        <Badge variant="outline" className="text-muted-foreground border-border rounded-md px-1.5 py-0 text-[9px] font-normal truncate max-w-full inline-block">
+                          {product.brand}
+                        </Badge>
+                      )}
+                    </div>
                     <h4 className="text-xs font-semibold leading-tight group-hover:text-primary transition-colors line-clamp-2" title={product.name}>{product.name}</h4>
                     <p className="text-muted-foreground line-clamp-1 text-[9px] mt-0.5">
                       {product.description}

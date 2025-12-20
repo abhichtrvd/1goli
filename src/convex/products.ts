@@ -133,7 +133,11 @@ export const searchProducts = query({
         const nameMatch = product.name.toLowerCase().includes(lowerQuery);
         const tagMatch = product.symptomsTags.some(tag => tag.toLowerCase().includes(lowerQuery));
         const descMatch = product.description.toLowerCase().includes(lowerQuery);
-        return nameMatch || tagMatch || descMatch;
+        const brandMatch = product.brand?.toLowerCase().includes(lowerQuery);
+        const categoryMatch = product.category?.toLowerCase().includes(lowerQuery);
+        const formMatch = product.forms?.some(f => f.toLowerCase().includes(lowerQuery));
+        
+        return nameMatch || tagMatch || descMatch || brandMatch || categoryMatch || formMatch;
       });
     }
 

@@ -310,6 +310,13 @@ export default function Landing() {
                           </div>
 
                           <div className="mb-1">
+                            <div className="flex flex-wrap gap-1 mb-1">
+                              {product.brand && (
+                                <Badge variant="outline" className="text-muted-foreground border-border rounded-md px-1.5 py-0 text-[9px] font-normal truncate max-w-full inline-block">
+                                  {product.brand}
+                                </Badge>
+                              )}
+                            </div>
                             <h4 className="text-sm font-semibold mb-0.5 group-hover:text-primary transition-colors line-clamp-1" title={product.name}>{product.name}</h4>
                             <p className="text-muted-foreground line-clamp-1 text-[10px]">
                               {product.description}
