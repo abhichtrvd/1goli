@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Star, CheckCircle2, Loader2 } from "lucide-react";
+import { Star, CheckCircle2, Loader2, ThumbsUp, Flag, MoreVertical, Pencil } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 interface ProductReviewsProps {
   productId: Id<"products">;
@@ -20,6 +21,9 @@ interface ProductReviewsProps {
 export function ProductReviews({ productId, averageRating, ratingCount }: ProductReviewsProps) {
   const reviews = useQuery(api.reviews.getReviews, { productId });
   const submitReview = useMutation(api.reviews.submitReview);
+  const editReview = useMutation(api.reviews.editReview);
+  const markHelpful = useMutation(api.reviews.markHelpful);
+  const reportReview = useMutation(api.reviews.reportReview);
   const { isAuthenticated } = useAuth();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -27,6 +31,25 @@ export function ProductReviews({ productId, averageRating, ratingCount }: Produc
   const [rating, setRating] = useState(5);
   const [title, setTitle] = useState("");
   const [comment, setComment] = useState("");
+  
+  // Editing state
+  const [editingReviewId, setEditingReviewId] = useState<Id<"reviews"> | null>(null);
+
+  const openWriteReview = () => {
+    setEditingReviewId(null);
+    setRating(5);
+    setTitle("");
+    setComment("");
+    setIsDialogOpen(true);
+  };
+
+  const openEditReview = (review: any) => {
+    setEditingReviewId(review._id);
+    setRating(review.rating);
+    setTitle(review.title || "");
+    setComment(review.comment || "");
+    setIsDialogOpen(true);
+  };
 
   const handleSubmit = async () => {
     if (!isAuthenticated) {
@@ -40,21 +63,53 @@ export function ProductReviews({ productId, averageRating, ratingCount }: Produc
 
     setIsSubmitting(true);
     try {
-      await submitReview({
-        productId,
-        rating,
-        title,
-        comment,
-      });
-      toast.success("Review submitted successfully");
+      if (editingReviewId) {
+        await editReview({
+          reviewId: editingReviewId,
+          rating,
+          title,
+          comment,
+        });
+        toast.success("Review updated successfully");
+      } else {
+        await submitReview({
+          productId,
+          rating,
+          title,
+          comment,
+        });
+        toast.success("Review submitted successfully");
+      }
       setIsDialogOpen(false);
-      setTitle("");
-      setComment("");
-      setRating(5);
     } catch (error: any) {
       toast.error(error.message || "Failed to submit review");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleHelpful = async (reviewId: Id<"reviews">) => {
+    if (!isAuthenticated) {
+      toast.error("Please sign in to vote");
+      return;
+    }
+    try {
+      await markHelpful({ reviewId });
+    } catch (error) {
+      toast.error("Failed to mark helpful");
+    }
+  };
+
+  const handleReport = async (reviewId: Id<"reviews">) => {
+    if (!isAuthenticated) {
+      toast.error("Please sign in to report");
+      return;
+    }
+    try {
+      await reportReview({ reviewId });
+      toast.success("Review reported for moderation");
+    } catch (error) {
+      toast.error("Failed to report review");
     }
   };
 
@@ -80,11 +135,11 @@ export function ProductReviews({ productId, averageRating, ratingCount }: Produc
           
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" className="w-full">Write a Review</Button>
+              <Button variant="outline" className="w-full" onClick={openWriteReview}>Write a Review</Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Write a Review</DialogTitle>
+                <DialogTitle>{editingReviewId ? "Edit Review" : "Write a Review"}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
@@ -126,7 +181,7 @@ export function ProductReviews({ productId, averageRating, ratingCount }: Produc
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
                 <Button onClick={handleSubmit} disabled={isSubmitting}>
                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Submit Review
+                  {editingReviewId ? "Update Review" : "Submit Review"}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -145,20 +200,39 @@ export function ProductReviews({ productId, averageRating, ratingCount }: Produc
           ) : (
             reviews.map((review) => (
               <div key={review._id} className="space-y-2 pb-6 border-b last:border-0">
-                <div className="flex items-center gap-2">
-                  <div className="flex text-green-600">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star 
-                        key={star} 
-                        className={`h-4 w-4 ${star <= review.rating ? "fill-current" : "text-muted-foreground/30"}`} 
-                      />
-                    ))}
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="flex text-green-600">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star 
+                          key={star} 
+                          className={`h-4 w-4 ${star <= review.rating ? "fill-current" : "text-muted-foreground/30"}`} 
+                        />
+                      ))}
+                    </div>
+                    <span className="font-medium text-sm">{review.title}</span>
                   </div>
-                  <span className="font-medium text-sm">{review.title}</span>
+                  
+                  {review.isCurrentUser && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openEditReview(review)}>
+                          <Pencil className="mr-2 h-4 w-4" /> Edit
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </div>
+
                 <p className="text-sm text-muted-foreground">
                   "{review.comment}"
                 </p>
+                
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <span className="font-medium text-foreground">{review.userName}</span>
                   <span>•</span>
@@ -169,6 +243,29 @@ export function ProductReviews({ productId, averageRating, ratingCount }: Produc
                   )}
                   <span>•</span>
                   <span>{new Date(review._creationTime).toLocaleDateString()}</span>
+                  {review.isEdited && <span className="italic">(edited)</span>}
+                </div>
+
+                <div className="flex items-center gap-4 pt-2">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className={`h-8 px-2 text-xs gap-1.5 ${review.currentUserInteraction === 'helpful' ? 'text-primary' : 'text-muted-foreground'}`}
+                    onClick={() => handleHelpful(review._id)}
+                  >
+                    <ThumbsUp className={`h-3.5 w-3.5 ${review.currentUserInteraction === 'helpful' ? 'fill-current' : ''}`} />
+                    Helpful ({review.helpfulCount || 0})
+                  </Button>
+                  
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className={`h-8 px-2 text-xs gap-1.5 ${review.currentUserInteraction === 'report' ? 'text-destructive' : 'text-muted-foreground'}`}
+                    onClick={() => handleReport(review._id)}
+                  >
+                    <Flag className={`h-3.5 w-3.5 ${review.currentUserInteraction === 'report' ? 'fill-current' : ''}`} />
+                    Report
+                  </Button>
                 </div>
               </div>
             ))

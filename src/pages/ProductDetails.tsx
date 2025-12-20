@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useParams, useNavigate, Link } from "react-router";
 import { useState } from "react";
@@ -29,6 +29,7 @@ export default function ProductDetails() {
   
   const product = useQuery(api.products.getProduct, { id: id as Id<"products"> });
   const addToCart = useMutation(api.cart.addToCart);
+  const checkDeliveryAction = useAction(api.delivery.checkAvailability);
 
   const [selectedPotency, setSelectedPotency] = useState<string>("");
   const [selectedForm, setSelectedForm] = useState<string>("");
@@ -112,21 +113,18 @@ export default function ProductDetails() {
     }
     setCheckingPincode(true);
     try {
-      const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
-      const data = await response.json();
+      const result = await checkDeliveryAction({ pincode });
       
-      if (data && data[0].Status === "Success") {
-        const city = data[0].PostOffice[0].District;
-        const state = data[0].PostOffice[0].State;
+      if (result.available) {
         setDeliveryStatus({
           available: true,
-          date: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
-          location: `${city}, ${state}`
+          date: new Date(result.estimatedDate!).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+          location: result.location
         });
-        toast.success(`Delivery available to ${city}, ${state}`);
+        toast.success(`Delivery available to ${result.location}`);
       } else {
         setDeliveryStatus({ available: false, date: "" });
-        toast.error("Delivery not available to this pincode");
+        toast.error(result.error || "Delivery not available to this pincode");
       }
     } catch (e) {
       toast.error("Failed to verify pincode");

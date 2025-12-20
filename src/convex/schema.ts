@@ -140,9 +140,19 @@ const schema = defineSchema(
       title: v.optional(v.string()),
       verifiedPurchase: v.boolean(),
       helpfulCount: v.optional(v.number()),
+      isEdited: v.optional(v.boolean()),
+      lastEditedAt: v.optional(v.number()),
     })
       .index("by_product", ["productId"])
       .index("by_user", ["userId"]),
+
+    reviewInteractions: defineTable({
+      userId: v.string(),
+      reviewId: v.id("reviews"),
+      type: v.union(v.literal("helpful"), v.literal("report")),
+    })
+      .index("by_review_user", ["reviewId", "userId"])
+      .index("by_review_type", ["reviewId", "type"]),
 
     prescriptions: defineTable({
       userId: v.optional(v.string()),

@@ -14,6 +14,7 @@ import type * as auth_emailOtp from "../auth/emailOtp.js";
 import type * as auth_phoneOtp from "../auth/phoneOtp.js";
 import type * as cart from "../cart.js";
 import type * as consultations from "../consultations.js";
+import type * as delivery from "../delivery.js";
 import type * as http from "../http.js";
 import type * as orders from "../orders.js";
 import type * as payments from "../payments.js";
@@ -37,6 +38,7 @@ declare const fullApi: ApiFromModules<{
   "auth/phoneOtp": typeof auth_phoneOtp;
   cart: typeof cart;
   consultations: typeof consultations;
+  delivery: typeof delivery;
   http: typeof http;
   orders: typeof orders;
   payments: typeof payments;

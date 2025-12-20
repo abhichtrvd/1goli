@@ -40,14 +40,127 @@ export const submitReview = mutation({
   },
 });
 
+export const editReview = mutation({
+  args: {
+    reviewId: v.id("reviews"),
+    rating: v.number(),
+    title: v.string(),
+    comment: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Unauthorized");
+
+    const review = await ctx.db.get(args.reviewId);
+    if (!review) throw new Error("Review not found");
+    if (review.userId !== userId) throw new Error("Unauthorized to edit this review");
+
+    await ctx.db.patch(args.reviewId, {
+      rating: args.rating,
+      title: args.title,
+      comment: args.comment,
+      isEdited: true,
+      lastEditedAt: Date.now(),
+    });
+  },
+});
+
+export const markHelpful = mutation({
+  args: { reviewId: v.id("reviews") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Unauthorized");
+
+    const existing = await ctx.db
+      .query("reviewInteractions")
+      .withIndex("by_review_user", (q) => q.eq("reviewId", args.reviewId).eq("userId", userId))
+      .first();
+
+    if (existing) {
+      if (existing.type === "helpful") {
+        // Toggle off
+        await ctx.db.delete(existing._id);
+        const review = await ctx.db.get(args.reviewId);
+        if (review) {
+          await ctx.db.patch(args.reviewId, { helpfulCount: Math.max(0, (review.helpfulCount || 0) - 1) });
+        }
+        return false; // Not helpful anymore
+      } else {
+        // Change from report to helpful (unlikely but possible)
+        await ctx.db.patch(existing._id, { type: "helpful" });
+        const review = await ctx.db.get(args.reviewId);
+        if (review) {
+          await ctx.db.patch(args.reviewId, { helpfulCount: (review.helpfulCount || 0) + 1 });
+        }
+        return true;
+      }
+    } else {
+      await ctx.db.insert("reviewInteractions", {
+        userId,
+        reviewId: args.reviewId,
+        type: "helpful",
+      });
+      const review = await ctx.db.get(args.reviewId);
+      if (review) {
+        await ctx.db.patch(args.reviewId, { helpfulCount: (review.helpfulCount || 0) + 1 });
+      }
+      return true;
+    }
+  },
+});
+
+export const reportReview = mutation({
+  args: { reviewId: v.id("reviews") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Unauthorized");
+
+    const existing = await ctx.db
+      .query("reviewInteractions")
+      .withIndex("by_review_user", (q) => q.eq("reviewId", args.reviewId).eq("userId", userId))
+      .first();
+
+    if (!existing) {
+      await ctx.db.insert("reviewInteractions", {
+        userId,
+        reviewId: args.reviewId,
+        type: "report",
+      });
+    } else if (existing.type === "helpful") {
+      // Switch to report? Or just ignore. Let's switch.
+      await ctx.db.patch(existing._id, { type: "report" });
+      const review = await ctx.db.get(args.reviewId);
+      if (review) {
+        await ctx.db.patch(args.reviewId, { helpfulCount: Math.max(0, (review.helpfulCount || 0) - 1) });
+      }
+    }
+  },
+});
+
 export const getReviews = query({
   args: { productId: v.id("products") },
   handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
     const reviews = await ctx.db
       .query("reviews")
       .withIndex("by_product", (q) => q.eq("productId", args.productId))
       .order("desc")
       .collect();
-    return reviews;
+
+    // If user is logged in, get their interactions
+    let userInteractions = new Map();
+    if (userId) {
+      const interactions = await ctx.db
+        .query("reviewInteractions")
+        .filter((q) => q.eq(q.field("userId"), userId))
+        .collect();
+      interactions.forEach((i) => userInteractions.set(i.reviewId, i.type));
+    }
+
+    return reviews.map((r) => ({
+      ...r,
+      currentUserInteraction: userInteractions.get(r._id),
+      isCurrentUser: r.userId === userId,
+    }));
   },
 });
