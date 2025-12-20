@@ -1,12 +1,11 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useParams, useNavigate, Link } from "react-router";
 import { useState } from "react";
-import { Loader2, ShoppingCart, ArrowLeft, ChevronLeft, ChevronRight, Play, Star, MapPin, CheckCircle2, ShieldCheck, Truck } from "lucide-react";
+import { Loader2, ShoppingCart, ChevronLeft, ChevronRight, Play, Star, MapPin, Truck } from "lucide-react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { useAuth } from "@/hooks/use-auth";
@@ -20,7 +19,8 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ProductInfoTabs } from "@/components/product/ProductInfoTabs";
+import { ProductReviews } from "@/components/product/ProductReviews";
 
 export default function ProductDetails() {
   const { id } = useParams<{ id: string }>();
@@ -36,7 +36,7 @@ export default function ProductDetails() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [pincode, setPincode] = useState("");
-  const [deliveryStatus, setDeliveryStatus] = useState<null | { available: boolean, date: string }>(null);
+  const [deliveryStatus, setDeliveryStatus] = useState<null | { available: boolean, date: string, location?: string }>(null);
   const [checkingPincode, setCheckingPincode] = useState(false);
 
   if (product === undefined) {
@@ -105,20 +105,34 @@ export default function ProductDetails() {
     }
   };
 
-  const checkDelivery = () => {
+  const checkDelivery = async () => {
     if (pincode.length !== 6) {
       toast.error("Please enter a valid 6-digit pincode");
       return;
     }
     setCheckingPincode(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
+      const data = await response.json();
+      
+      if (data && data[0].Status === "Success") {
+        const city = data[0].PostOffice[0].District;
+        const state = data[0].PostOffice[0].State;
+        setDeliveryStatus({
+          available: true,
+          date: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+          location: `${city}, ${state}`
+        });
+        toast.success(`Delivery available to ${city}, ${state}`);
+      } else {
+        setDeliveryStatus({ available: false, date: "" });
+        toast.error("Delivery not available to this pincode");
+      }
+    } catch (e) {
+      toast.error("Failed to verify pincode");
+    } finally {
       setCheckingPincode(false);
-      setDeliveryStatus({
-        available: true,
-        date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-      });
-    }, 1000);
+    }
   };
 
   return (
@@ -261,10 +275,10 @@ export default function ProductDetails() {
             <h1 className="text-3xl font-bold text-foreground mb-2">{product.name}</h1>
             <div className="flex items-center gap-2 mb-4">
               <div className="flex items-center bg-green-700 text-white px-2 py-0.5 rounded text-sm font-bold">
-                {product.averageRating ? product.averageRating.toFixed(1) : "4.5"} <Star className="h-3 w-3 ml-1 fill-current" />
+                {product.averageRating ? product.averageRating.toFixed(1) : "0.0"} <Star className="h-3 w-3 ml-1 fill-current" />
               </div>
               <span className="text-sm text-muted-foreground underline cursor-pointer">
-                {product.ratingCount || 128} Ratings & Reviews
+                {product.ratingCount || 0} Ratings & Reviews
               </span>
             </div>
 
@@ -356,66 +370,21 @@ export default function ProductDetails() {
                     </Button>
                   </div>
                   {deliveryStatus && (
-                    <div className="text-sm flex items-center gap-2 text-green-600 mt-2">
-                      <Truck className="h-4 w-4" />
-                      <span>Delivery by {deliveryStatus.date}</span>
+                    <div className={`text-sm flex flex-col gap-1 mt-2 ${deliveryStatus.available ? 'text-green-600' : 'text-destructive'}`}>
+                      <div className="flex items-center gap-2">
+                        <Truck className="h-4 w-4" />
+                        <span>{deliveryStatus.available ? `Delivery by ${deliveryStatus.date}` : "Not available"}</span>
+                      </div>
+                      {deliveryStatus.location && (
+                        <span className="text-xs text-muted-foreground ml-6">to {deliveryStatus.location}</span>
+                      )}
                     </div>
                   )}
                 </div>
               </div>
 
               {/* Product Info Tabs */}
-              <div className="space-y-6">
-                <Tabs defaultValue="benefits" className="w-full">
-                  <TabsList className="w-full grid grid-cols-3">
-                    <TabsTrigger value="benefits">Benefits</TabsTrigger>
-                    <TabsTrigger value="usage">Usage</TabsTrigger>
-                    <TabsTrigger value="safety">Safety</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="benefits" className="mt-4 space-y-4">
-                    {product.keyBenefits && product.keyBenefits.length > 0 ? (
-                      <ul className="space-y-2">
-                        {product.keyBenefits.map((benefit: string, i: number) => (
-                          <li key={i} className="flex gap-2 text-sm text-muted-foreground">
-                            <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
-                            {benefit}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">{product.description}</p>
-                    )}
-                  </TabsContent>
-                  <TabsContent value="usage" className="mt-4">
-                    <div className="text-sm text-muted-foreground leading-relaxed">
-                      <h4 className="font-medium text-foreground mb-1">Directions for Use:</h4>
-                      <p>{product.directionsForUse || "As prescribed by the physician."}</p>
-                    </div>
-                  </TabsContent>
-                  <TabsContent value="safety" className="mt-4">
-                    <div className="text-sm text-muted-foreground leading-relaxed">
-                      <h4 className="font-medium text-foreground mb-1 flex items-center gap-2">
-                        <ShieldCheck className="h-4 w-4" /> Safety Information:
-                      </h4>
-                      <p>{product.safetyInformation || "Read the label carefully before use. Keep out of reach of children."}</p>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-
-                <Separator />
-
-                <div className="space-y-2">
-                  <h3 className="font-semibold">Product Details</h3>
-                  <div className="grid grid-cols-2 gap-y-2 text-sm">
-                    <div className="text-muted-foreground">Brand</div>
-                    <div className="font-medium">{product.brand || "Generic"}</div>
-                    <div className="text-muted-foreground">Expires on or After</div>
-                    <div className="font-medium">Sept, 2026</div>
-                    <div className="text-muted-foreground">Country of Origin</div>
-                    <div className="font-medium">India</div>
-                  </div>
-                </div>
-              </div>
+              <ProductInfoTabs product={product} />
             </div>
           </div>
         </div>
@@ -423,54 +392,11 @@ export default function ProductDetails() {
         <Separator className="my-12" />
 
         {/* Reviews Section */}
-        <div className="max-w-4xl">
-          <h2 className="text-2xl font-bold mb-6">Ratings & Reviews</h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="md:col-span-1 space-y-4">
-              <div className="flex items-end gap-2">
-                <span className="text-5xl font-bold text-foreground">4.5</span>
-                <div className="mb-2">
-                  <div className="flex text-yellow-400">
-                    <Star className="h-5 w-5 fill-current" />
-                    <Star className="h-5 w-5 fill-current" />
-                    <Star className="h-5 w-5 fill-current" />
-                    <Star className="h-5 w-5 fill-current" />
-                    <Star className="h-5 w-5 fill-current opacity-50" />
-                  </div>
-                  <span className="text-sm text-muted-foreground">128 Verified Ratings</span>
-                </div>
-              </div>
-              <Button variant="outline" className="w-full">Write a Review</Button>
-            </div>
-            
-            <div className="md:col-span-2 space-y-6">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="space-y-2 pb-6 border-b last:border-0">
-                  <div className="flex items-center gap-2">
-                    <div className="flex text-green-600">
-                      <Star className="h-4 w-4 fill-current" />
-                      <Star className="h-4 w-4 fill-current" />
-                      <Star className="h-4 w-4 fill-current" />
-                      <Star className="h-4 w-4 fill-current" />
-                      <Star className="h-4 w-4 fill-current" />
-                    </div>
-                    <span className="font-medium text-sm">Very Effective</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    "I have been using this for a month and the results are amazing. Highly recommended for anyone suffering from similar issues."
-                  </p>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span className="font-medium text-foreground">Rahul Kumar</span>
-                    <span>•</span>
-                    <span className="text-green-600 flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> Verified Purchase</span>
-                    <span>•</span>
-                    <span>2 months ago</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        <ProductReviews 
+          productId={product._id} 
+          averageRating={product.averageRating} 
+          ratingCount={product.ratingCount} 
+        />
       </div>
 
       {/* Mobile Sticky Add to Cart */}
