@@ -38,7 +38,7 @@ export function WholesaleCategoryAccordion({
 
   return (
     <AccordionItem value={sectionKey} className="border-b-0 mb-2">
-      <AccordionTrigger className="text-lg font-medium text-lime-700 hover:text-lime-800 hover:no-underline py-3">
+      <AccordionTrigger className="text-lg font-medium text-lime-700 hover:text-lime-800 hover:no-underline py-3 [&>svg]:text-lime-700 [&>svg]:h-5 [&>svg]:w-5 [&>svg]:opacity-100">
         {category}
       </AccordionTrigger>
       <AccordionContent>
