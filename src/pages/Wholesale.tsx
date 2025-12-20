@@ -1,20 +1,18 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Button } from "@/components/ui/button";
-import { Minus, Plus, ShoppingCart, Loader2, Search, Filter, X } from "lucide-react";
+import { Loader2, Search, Filter, X } from "lucide-react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { useDebounce } from "@/hooks/use-debounce";
+import { WholesaleCategoryAccordion } from "./wholesale/WholesaleCategoryAccordion";
 
 // Categories as requested
 const CATEGORIES = [
@@ -85,9 +83,6 @@ export default function Wholesale() {
   
   // Local state for selections: { [productId]: { potency: string, packingSize: string } }
   const [selections, setSelections] = useState<Record<string, { potency: string, packingSize: string }>>({});
-
-  // State for category-level search queries
-  const [categorySearchQueries, setCategorySearchQueries] = useState<Record<string, string>>({});
 
   useEffect(() => {
     seed();
@@ -261,152 +256,19 @@ export default function Wholesale() {
                         const categoryProducts = categories[category];
                         if (!categoryProducts || categoryProducts.length === 0) return null;
 
-                        const sectionKey = `${brand}-${category}`;
-                        const searchQuery = categorySearchQueries[sectionKey] || "";
-                        
-                        const filteredCategoryProducts = categoryProducts.filter((p: any) => 
-                          p.name.toLowerCase().includes(searchQuery.toLowerCase())
-                        );
-
                         return (
-                          <AccordionItem key={category} value={sectionKey} className="border-b-0 mb-2">
-                            <AccordionTrigger className="text-lg font-medium text-lime-700 hover:text-lime-800 hover:no-underline py-3">
-                              {category}
-                            </AccordionTrigger>
-                            <AccordionContent>
-                              <div className="mb-4 px-1">
-                                <div className="relative">
-                                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                  <Input 
-                                    placeholder={`Search ${category}...`}
-                                    className="pl-9 bg-background"
-                                    value={searchQuery}
-                                    onChange={(e) => setCategorySearchQueries(prev => ({...prev, [sectionKey]: e.target.value}))}
-                                  />
-                                </div>
-                              </div>
-                              <div className="space-y-3 mt-2">
-                                {filteredCategoryProducts.length === 0 ? (
-                                  <div className="text-center py-8 text-muted-foreground text-sm">
-                                    No products found matching "{searchQuery}" in {category}
-                                  </div>
-                                ) : (
-                                  filteredCategoryProducts.map((product: any) => {
-                                    const selection = selections[product._id] || {};
-                                    const availablePackingSizes = product.packingSizes || ["30ml", "100ml", "450ml"];
-                                    const availablePotencies = category === "Dilution" ? DILUTION_POTENCIES : (product.potencies || []);
-
-                                    return (
-                                      <div key={product._id} className="flex flex-col gap-4 p-4 rounded-lg bg-secondary/30 border border-border/50">
-                                        <div className="flex justify-between items-start">
-                                          <div>
-                                            <div className="flex items-center gap-2">
-                                              <h4 className="font-semibold text-base">{product.name}</h4>
-                                              {product.availability === "out_of_stock" && (
-                                                  <Badge variant="destructive" className="text-[10px] h-4 px-1">Out of Stock</Badge>
-                                              )}
-                                            </div>
-                                            <p className="text-xs text-muted-foreground line-clamp-1">{product.description}</p>
-                                          </div>
-                                          <p className="text-sm font-bold">₹{product.basePrice}</p>
-                                        </div>
-
-                                        {/* Selection Controls */}
-                                        <div className="grid grid-cols-2 gap-3">
-                                            {/* Potency Selection */}
-                                            {category === "Mother Tincture" ? (
-                                                <div className="space-y-1">
-                                                    <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Potency</span>
-                                                    <div className="h-9 px-3 flex items-center bg-muted rounded-md text-sm font-medium text-muted-foreground border border-transparent">
-                                                        Q (Mother Tincture)
-                                                    </div>
-                                                </div>
-                                            ) : (category !== "Patent" && category !== "Cosmetics") && (
-                                                <div className="space-y-1">
-                                                    <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Potency</span>
-                                                    <Select 
-                                                        value={selection.potency || (category === "Dilution" ? "30ch" : availablePotencies[0])} 
-                                                        onValueChange={(val) => handleSelectionChange(product._id, 'potency', val)}
-                                                    >
-                                                        <SelectTrigger className="h-9 text-xs">
-                                                            <SelectValue placeholder="Select Potency" />
-                                                        </SelectTrigger>
-                                                    <SelectContent>
-                                                        {availablePotencies.map((p: string) => (
-                                                            <SelectItem key={p} value={p} className="text-xs">{p}</SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                        )}
-
-                                        {/* Packing Size Selection */}
-                                        <div className="space-y-1 col-span-1">
-                                            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Pack Size</span>
-                                            <Select 
-                                                value={selection.packingSize || availablePackingSizes[0]} 
-                                                onValueChange={(val) => handleSelectionChange(product._id, 'packingSize', val)}
-                                            >
-                                                <SelectTrigger className="h-9 text-xs">
-                                                    <SelectValue placeholder="Select Size" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {availablePackingSizes.map((s: string) => (
-                                                        <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                                </Select>
-                                            </div>
-                                        </div>
-
-                                        {/* Actions */}
-                                        <div className="flex items-center justify-between pt-2 border-t border-border/40">
-                                          <div className="flex items-center bg-background rounded-md border shadow-sm h-8">
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              className="h-full w-8 rounded-none rounded-l-md"
-                                              onClick={() => handleQuantityChange(product._id, -1)}
-                                              disabled={product.availability === "out_of_stock"}
-                                            >
-                                              <Minus className="h-3 w-3" />
-                                            </Button>
-                                            <div className="w-8 text-center font-medium text-xs">
-                                              {quantities[product._id] || 1}
-                                            </div>
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              className="h-full w-8 rounded-none rounded-r-md"
-                                              onClick={() => handleQuantityChange(product._id, 1)}
-                                              disabled={product.availability === "out_of_stock"}
-                                            >
-                                              <Plus className="h-3 w-3" />
-                                            </Button>
-                                          </div>
-
-                                          <Button 
-                                            size="sm" 
-                                            className="bg-[#A6FF00] text-black hover:bg-[#98f000] font-semibold h-8 px-4 text-xs"
-                                            onClick={() => handleAddToCart(product, category)}
-                                            disabled={addingToCart[product._id] || product.availability === "out_of_stock"}
-                                          >
-                                            {addingToCart[product._id] ? (
-                                              <Loader2 className="h-3 w-3 animate-spin" />
-                                            ) : (
-                                              <>
-                                                Add <ShoppingCart className="ml-2 h-3 w-3" />
-                                              </>
-                                            )}
-                                          </Button>
-                                        </div>
-                                      </div>
-                                    );
-                                })
-                                )}
-                              </div>
-                            </AccordionContent>
-                          </AccordionItem>
+                          <WholesaleCategoryAccordion
+                            key={`${brand}-${category}`}
+                            category={category}
+                            brand={brand}
+                            products={categoryProducts}
+                            quantities={quantities}
+                            selections={selections}
+                            addingToCart={addingToCart}
+                            onQuantityChange={handleQuantityChange}
+                            onSelectionChange={handleSelectionChange}
+                            onAddToCart={handleAddToCart}
+                          />
                         );
                       })}
                     </Accordion>
