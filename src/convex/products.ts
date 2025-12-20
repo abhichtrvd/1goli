@@ -88,12 +88,25 @@ export const getProduct = query({
       url: img.storageId ? (await ctx.storage.getUrl(img.storageId)) || img.url : img.url
     }))) : [];
 
+    // Fetch reviews summary
+    const reviews = await ctx.db
+      .query("reviews")
+      .withIndex("by_product", (q) => q.eq("productId", product._id))
+      .collect();
+    
+    const ratingCount = reviews.length;
+    const averageRating = ratingCount > 0 
+      ? reviews.reduce((acc, r) => acc + r.rating, 0) / ratingCount 
+      : 0;
+
     return {
       ...product,
       imageUrl: product.imageStorageId
         ? (await ctx.storage.getUrl(product.imageStorageId)) || product.imageUrl || ""
         : product.imageUrl || "",
       images: gallery,
+      ratingCount,
+      averageRating,
     };
   },
 });
@@ -211,6 +224,11 @@ export const createProduct = mutation({
     symptomsTags: v.array(v.string()),
     category: v.optional(v.string()),
     availability: v.optional(v.string()),
+    // New fields
+    keyBenefits: v.optional(v.array(v.string())),
+    directionsForUse: v.optional(v.string()),
+    safetyInformation: v.optional(v.string()),
+    ingredients: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
@@ -259,6 +277,11 @@ export const updateProduct = mutation({
     symptomsTags: v.optional(v.array(v.string())),
     category: v.optional(v.string()),
     availability: v.optional(v.string()),
+    // New fields
+    keyBenefits: v.optional(v.array(v.string())),
+    directionsForUse: v.optional(v.string()),
+    safetyInformation: v.optional(v.string()),
+    ingredients: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
@@ -333,6 +356,13 @@ export const seedProducts = mutation({
         symptomsTags: ["Injury", "Pain", "Bruises"],
         category: "Classical",
         imageUrl: "https://images.unsplash.com/photo-1624454002302-36b824d7bd52?q=80&w=500&auto=format&fit=crop",
+        keyBenefits: [
+          "Helps in reducing pain and swelling from injuries",
+          "Effective for muscle soreness and stiffness",
+          "Promotes healing of bruises and sprains"
+        ],
+        directionsForUse: "Take 5 drops in half cup of water three times a day or as prescribed by the physician.",
+        safetyInformation: "Read the label carefully before use. Do not exceed the recommended dosage. Keep out of reach of children.",
       },
       {
         name: "Nux Vomica",
@@ -345,6 +375,13 @@ export const seedProducts = mutation({
         symptomsTags: ["Digestion", "Stress", "Headache"],
         category: "Classical",
         imageUrl: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?q=80&w=500&auto=format&fit=crop",
+        keyBenefits: [
+          "Relieves indigestion and acidity",
+          "Helps with bloating and constipation",
+          "Calms irritability and stress-related symptoms"
+        ],
+        directionsForUse: "Take 5 drops in half cup of water twice daily.",
+        safetyInformation: "Avoid strong smelling substances like coffee, onion, hing, mint, camphor, garlic etc while taking the medicine.",
       },
       {
         name: "R89 Hair Care Drops",
@@ -357,6 +394,13 @@ export const seedProducts = mutation({
         symptomsTags: ["Hair Fall", "Scalp"],
         category: "Patent",
         imageUrl: "https://images.unsplash.com/photo-1626806749963-2c709d771e43?q=80&w=500&auto=format&fit=crop",
+        keyBenefits: [
+          "Reduces hair fall and promotes hair growth",
+          "Prevents premature graying of hair",
+          "Strengthens hair roots"
+        ],
+        directionsForUse: "20-30 drops after meals, 3 times daily.",
+        safetyInformation: "For external use only. Store in a cool and dry place.",
       },
       {
         name: "Belladonna",
@@ -396,7 +440,7 @@ export const seedProducts = mutation({
       },
     ];
 
-    for (const product of products) {
+    for (const product of [...products, ...products.slice(3)]) {
       await ctx.db.insert("products", product);
     }
   },

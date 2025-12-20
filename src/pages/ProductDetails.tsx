@@ -4,12 +4,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useParams, useNavigate } from "react-router";
+import { useParams, useNavigate, Link } from "react-router";
 import { useState } from "react";
-import { Loader2, ShoppingCart, ArrowLeft, ChevronLeft, ChevronRight, Play } from "lucide-react";
+import { Loader2, ShoppingCart, ArrowLeft, ChevronLeft, ChevronRight, Play, Star, MapPin, CheckCircle2, ShieldCheck, Truck } from "lucide-react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { useAuth } from "@/hooks/use-auth";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function ProductDetails() {
   const { id } = useParams<{ id: string }>();
@@ -24,6 +35,9 @@ export default function ProductDetails() {
   const [isAdding, setIsAdding] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [pincode, setPincode] = useState("");
+  const [deliveryStatus, setDeliveryStatus] = useState<null | { available: boolean, date: string }>(null);
+  const [checkingPincode, setCheckingPincode] = useState(false);
 
   if (product === undefined) {
     return (
@@ -91,16 +105,49 @@ export default function ProductDetails() {
     }
   };
 
-  return (
-    <div className="pb-20 md:pb-0">
-      <div className="container mx-auto px-4 py-8">
-        <Button variant="ghost" className="mb-6 pl-0 hover:bg-transparent hover:text-primary" onClick={() => navigate(-1)}>
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back
-        </Button>
+  const checkDelivery = () => {
+    if (pincode.length !== 6) {
+      toast.error("Please enter a valid 6-digit pincode");
+      return;
+    }
+    setCheckingPincode(true);
+    // Simulate API call
+    setTimeout(() => {
+      setCheckingPincode(false);
+      setDeliveryStatus({
+        available: true,
+        date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+      });
+    }, 1000);
+  };
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
-          {/* Image Section */}
-          <div className="space-y-4">
+  return (
+    <div className="pb-20 md:pb-0 bg-background min-h-screen">
+      <div className="container mx-auto px-4 py-4">
+        {/* Breadcrumbs */}
+        <Breadcrumb className="mb-6">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link to="/">Home</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link to="/search">Medicines</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>{product.name}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
+          {/* Left Column: Images */}
+          <div className="lg:col-span-5 space-y-4">
             <div className="rounded-2xl overflow-hidden bg-white border shadow-sm aspect-square flex items-center justify-center bg-secondary/10 relative group">
               {currentItem?.type === 'video' ? (
                 <div className="w-full h-full bg-black flex items-center justify-center relative">
@@ -204,93 +251,224 @@ export default function ProductDetails() {
             )}
           </div>
 
-          {/* Details Section */}
-          <div className="flex flex-col">
+          {/* Right Column: Details & Actions */}
+          <div className="lg:col-span-7 flex flex-col">
             <div className="mb-2">
               <Badge variant="outline" className="text-lime-600 border-lime-600/20 mb-2">
-                Homeopathic Medicine
+                {product.category || "Homeopathic Medicine"}
               </Badge>
             </div>
-            <h1 className="text-3xl md:text-4xl font-bold text-lime-600 mb-2">{product.name}</h1>
+            <h1 className="text-3xl font-bold text-foreground mb-2">{product.name}</h1>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center bg-green-700 text-white px-2 py-0.5 rounded text-sm font-bold">
+                {product.averageRating ? product.averageRating.toFixed(1) : "4.5"} <Star className="h-3 w-3 ml-1 fill-current" />
+              </div>
+              <span className="text-sm text-muted-foreground underline cursor-pointer">
+                {product.ratingCount || 128} Ratings & Reviews
+              </span>
+            </div>
+
             <div className="flex flex-wrap gap-2 mb-6">
-              {product.symptomsTags.map((tag) => (
-                <Badge key={tag} variant="secondary" className="bg-lime-50 text-lime-700 hover:bg-lime-100">
+              {product.brand && (
+                <Badge variant="secondary" className="bg-secondary text-secondary-foreground">
+                  {product.brand}
+                </Badge>
+              )}
+              {product.symptomsTags.map((tag: string) => (
+                <Badge key={tag} variant="outline" className="text-muted-foreground">
                   {tag}
                 </Badge>
               ))}
-              {isOutOfStock && (
-                <Badge variant="destructive">Out of Stock</Badge>
-              )}
-              {!isOutOfStock && product.stock !== undefined && product.stock < 10 && (
-                <Badge variant="outline" className="text-orange-600 border-orange-600">
-                  Only {product.stock} left
-                </Badge>
-              )}
             </div>
 
-            <div className="prose prose-sm text-muted-foreground mb-8 leading-relaxed">
-              <h3 className="text-foreground font-semibold mb-2">Indications</h3>
-              <p>{product.description}</p>
-            </div>
-
-            <Card className="mt-auto border-primary/10 shadow-md bg-secondary/30">
-              <CardContent className="p-6 space-y-6">
+            <div className="grid md:grid-cols-2 gap-8">
+              <div className="space-y-6">
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium flex items-center gap-2">
-                        Potency
-                        <span className="text-xs text-muted-foreground font-normal">(Strength)</span>
-                      </label>
-                      <Select value={selectedPotency} onValueChange={setSelectedPotency}>
-                        <SelectTrigger className="bg-background">
-                          <SelectValue placeholder="Select" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {product.potencies.map((p) => (
-                            <SelectItem key={p} value={p}>{p}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium flex items-center gap-2">
+                      Potency
+                      <span className="text-xs text-muted-foreground font-normal">(Strength)</span>
+                    </label>
+                    <Select value={selectedPotency} onValueChange={setSelectedPotency}>
+                      <SelectTrigger className="bg-background">
+                        <SelectValue placeholder="Select Potency" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {product.potencies.map((p: string) => (
+                          <SelectItem key={p} value={p}>{p}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium flex items-center gap-2">
-                        Form
-                        <span className="text-xs text-muted-foreground font-normal">(Type)</span>
-                      </label>
-                      <Select value={selectedForm} onValueChange={setSelectedForm}>
-                        <SelectTrigger className="bg-background">
-                          <SelectValue placeholder="Select" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {product.forms.map((f) => (
-                            <SelectItem key={f} value={f}>{f}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium flex items-center gap-2">
+                      Form
+                      <span className="text-xs text-muted-foreground font-normal">(Type)</span>
+                    </label>
+                    <Select value={selectedForm} onValueChange={setSelectedForm}>
+                      <SelectTrigger className="bg-background">
+                        <SelectValue placeholder="Select Form" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {product.forms.map((f: string) => (
+                          <SelectItem key={f} value={f}>{f}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
-                <div className="pt-4 border-t flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total Price</p>
-                    <p className="text-3xl font-bold text-lime-600">₹{getPrice()}</p>
+                <div className="p-4 bg-secondary/30 rounded-xl border border-border/50">
+                  <div className="flex items-baseline gap-2 mb-1">
+                    <span className="text-3xl font-bold text-foreground">₹{getPrice()}</span>
+                    <span className="text-sm text-muted-foreground line-through">₹{(parseFloat(getPrice()) * 1.2).toFixed(2)}</span>
+                    <span className="text-sm font-bold text-green-600">20% OFF</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-4">Inclusive of all taxes</p>
+                  
+                  <Button 
+                    className="w-full h-12 text-lg font-semibold" 
+                    disabled={!selectedPotency || !selectedForm || isAdding || isOutOfStock}
+                    onClick={handleAddToCart}
+                  >
+                    {isAdding ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <ShoppingCart className="mr-2 h-5 w-5" />}
+                    {isOutOfStock ? "Out of Stock" : "Add to Cart"}
+                  </Button>
+                </div>
+
+                {/* Delivery Check */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    Check Delivery
+                  </label>
+                  <div className="flex gap-2">
+                    <Input 
+                      placeholder="Enter Pincode" 
+                      className="max-w-[150px]" 
+                      maxLength={6}
+                      value={pincode}
+                      onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
+                    />
+                    <Button variant="outline" onClick={checkDelivery} disabled={checkingPincode}>
+                      {checkingPincode ? <Loader2 className="h-4 w-4 animate-spin" /> : "Check"}
+                    </Button>
+                  </div>
+                  {deliveryStatus && (
+                    <div className="text-sm flex items-center gap-2 text-green-600 mt-2">
+                      <Truck className="h-4 w-4" />
+                      <span>Delivery by {deliveryStatus.date}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Product Info Tabs */}
+              <div className="space-y-6">
+                <Tabs defaultValue="benefits" className="w-full">
+                  <TabsList className="w-full grid grid-cols-3">
+                    <TabsTrigger value="benefits">Benefits</TabsTrigger>
+                    <TabsTrigger value="usage">Usage</TabsTrigger>
+                    <TabsTrigger value="safety">Safety</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="benefits" className="mt-4 space-y-4">
+                    {product.keyBenefits && product.keyBenefits.length > 0 ? (
+                      <ul className="space-y-2">
+                        {product.keyBenefits.map((benefit: string, i: number) => (
+                          <li key={i} className="flex gap-2 text-sm text-muted-foreground">
+                            <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
+                            {benefit}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">{product.description}</p>
+                    )}
+                  </TabsContent>
+                  <TabsContent value="usage" className="mt-4">
+                    <div className="text-sm text-muted-foreground leading-relaxed">
+                      <h4 className="font-medium text-foreground mb-1">Directions for Use:</h4>
+                      <p>{product.directionsForUse || "As prescribed by the physician."}</p>
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="safety" className="mt-4">
+                    <div className="text-sm text-muted-foreground leading-relaxed">
+                      <h4 className="font-medium text-foreground mb-1 flex items-center gap-2">
+                        <ShieldCheck className="h-4 w-4" /> Safety Information:
+                      </h4>
+                      <p>{product.safetyInformation || "Read the label carefully before use. Keep out of reach of children."}</p>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+
+                <Separator />
+
+                <div className="space-y-2">
+                  <h3 className="font-semibold">Product Details</h3>
+                  <div className="grid grid-cols-2 gap-y-2 text-sm">
+                    <div className="text-muted-foreground">Brand</div>
+                    <div className="font-medium">{product.brand || "Generic"}</div>
+                    <div className="text-muted-foreground">Expires on or After</div>
+                    <div className="font-medium">Sept, 2026</div>
+                    <div className="text-muted-foreground">Country of Origin</div>
+                    <div className="font-medium">India</div>
                   </div>
                 </div>
-                
-                {/* Desktop Add to Cart */}
-                <Button 
-                  className="w-full h-12 text-lg hidden md:flex" 
-                  disabled={!selectedPotency || !selectedForm || isAdding || isOutOfStock}
-                  onClick={handleAddToCart}
-                >
-                  {isAdding ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <ShoppingCart className="mr-2 h-5 w-5" />}
-                  {isOutOfStock ? "Out of Stock" : "Add to Cart"}
-                </Button>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <Separator className="my-12" />
+
+        {/* Reviews Section */}
+        <div className="max-w-4xl">
+          <h2 className="text-2xl font-bold mb-6">Ratings & Reviews</h2>
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="md:col-span-1 space-y-4">
+              <div className="flex items-end gap-2">
+                <span className="text-5xl font-bold text-foreground">4.5</span>
+                <div className="mb-2">
+                  <div className="flex text-yellow-400">
+                    <Star className="h-5 w-5 fill-current" />
+                    <Star className="h-5 w-5 fill-current" />
+                    <Star className="h-5 w-5 fill-current" />
+                    <Star className="h-5 w-5 fill-current" />
+                    <Star className="h-5 w-5 fill-current opacity-50" />
+                  </div>
+                  <span className="text-sm text-muted-foreground">128 Verified Ratings</span>
+                </div>
+              </div>
+              <Button variant="outline" className="w-full">Write a Review</Button>
+            </div>
+            
+            <div className="md:col-span-2 space-y-6">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="space-y-2 pb-6 border-b last:border-0">
+                  <div className="flex items-center gap-2">
+                    <div className="flex text-green-600">
+                      <Star className="h-4 w-4 fill-current" />
+                      <Star className="h-4 w-4 fill-current" />
+                      <Star className="h-4 w-4 fill-current" />
+                      <Star className="h-4 w-4 fill-current" />
+                      <Star className="h-4 w-4 fill-current" />
+                    </div>
+                    <span className="font-medium text-sm">Very Effective</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    "I have been using this for a month and the results are amazing. Highly recommended for anyone suffering from similar issues."
+                  </p>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="font-medium text-foreground">Rahul Kumar</span>
+                    <span>•</span>
+                    <span className="text-green-600 flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> Verified Purchase</span>
+                    <span>•</span>
+                    <span>2 months ago</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

@@ -62,6 +62,12 @@ const schema = defineSchema(
       symptomsTags: v.array(v.string()),
       category: v.optional(v.string()), // e.g., "Classical", "Patent", "Personal Care"
       availability: v.optional(v.string()), // "in_stock", "out_of_stock"
+      
+      // New Retail Fields
+      keyBenefits: v.optional(v.array(v.string())),
+      directionsForUse: v.optional(v.string()),
+      safetyInformation: v.optional(v.string()),
+      ingredients: v.optional(v.string()),
     })
       .searchIndex("search_body", {
         searchField: "description",
@@ -124,6 +130,19 @@ const schema = defineSchema(
       .searchIndex("search_shipping", {
         searchField: "shippingAddress",
       }),
+
+    reviews: defineTable({
+      userId: v.string(),
+      userName: v.string(),
+      productId: v.id("products"),
+      rating: v.number(), // 1-5
+      comment: v.optional(v.string()),
+      title: v.optional(v.string()),
+      verifiedPurchase: v.boolean(),
+      helpfulCount: v.optional(v.number()),
+    })
+      .index("by_product", ["productId"])
+      .index("by_user", ["userId"]),
 
     prescriptions: defineTable({
       userId: v.optional(v.string()),
