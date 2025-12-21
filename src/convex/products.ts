@@ -4,6 +4,17 @@ import { requireAdmin } from "./users";
 import { paginationOptsValidator } from "convex/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
+// Search Relevance Weights Configuration
+// Adjust these values to tune search relevance
+export const SEARCH_WEIGHTS = {
+  NAME: 3,
+  BRAND: 2,
+  SYMPTOMS: 2,
+  FORMS: 1,
+  POTENCIES: 1,
+  DESCRIPTION: 1,
+};
+
 // Helper to generate search text
 function generateSearchText(
   name: string, 
@@ -13,19 +24,15 @@ function generateSearchText(
   forms: string[] = [],
   potencies: string[] = []
 ): string {
-  // Weighted relevance generation
-  // Name: Weight 3
-  // Brand: Weight 2
-  // Symptoms: Weight 2
-  // Forms: Weight 1
-  // Potencies: Weight 1
-  // Description: Weight 1
+  // Weighted relevance generation using configuration
   
-  const nameText = `${name} ${name} ${name}`;
-  const brandText = brand ? `${brand} ${brand}` : "";
-  const symptomsText = symptomsTags.map(s => `${s} ${s}`).join(" ");
-  const formsText = forms.join(" ");
-  const potenciesText = potencies.join(" ");
+  const nameText = Array(SEARCH_WEIGHTS.NAME).fill(name).join(" ");
+  const brandText = brand ? Array(SEARCH_WEIGHTS.BRAND).fill(brand).join(" ") : "";
+  
+  // For arrays, we repeat each item by its weight
+  const symptomsText = symptomsTags.map(s => Array(SEARCH_WEIGHTS.SYMPTOMS).fill(s).join(" ")).join(" ");
+  const formsText = forms.map(f => Array(SEARCH_WEIGHTS.FORMS).fill(f).join(" ")).join(" ");
+  const potenciesText = potencies.map(p => Array(SEARCH_WEIGHTS.POTENCIES).fill(p).join(" ")).join(" ");
   
   return `${nameText} ${brandText} ${symptomsText} ${formsText} ${potenciesText} ${description}`.toLowerCase();
 }
@@ -67,6 +74,7 @@ export const getProductsCount = query({
     inStockOnly: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    const startTime = Date.now();
     let query;
 
     // Select index based on primary filters to optimize scan
@@ -109,8 +117,10 @@ export const getProductsCount = query({
     }
 
     const products = await query.collect();
+    const fetchTime = Date.now() - startTime;
 
     // Manual filtering for array fields
+    const filterStartTime = Date.now();
     const filtered = products.filter(p => {
       if (args.forms && args.forms.length > 0) {
         if (!p.forms || !p.forms.some(f => args.forms!.includes(f))) return false;
@@ -123,6 +133,12 @@ export const getProductsCount = query({
       }
       return true;
     });
+    const filterTime = Date.now() - filterStartTime;
+
+    // Log performance metrics for monitoring
+    if (args.forms?.length || args.symptoms?.length || args.potencies?.length) {
+      console.log(`[Perf:getProductsCount] Fetched ${products.length} in ${fetchTime}ms. Filtered to ${filtered.length} in ${filterTime}ms.`);
+    }
 
     return filtered.length;
   },
@@ -208,9 +224,12 @@ export const getPaginatedProducts = query({
     // If we have array filters, we must collect all results, filter in memory, and manually paginate
     // to ensure consistent page sizes.
     if (hasArrayFilters || (args.sort && !useSortIndex)) {
+      const startTime = Date.now();
       const allProducts = await query.collect();
+      const fetchTime = Date.now() - startTime;
       
       // Manual filtering
+      const filterStartTime = Date.now();
       let filtered = allProducts.filter(p => {
         if (args.forms && args.forms.length > 0) {
           if (!p.forms || !p.forms.some(f => args.forms!.includes(f))) return false;
@@ -223,6 +242,9 @@ export const getPaginatedProducts = query({
         }
         return true;
       });
+      const filterTime = Date.now() - filterStartTime;
+
+      console.log(`[Perf:getPaginatedProducts] Array/Sort Mode: Fetched ${allProducts.length} in ${fetchTime}ms. Filtered to ${filtered.length} in ${filterTime}ms.`);
 
       // Manual sorting
       if (args.sort) {
