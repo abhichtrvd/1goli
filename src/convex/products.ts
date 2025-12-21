@@ -11,7 +11,8 @@ function generateSearchText(
   description: string, 
   symptomsTags: string[]
 ): string {
-  return `${name} ${brand || ""} ${description} ${symptomsTags.join(" ")}`.toLowerCase();
+  // Boost name relevance by repeating it
+  return `${name} ${name} ${name} ${brand || ""} ${description} ${symptomsTags.join(" ")}`.toLowerCase();
 }
 
 export const getProducts = query({
@@ -35,6 +36,79 @@ export const getProducts = query({
         };
       })
     );
+  },
+});
+
+export const getProductsCount = query({
+  args: { 
+    brand: v.optional(v.string()),
+    brands: v.optional(v.array(v.string())),
+    category: v.optional(v.string()),
+    minPrice: v.optional(v.number()),
+    maxPrice: v.optional(v.number()),
+    forms: v.optional(v.array(v.string())),
+    symptoms: v.optional(v.array(v.string())),
+    potencies: v.optional(v.array(v.string())),
+    inStockOnly: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    let query;
+
+    // Select index based on primary filters to optimize scan
+    if (args.brand) {
+      query = ctx.db.query("products").withIndex("by_brand", (q) => q.eq("brand", args.brand!));
+    } else if (args.category) {
+      query = ctx.db.query("products").withIndex("by_category", (q) => q.eq("category", args.category!));
+    } else {
+      query = ctx.db.query("products");
+    }
+
+    // Apply filters (same logic as getPaginatedProducts)
+    const brands = args.brands || (args.brand ? [args.brand] : []);
+
+    if (brands.length > 0) {
+      if (!args.brand || brands.length > 1) {
+         query = query.filter((q) => 
+           q.or(...brands.map(b => q.eq(q.field("brand"), b)))
+         );
+      }
+    }
+
+    if (args.category && !args.brand) {
+      // Already filtered by index if brand wasn't present
+    } else if (args.category) {
+      query = query.filter((q) => q.eq(q.field("category"), args.category));
+    }
+
+    if (args.minPrice !== undefined) {
+      query = query.filter((q) => q.gte(q.field("basePrice"), args.minPrice!));
+    }
+
+    if (args.maxPrice !== undefined) {
+      query = query.filter((q) => q.lte(q.field("basePrice"), args.maxPrice!));
+    }
+
+    if (args.inStockOnly) {
+      query = query.filter((q) => q.gt(q.field("stock"), 0));
+    }
+
+    const products = await query.collect();
+
+    // Manual filtering for array fields
+    const filtered = products.filter(p => {
+      if (args.forms && args.forms.length > 0) {
+        if (!p.forms || !p.forms.some(f => args.forms!.includes(f))) return false;
+      }
+      if (args.symptoms && args.symptoms.length > 0) {
+        if (!p.symptomsTags || !p.symptomsTags.some(s => args.symptoms!.includes(s))) return false;
+      }
+      if (args.potencies && args.potencies.length > 0) {
+        if (!p.potencies || !p.potencies.some(pot => args.potencies!.includes(pot))) return false;
+      }
+      return true;
+    });
+
+    return filtered.length;
   },
 });
 
@@ -604,15 +678,14 @@ export const backfillSearchText = mutation({
   handler: async (ctx) => {
     const products = await ctx.db.query("products").collect();
     for (const product of products) {
-      if (!product.searchText) {
-        const searchText = generateSearchText(
-          product.name,
-          product.brand,
-          product.description,
-          product.symptomsTags
-        );
-        await ctx.db.patch(product._id, { searchText });
-      }
+      // Always update to apply new relevance boosting
+      const searchText = generateSearchText(
+        product.name,
+        product.brand,
+        product.description,
+        product.symptomsTags
+      );
+      await ctx.db.patch(product._id, { searchText });
     }
   },
 });

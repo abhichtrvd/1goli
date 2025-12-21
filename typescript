@@ -1,1 +1,1 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+return `${name} ${name} ${name} ${brand || ""} ${description} ${symptomsTags.join(" ")}`.toLowerCase();

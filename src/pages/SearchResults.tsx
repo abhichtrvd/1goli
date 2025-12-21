@@ -144,6 +144,18 @@ export default function SearchResults() {
     { initialNumItems: ITEMS_PER_PAGE }
   );
 
+  // 3. Get Total Count for Browsing Mode
+  const totalCount = useQuery(api.products.getProductsCount, !isSearchMode ? {
+    category,
+    brands: selectedBrands.length > 0 ? selectedBrands : undefined,
+    forms: selectedForms.length > 0 ? selectedForms : undefined,
+    symptoms: selectedUses.length > 0 ? selectedUses : undefined,
+    potencies: selectedPotencies.length > 0 ? selectedPotencies : undefined,
+    minPrice: priceRange[0],
+    maxPrice: priceRange[1] < 5000 ? priceRange[1] : undefined,
+    inStockOnly: inStockOnly ? true : undefined,
+  } : "skip");
+
   // Determine which products to display
   let displayProducts: any[] = [];
   let totalItems = 0;
@@ -161,7 +173,7 @@ export default function SearchResults() {
   } else {
     // Server-side pagination for browsing
     displayProducts = paginatedResults || [];
-    totalItems = displayProducts.length; // This is just loaded items, not total in DB. 
+    totalItems = totalCount || 0; // Use the fetched total count
     // For infinite scroll style pagination, we don't know total pages easily without another query.
     // We will use "Load More" button instead of numbered pagination for this mode.
     showLoadMore = status === "CanLoadMore";
@@ -447,6 +459,7 @@ export default function SearchResults() {
               {!query && !category && "Showing all products"}
               {/* Show count only if we have it loaded or in search mode */}
               {(isSearchMode && searchResults) && ` (${searchResults.length} items)`}
+              {(!isSearchMode && totalCount !== undefined) && ` (${totalCount} items)`}
             </p>
           </div>
 
