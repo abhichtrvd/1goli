@@ -161,6 +161,7 @@ export const searchProducts = query({
     minPrice: v.optional(v.number()),
     maxPrice: v.optional(v.number()),
     sort: v.optional(v.string()), // Added sort argument
+    inStockOnly: v.optional(v.boolean()), // Added availability filter
   },
   handler: async (ctx, args) => {
     // Simple search implementation
@@ -199,6 +200,10 @@ export const searchProducts = query({
 
     if (args.maxPrice !== undefined) {
       filtered = filtered.filter((p) => p.basePrice <= args.maxPrice!);
+    }
+
+    if (args.inStockOnly) {
+      filtered = filtered.filter((p) => p.stock > 0);
     }
 
     // Scoring logic (only if query is present and NO explicit sort is requested)
@@ -272,6 +277,10 @@ export const searchProducts = query({
             return a.name.localeCompare(b.name);
           case "name_desc":
             return b.name.localeCompare(a.name);
+          case "rating_desc":
+            return (b.averageRating || 0) - (a.averageRating || 0);
+          case "rating_asc":
+            return (a.averageRating || 0) - (b.averageRating || 0);
           default:
             return 0;
         }

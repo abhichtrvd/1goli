@@ -87,13 +87,14 @@ export default function SearchResults() {
   const [selectedForms, setSelectedForms] = useState<string[]>([]);
   const [selectedUses, setSelectedUses] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 5000]);
+  const [inStockOnly, setInStockOnly] = useState<boolean>(false);
   const [sortBy, setSortBy] = useState<string>("relevance");
   const [currentPage, setCurrentPage] = useState(1);
   
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [query, category, selectedBrands, selectedForms, selectedUses, priceRange, sortBy]);
+  }, [query, category, selectedBrands, selectedForms, selectedUses, priceRange, inStockOnly, sortBy]);
 
   const products = useQuery(api.products.searchProducts, { 
     query, 
@@ -103,6 +104,7 @@ export default function SearchResults() {
     symptoms: selectedUses.length > 0 ? selectedUses : undefined,
     minPrice: priceRange[0],
     maxPrice: priceRange[1] < 5000 ? priceRange[1] : undefined,
+    inStockOnly: inStockOnly ? true : undefined,
     sort: sortBy !== "relevance" ? sortBy : undefined
   });
 
@@ -150,6 +152,7 @@ export default function SearchResults() {
     setSelectedForms([]);
     setSelectedUses([]);
     setPriceRange([0, 5000]);
+    setInStockOnly(false);
     setSortBy("relevance");
     setCurrentPage(1);
   };
@@ -159,7 +162,8 @@ export default function SearchResults() {
     selectedBrands.length + 
     selectedForms.length + 
     selectedUses.length +
-    (priceRange[0] > 0 || priceRange[1] < 5000 ? 1 : 0);
+    (priceRange[0] > 0 || priceRange[1] < 5000 ? 1 : 0) +
+    (inStockOnly ? 1 : 0);
 
   const FilterContent = () => (
     <div className="space-y-6">
@@ -182,6 +186,25 @@ export default function SearchResults() {
             Clear All
           </Button>
         )}
+      </div>
+
+      <Separator />
+
+      <div className="space-y-3">
+        <h4 className="text-sm font-medium">Availability</h4>
+        <div className="flex items-center space-x-2">
+          <Checkbox 
+            id="in-stock" 
+            checked={inStockOnly}
+            onCheckedChange={(checked) => setInStockOnly(checked === true)}
+          />
+          <Label 
+            htmlFor="in-stock" 
+            className="text-sm font-normal cursor-pointer leading-none"
+          >
+            In Stock Only
+          </Label>
+        </div>
       </div>
 
       <Separator />
@@ -353,6 +376,8 @@ export default function SearchResults() {
                 <SelectItem value="price_desc">Price: High to Low</SelectItem>
                 <SelectItem value="name_asc">Name: A to Z</SelectItem>
                 <SelectItem value="name_desc">Name: Z to A</SelectItem>
+                <SelectItem value="rating_desc">Rating: High to Low</SelectItem>
+                <SelectItem value="rating_asc">Rating: Low to High</SelectItem>
               </SelectContent>
             </Select>
 
