@@ -2,6 +2,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { motion } from "framer-motion";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 interface HeroSectionProps {
   searchQuery: string;
@@ -11,6 +13,11 @@ interface HeroSectionProps {
 }
 
 export function HeroSection({ searchQuery, setSearchQuery, handleSearch, handleKeyDown }: HeroSectionProps) {
+  const settings = useQuery(api.settings.getSettings);
+
+  const headline = settings?.heroHeadline || "Homoeopathy, Simplified by 1goli";
+  const description = settings?.heroDescription || "India's trusted Homeopathic Pharmacy. Authentic remedies, expert guidance, and doorstep delivery.";
+
   return (
     <section className="pt-12 pb-16 md:pt-24 md:pb-24 px-4 bg-secondary">
       <div className="container max-w-6xl mx-auto">
@@ -45,12 +52,18 @@ export function HeroSection({ searchQuery, setSearchQuery, handleSearch, handleK
             </div>
 
             <h1 className="text-4xl md:text-6xl font-semibold tracking-tight text-foreground leading-tight">
-              Homoeopathy, <br/>
-              <span className="text-lime-600">Simplified</span> by <br/>
-              <span className="text-5xl md:text-7xl whitespace-nowrap">1g<span className="inline-block w-[0.55em] h-[0.55em] rounded-full border-[0.12em] border-current bg-[#A6FF00] mx-[0.02em] translate-y-[0.05em]" />li</span>
+              {headline.includes("1goli") ? (
+                <>
+                  {headline.split("1goli")[0]}
+                  <span className="whitespace-nowrap">1g<span className="inline-block w-[0.55em] h-[0.55em] rounded-full border-[0.12em] border-current bg-[#A6FF00] mx-[0.02em] translate-y-[0.05em]" />li</span>
+                  {headline.split("1goli")[1]}
+                </>
+              ) : (
+                headline
+              )}
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground max-w-lg mx-auto pt-4">
-              India's trusted Homeopathic Pharmacy. Authentic remedies, expert guidance, and doorstep delivery.
+              {description}
             </p>
 
             <div className="flex flex-wrap justify-center gap-4 pt-2">

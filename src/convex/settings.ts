@@ -19,6 +19,16 @@ export const updateSettings = mutation({
     freeShippingThreshold: v.number(),
     maintenanceMode: v.boolean(),
     bannerMessage: v.optional(v.string()),
+    
+    // New fields
+    heroHeadline: v.optional(v.string()),
+    heroDescription: v.optional(v.string()),
+    address: v.optional(v.string()),
+    facebookUrl: v.optional(v.string()),
+    twitterUrl: v.optional(v.string()),
+    instagramUrl: v.optional(v.string()),
+    linkedinUrl: v.optional(v.string()),
+    featuredBrands: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);

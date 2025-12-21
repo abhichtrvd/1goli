@@ -274,6 +274,22 @@ const schema = defineSchema(
       freeShippingThreshold: v.number(),
       maintenanceMode: v.boolean(),
       bannerMessage: v.optional(v.string()),
+      
+      // Hero Section
+      heroHeadline: v.optional(v.string()),
+      heroDescription: v.optional(v.string()),
+      
+      // Contact Information
+      address: v.optional(v.string()),
+      
+      // Social Media
+      facebookUrl: v.optional(v.string()),
+      twitterUrl: v.optional(v.string()),
+      instagramUrl: v.optional(v.string()),
+      linkedinUrl: v.optional(v.string()),
+      
+      // Featured Brands
+      featuredBrands: v.optional(v.array(v.string())),
     }),
 
     auditLogs: defineTable({

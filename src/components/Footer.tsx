@@ -1,7 +1,11 @@
 import { Link } from "react-router";
 import { Facebook, Twitter, Instagram, Linkedin, Mail, Phone, MapPin } from "lucide-react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 export function Footer() {
+  const settings = useQuery(api.settings.getSettings);
+
   return (
     <footer className="bg-secondary border-t border-border pt-16 pb-8 mt-auto">
       <div className="container max-w-7xl mx-auto px-4">
@@ -14,21 +18,32 @@ export function Footer() {
               </span>
             </Link>
             <p className="text-muted-foreground text-sm leading-relaxed max-w-xs">
-              India's trusted Homeopathic Pharmacy. Authentic remedies, expert guidance, and doorstep delivery.
+              {settings?.heroDescription || "India's trusted Homeopathic Pharmacy. Authentic remedies, expert guidance, and doorstep delivery."}
             </p>
             <div className="flex gap-4 pt-2">
-              <a href="#" className="text-muted-foreground hover:text-lime-600 transition-colors">
-                <Facebook className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-muted-foreground hover:text-lime-600 transition-colors">
-                <Twitter className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-muted-foreground hover:text-lime-600 transition-colors">
-                <Instagram className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-muted-foreground hover:text-lime-600 transition-colors">
-                <Linkedin className="h-5 w-5" />
-              </a>
+              {settings?.facebookUrl && (
+                <a href={settings.facebookUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-lime-600 transition-colors">
+                  <Facebook className="h-5 w-5" />
+                </a>
+              )}
+              {settings?.twitterUrl && (
+                <a href={settings.twitterUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-lime-600 transition-colors">
+                  <Twitter className="h-5 w-5" />
+                </a>
+              )}
+              {settings?.instagramUrl && (
+                <a href={settings.instagramUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-lime-600 transition-colors">
+                  <Instagram className="h-5 w-5" />
+                </a>
+              )}
+              {settings?.linkedinUrl && (
+                <a href={settings.linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-lime-600 transition-colors">
+                  <Linkedin className="h-5 w-5" />
+                </a>
+              )}
+              {!settings?.facebookUrl && !settings?.twitterUrl && !settings?.instagramUrl && !settings?.linkedinUrl && (
+                 <div className="text-xs text-muted-foreground">Social links not configured</div>
+              )}
             </div>
           </div>
 
@@ -62,22 +77,22 @@ export function Footer() {
             <ul className="space-y-4 text-sm text-muted-foreground">
               <li className="flex items-start gap-3">
                 <MapPin className="h-5 w-5 shrink-0 text-lime-600" />
-                <span>123 Wellness Street, Health City, India 400001</span>
+                <span>{settings?.address || "123 Wellness Street, Health City, India 400001"}</span>
               </li>
               <li className="flex items-center gap-3">
                 <Phone className="h-5 w-5 shrink-0 text-lime-600" />
-                <span>+91 98765 43210</span>
+                <span>{settings?.supportPhone || "+91 98765 43210"}</span>
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="h-5 w-5 shrink-0 text-lime-600" />
-                <span>support@1goli.com</span>
+                <span>{settings?.supportEmail || "support@1goli.com"}</span>
               </li>
             </ul>
           </div>
         </div>
 
         <div className="border-t border-border/40 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
-          <p>© {new Date().getFullYear()} 1goli. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} {settings?.siteName || "1goli"}. All rights reserved.</p>
           <div className="flex gap-6">
             <Link to="#" className="hover:text-foreground transition-colors">Privacy</Link>
             <Link to="#" className="hover:text-foreground transition-colors">Terms</Link>

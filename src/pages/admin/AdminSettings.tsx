@@ -24,6 +24,14 @@ export default function AdminSettings() {
     freeShippingThreshold: 500,
     maintenanceMode: false,
     bannerMessage: "",
+    heroHeadline: "Homoeopathy, Simplified by 1goli",
+    heroDescription: "India's trusted Homeopathic Pharmacy. Authentic remedies, expert guidance, and doorstep delivery.",
+    address: "123 Wellness Street, Health City, India 400001",
+    facebookUrl: "",
+    twitterUrl: "",
+    instagramUrl: "",
+    linkedinUrl: "",
+    featuredBrands: "Dr. Reckeweg, SBL World Class, Schwabe India, Adel Pekana, Bakson's, Bjain Pharma",
   });
 
   useEffect(() => {
@@ -36,6 +44,14 @@ export default function AdminSettings() {
         freeShippingThreshold: settings.freeShippingThreshold,
         maintenanceMode: settings.maintenanceMode,
         bannerMessage: settings.bannerMessage || "",
+        heroHeadline: settings.heroHeadline || "Homoeopathy, Simplified by 1goli",
+        heroDescription: settings.heroDescription || "India's trusted Homeopathic Pharmacy. Authentic remedies, expert guidance, and doorstep delivery.",
+        address: settings.address || "123 Wellness Street, Health City, India 400001",
+        facebookUrl: settings.facebookUrl || "",
+        twitterUrl: settings.twitterUrl || "",
+        instagramUrl: settings.instagramUrl || "",
+        linkedinUrl: settings.linkedinUrl || "",
+        featuredBrands: settings.featuredBrands ? settings.featuredBrands.join(", ") : "Dr. Reckeweg, SBL World Class, Schwabe India, Adel Pekana, Bakson's, Bjain Pharma",
       });
     }
   }, [settings]);
@@ -57,6 +73,7 @@ export default function AdminSettings() {
         ...formData,
         shippingFee: Number(formData.shippingFee),
         freeShippingThreshold: Number(formData.freeShippingThreshold),
+        featuredBrands: formData.featuredBrands.split(",").map(b => b.trim()).filter(b => b.length > 0),
       });
       toast.success("Settings updated successfully");
     } catch (error) {
@@ -120,6 +137,114 @@ export default function AdminSettings() {
                     value={formData.supportPhone} 
                     onChange={handleChange} 
                     required 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="address">Address</Label>
+                  <Input 
+                    id="address" 
+                    name="address" 
+                    value={formData.address} 
+                    onChange={handleChange} 
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Hero Section</CardTitle>
+              <CardDescription>Customize the main landing page banner.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="heroHeadline">Headline</Label>
+                <Input 
+                  id="heroHeadline" 
+                  name="heroHeadline" 
+                  value={formData.heroHeadline} 
+                  onChange={handleChange} 
+                  placeholder="Homoeopathy, Simplified by 1goli"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="heroDescription">Description</Label>
+                <Textarea 
+                  id="heroDescription" 
+                  name="heroDescription" 
+                  value={formData.heroDescription} 
+                  onChange={handleChange} 
+                  placeholder="India's trusted Homeopathic Pharmacy..."
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Featured Brands</CardTitle>
+              <CardDescription>Manage brands shown on the homepage.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="featuredBrands">Brands List (comma separated)</Label>
+                <Textarea 
+                  id="featuredBrands" 
+                  name="featuredBrands" 
+                  value={formData.featuredBrands} 
+                  onChange={handleChange} 
+                  placeholder="Dr. Reckeweg, SBL World Class, Schwabe India..."
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Social Media</CardTitle>
+              <CardDescription>Links to your social media profiles.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="facebookUrl">Facebook URL</Label>
+                  <Input 
+                    id="facebookUrl" 
+                    name="facebookUrl" 
+                    value={formData.facebookUrl} 
+                    onChange={handleChange} 
+                    placeholder="https://facebook.com/..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="twitterUrl">Twitter URL</Label>
+                  <Input 
+                    id="twitterUrl" 
+                    name="twitterUrl" 
+                    value={formData.twitterUrl} 
+                    onChange={handleChange} 
+                    placeholder="https://twitter.com/..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="instagramUrl">Instagram URL</Label>
+                  <Input 
+                    id="instagramUrl" 
+                    name="instagramUrl" 
+                    value={formData.instagramUrl} 
+                    onChange={handleChange} 
+                    placeholder="https://instagram.com/..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="linkedinUrl">LinkedIn URL</Label>
+                  <Input 
+                    id="linkedinUrl" 
+                    name="linkedinUrl" 
+                    value={formData.linkedinUrl} 
+                    onChange={handleChange} 
+                    placeholder="https://linkedin.com/..."
                   />
                 </div>
               </div>
