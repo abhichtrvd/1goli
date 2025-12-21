@@ -49,6 +49,10 @@ export const getPaginatedProducts = query({
         query = ctx.db.query("products").withIndex("by_name").order("asc");
       } else if (args.sort === "name_desc") {
         query = ctx.db.query("products").withIndex("by_name").order("desc");
+      } else if (args.sort === "rating_desc") {
+        query = ctx.db.query("products").withIndex("by_rating").order("desc");
+      } else if (args.sort === "rating_asc") {
+        query = ctx.db.query("products").withIndex("by_rating").order("asc");
       } else {
         query = ctx.db.query("products").order("desc");
       }

@@ -79,7 +79,8 @@ const schema = defineSchema(
       })
       .index("by_brand", ["brand"])
       .index("by_price", ["basePrice"])
-      .index("by_name", ["name"]),
+      .index("by_name", ["name"])
+      .index("by_rating", ["averageRating"]),
 
     cartItems: defineTable({
       userId: v.string(),

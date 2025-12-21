@@ -66,6 +66,8 @@ export function ProductsGrid({
                   <SelectItem value="price_asc">Price: Low to High</SelectItem>
                   <SelectItem value="price_desc">Price: High to Low</SelectItem>
                   <SelectItem value="name_asc">Name: A to Z</SelectItem>
+                  <SelectItem value="rating_desc">Rating: High to Low</SelectItem>
+                  <SelectItem value="rating_asc">Rating: Low to High</SelectItem>
                 </SelectContent>
               </Select>
             )}

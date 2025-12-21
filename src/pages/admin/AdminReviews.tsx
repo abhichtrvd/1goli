@@ -19,7 +19,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Loader2, MoreHorizontal, Search, Star, Trash2, ShieldCheck, AlertTriangle } from "lucide-react";
+import { Loader2, MoreHorizontal, Search, Star, Trash2, ShieldCheck, AlertTriangle, Filter } from "lucide-react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import {
@@ -32,6 +32,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function AdminReviews() {
   const reviews = useQuery(api.reviews.getAllReviews);
@@ -39,16 +40,30 @@ export default function AdminReviews() {
   const dismissReports = useMutation(api.reviews.dismissReports);
   
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [ratingFilter, setRatingFilter] = useState("all");
   const [reviewToDelete, setReviewToDelete] = useState<Id<"reviews"> | null>(null);
 
   const filteredReviews = reviews?.filter((review) => {
     const searchLower = searchQuery.toLowerCase();
-    return (
+    const matchesSearch = (
       review.productName.toLowerCase().includes(searchLower) ||
       review.userName.toLowerCase().includes(searchLower) ||
       review.comment?.toLowerCase().includes(searchLower) ||
       review.title?.toLowerCase().includes(searchLower)
     );
+
+    const matchesStatus = statusFilter === "all" 
+      ? true 
+      : statusFilter === "reported" 
+        ? review.reportCount > 0 
+        : review.reportCount === 0;
+
+    const matchesRating = ratingFilter === "all"
+      ? true
+      : review.rating === parseInt(ratingFilter);
+
+    return matchesSearch && matchesStatus && matchesRating;
   });
 
   const handleDelete = async () => {
@@ -89,8 +104,8 @@ export default function AdminReviews() {
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+        <div className="relative flex-1 max-w-sm w-full">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search reviews..."
@@ -98,6 +113,35 @@ export default function AdminReviews() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
+        </div>
+        
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[150px]">
+              <Filter className="w-4 h-4 mr-2 text-muted-foreground" />
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="published">Published</SelectItem>
+              <SelectItem value="reported">Reported</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={ratingFilter} onValueChange={setRatingFilter}>
+            <SelectTrigger className="w-[150px]">
+              <Star className="w-4 h-4 mr-2 text-muted-foreground" />
+              <SelectValue placeholder="Rating" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Ratings</SelectItem>
+              <SelectItem value="5">5 Stars</SelectItem>
+              <SelectItem value="4">4 Stars</SelectItem>
+              <SelectItem value="3">3 Stars</SelectItem>
+              <SelectItem value="2">2 Stars</SelectItem>
+              <SelectItem value="1">1 Star</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
