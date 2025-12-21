@@ -3,7 +3,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Activity, ShoppingCart, Filter, X, Check } from "lucide-react";
+import { Activity, ShoppingCart, Filter, X, Check, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { Navbar } from "@/components/Navbar";
 import {
@@ -20,6 +20,15 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Slider } from "@/components/ui/slider";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 const CATEGORIES = [
   "Dilution",
@@ -66,6 +75,8 @@ const USES = [
   "Headache"
 ];
 
+const ITEMS_PER_PAGE = 12;
+
 export default function SearchResults() {
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get("q") || "";
@@ -76,10 +87,14 @@ export default function SearchResults() {
   const [selectedForms, setSelectedForms] = useState<string[]>([]);
   const [selectedUses, setSelectedUses] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 5000]);
+  const [sortBy, setSortBy] = useState<string>("relevance");
+  const [currentPage, setCurrentPage] = useState(1);
   
-  // Sync URL params with state if needed, or just use state for filters
-  // For simplicity, we'll keep category in URL but other filters in local state for now
-  
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [query, category, selectedBrands, selectedForms, selectedUses, priceRange, sortBy]);
+
   const products = useQuery(api.products.searchProducts, { 
     query, 
     category, 
@@ -87,8 +102,16 @@ export default function SearchResults() {
     forms: selectedForms.length > 0 ? selectedForms : undefined,
     symptoms: selectedUses.length > 0 ? selectedUses : undefined,
     minPrice: priceRange[0],
-    maxPrice: priceRange[1] < 5000 ? priceRange[1] : undefined
+    maxPrice: priceRange[1] < 5000 ? priceRange[1] : undefined,
+    sort: sortBy !== "relevance" ? sortBy : undefined
   });
+
+  // Client-side pagination logic
+  const totalItems = products?.length || 0;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const currentProducts = products?.slice(startIndex, endIndex);
 
   const handleCategoryChange = (value: string) => {
     const newParams = new URLSearchParams(searchParams);
@@ -127,6 +150,8 @@ export default function SearchResults() {
     setSelectedForms([]);
     setSelectedUses([]);
     setPriceRange([0, 5000]);
+    setSortBy("relevance");
+    setCurrentPage(1);
   };
 
   const activeFiltersCount = 
@@ -316,19 +341,35 @@ export default function SearchResults() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 md:hidden">
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Filter className="w-4 h-4 mr-2" /> Filters
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right">
-                <div className="mt-6">
-                  <FilterContent />
-                </div>
-              </SheetContent>
-            </Sheet>
+          <div className="flex items-center gap-2">
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-[180px]">
+                <ArrowUpDown className="w-4 h-4 mr-2 text-muted-foreground" />
+                <SelectValue placeholder="Sort By" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="relevance">Relevance</SelectItem>
+                <SelectItem value="price_asc">Price: Low to High</SelectItem>
+                <SelectItem value="price_desc">Price: High to Low</SelectItem>
+                <SelectItem value="name_asc">Name: A to Z</SelectItem>
+                <SelectItem value="name_desc">Name: Z to A</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="md:hidden">
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="icon">
+                    <Filter className="w-4 h-4" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right">
+                  <div className="mt-6">
+                    <FilterContent />
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
           </div>
         </div>
 
@@ -353,59 +394,113 @@ export default function SearchResults() {
                 </Button>
               </div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {products.map((product, index) => (
-                  <motion.div
-                    key={product._id}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.3, delay: index * 0.05 }}
-                    className="group relative bg-white dark:bg-card rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer border border-border flex flex-col h-full"
-                    onClick={() => navigate(`/product/${product._id}`)}
-                  >
-                    <div className="p-3 h-full flex flex-col">
-                      <div className="relative aspect-square w-full flex items-center justify-center bg-secondary rounded-lg overflow-hidden mb-3">
-                        {product.imageUrl ? (
-                          <img 
-                            src={product.imageUrl} 
-                            alt={product.name}
-                            className="w-full h-full object-cover mix-blend-multiply dark:mix-blend-normal transition-transform duration-500 group-hover:scale-105"
-                          />
-                        ) : (
-                          <div className="flex flex-col items-center justify-center text-muted-foreground/50">
-                            <Activity className="h-6 w-6 mb-1" />
-                            <span className="text-[10px]">No Image</span>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="mb-2 flex-1">
-                        <div className="flex flex-wrap gap-1 mb-1.5">
-                          <Badge variant="secondary" className="bg-secondary/50 text-secondary-foreground hover:bg-secondary/80 rounded-md px-1.5 py-0 text-[10px] font-normal truncate max-w-full inline-block">
-                            {product.category || "Homeopathy"}
-                          </Badge>
-                          {product.brand && (
-                            <Badge variant="outline" className="text-muted-foreground border-border rounded-md px-1.5 py-0 text-[10px] font-normal truncate max-w-full inline-block">
-                              {product.brand}
-                            </Badge>
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
+                  {currentProducts?.map((product, index) => (
+                    <motion.div
+                      key={product._id}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.3, delay: index * 0.05 }}
+                      className="group relative bg-white dark:bg-card rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer border border-border flex flex-col h-full"
+                      onClick={() => navigate(`/product/${product._id}`)}
+                    >
+                      <div className="p-3 h-full flex flex-col">
+                        <div className="relative aspect-square w-full flex items-center justify-center bg-secondary rounded-lg overflow-hidden mb-3">
+                          {product.imageUrl ? (
+                            <img 
+                              src={product.imageUrl} 
+                              alt={product.name}
+                              className="w-full h-full object-cover mix-blend-multiply dark:mix-blend-normal transition-transform duration-500 group-hover:scale-105"
+                            />
+                          ) : (
+                            <div className="flex flex-col items-center justify-center text-muted-foreground/50">
+                              <Activity className="h-6 w-6 mb-1" />
+                              <span className="text-[10px]">No Image</span>
+                            </div>
                           )}
                         </div>
-                        <h4 className="text-sm font-semibold leading-tight group-hover:text-primary transition-colors line-clamp-2 mb-1" title={product.name}>{product.name}</h4>
-                        <p className="text-muted-foreground line-clamp-2 text-[10px]">
-                          {product.description}
-                        </p>
+
+                        <div className="mb-2 flex-1">
+                          <div className="flex flex-wrap gap-1 mb-1.5">
+                            <Badge variant="secondary" className="bg-secondary/50 text-secondary-foreground hover:bg-secondary/80 rounded-md px-1.5 py-0 text-[10px] font-normal truncate max-w-full inline-block">
+                              {product.category || "Homeopathy"}
+                            </Badge>
+                            {product.brand && (
+                              <Badge variant="outline" className="text-muted-foreground border-border rounded-md px-1.5 py-0 text-[10px] font-normal truncate max-w-full inline-block">
+                                {product.brand}
+                              </Badge>
+                            )}
+                          </div>
+                          <h4 className="text-sm font-semibold leading-tight group-hover:text-primary transition-colors line-clamp-2 mb-1" title={product.name}>{product.name}</h4>
+                          <p className="text-muted-foreground line-clamp-2 text-[10px]">
+                            {product.description}
+                          </p>
+                        </div>
+                        
+                        <div className="flex items-center justify-between mt-auto pt-2 border-t border-border/50">
+                          <span className="text-sm font-bold text-lime-600">₹{product.basePrice}</span>
+                          <Button size="icon" className="h-7 w-7 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm">
+                            <ShoppingCart className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </div>
+                    </motion.div>
+                  ))}
+                </div>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious 
+                          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                          className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                        />
+                      </PaginationItem>
                       
-                      <div className="flex items-center justify-between mt-auto pt-2 border-t border-border/50">
-                        <span className="text-sm font-bold text-lime-600">₹{product.basePrice}</span>
-                        <Button size="icon" className="h-7 w-7 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm">
-                          <ShoppingCart className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                        // Show first, last, and pages around current
+                        if (
+                          page === 1 || 
+                          page === totalPages || 
+                          (page >= currentPage - 1 && page <= currentPage + 1)
+                        ) {
+                          return (
+                            <PaginationItem key={page}>
+                              <PaginationLink 
+                                isActive={page === currentPage}
+                                onClick={() => setCurrentPage(page)}
+                                className="cursor-pointer"
+                              >
+                                {page}
+                              </PaginationLink>
+                            </PaginationItem>
+                          );
+                        } else if (
+                          page === currentPage - 2 || 
+                          page === currentPage + 2
+                        ) {
+                          return (
+                            <PaginationItem key={page}>
+                              <PaginationEllipsis />
+                            </PaginationItem>
+                          );
+                        }
+                        return null;
+                      })}
+
+                      <PaginationItem>
+                        <PaginationNext 
+                          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                          className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                )}
+              </>
             )}
           </div>
 

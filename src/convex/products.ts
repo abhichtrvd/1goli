@@ -160,6 +160,7 @@ export const searchProducts = query({
     symptoms: v.optional(v.array(v.string())),
     minPrice: v.optional(v.number()),
     maxPrice: v.optional(v.number()),
+    sort: v.optional(v.string()), // Added sort argument
   },
   handler: async (ctx, args) => {
     // Simple search implementation
@@ -200,7 +201,8 @@ export const searchProducts = query({
       filtered = filtered.filter((p) => p.basePrice <= args.maxPrice!);
     }
 
-    if (args.query) {
+    // Scoring logic (only if query is present and NO explicit sort is requested)
+    if (args.query && !args.sort) {
       const lowerQuery = args.query.toLowerCase();
       
       // Calculate relevance score
@@ -241,6 +243,39 @@ export const searchProducts = query({
         .filter(item => item.score > 0)
         .sort((a, b) => b.score - a.score)
         .map(item => item.product);
+    } else if (args.query) {
+       // If query is present but we are sorting by something else, we still need to filter by query match
+       // Simple inclusion check
+       const lowerQuery = args.query.toLowerCase();
+       filtered = filtered.filter(p => {
+          const name = p.name.toLowerCase();
+          const brand = p.brand?.toLowerCase() || "";
+          const description = p.description.toLowerCase();
+          const tags = p.symptomsTags.map(t => t.toLowerCase());
+          
+          return name.includes(lowerQuery) || 
+                 brand.includes(lowerQuery) || 
+                 description.includes(lowerQuery) ||
+                 tags.some(t => t.includes(lowerQuery));
+       });
+    }
+
+    // Apply explicit sorting
+    if (args.sort) {
+      filtered.sort((a, b) => {
+        switch (args.sort) {
+          case "price_asc":
+            return a.basePrice - b.basePrice;
+          case "price_desc":
+            return b.basePrice - a.basePrice;
+          case "name_asc":
+            return a.name.localeCompare(b.name);
+          case "name_desc":
+            return b.name.localeCompare(a.name);
+          default:
+            return 0;
+        }
+      });
     }
 
     return await Promise.all(
