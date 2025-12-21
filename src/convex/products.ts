@@ -158,6 +158,8 @@ export const searchProducts = query({
     brands: v.optional(v.array(v.string())),
     forms: v.optional(v.array(v.string())),
     symptoms: v.optional(v.array(v.string())),
+    minPrice: v.optional(v.number()),
+    maxPrice: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     // Simple search implementation
@@ -188,6 +190,14 @@ export const searchProducts = query({
 
     if (args.symptoms && args.symptoms.length > 0) {
       filtered = filtered.filter((p) => p.symptomsTags && p.symptomsTags.some(s => args.symptoms!.includes(s)));
+    }
+
+    if (args.minPrice !== undefined) {
+      filtered = filtered.filter((p) => p.basePrice >= args.minPrice!);
+    }
+
+    if (args.maxPrice !== undefined) {
+      filtered = filtered.filter((p) => p.basePrice <= args.maxPrice!);
     }
 
     if (args.query) {

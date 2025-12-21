@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Slider } from "@/components/ui/slider";
 
 const CATEGORIES = [
   "Dilution",
@@ -74,6 +75,7 @@ export default function SearchResults() {
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [selectedForms, setSelectedForms] = useState<string[]>([]);
   const [selectedUses, setSelectedUses] = useState<string[]>([]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 5000]);
   
   // Sync URL params with state if needed, or just use state for filters
   // For simplicity, we'll keep category in URL but other filters in local state for now
@@ -83,7 +85,9 @@ export default function SearchResults() {
     category, 
     brands: selectedBrands.length > 0 ? selectedBrands : undefined,
     forms: selectedForms.length > 0 ? selectedForms : undefined,
-    symptoms: selectedUses.length > 0 ? selectedUses : undefined
+    symptoms: selectedUses.length > 0 ? selectedUses : undefined,
+    minPrice: priceRange[0],
+    maxPrice: priceRange[1] < 5000 ? priceRange[1] : undefined
   });
 
   const handleCategoryChange = (value: string) => {
@@ -122,13 +126,15 @@ export default function SearchResults() {
     setSelectedBrands([]);
     setSelectedForms([]);
     setSelectedUses([]);
+    setPriceRange([0, 5000]);
   };
 
   const activeFiltersCount = 
     (category ? 1 : 0) + 
     selectedBrands.length + 
     selectedForms.length + 
-    selectedUses.length;
+    selectedUses.length +
+    (priceRange[0] > 0 || priceRange[1] < 5000 ? 1 : 0);
 
   const FilterContent = () => (
     <div className="space-y-6">
@@ -151,6 +157,63 @@ export default function SearchResults() {
             Clear All
           </Button>
         )}
+      </div>
+
+      <Separator />
+
+      <div className="space-y-3">
+        <h4 className="text-sm font-medium">Category</h4>
+        <ScrollArea className="h-[150px] pr-4">
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="cat-all" 
+                checked={!category}
+                onCheckedChange={() => handleCategoryChange("all")}
+              />
+              <Label 
+                htmlFor="cat-all" 
+                className="text-sm font-normal cursor-pointer leading-none"
+              >
+                All Categories
+              </Label>
+            </div>
+            {CATEGORIES.map((cat) => (
+              <div key={cat} className="flex items-center space-x-2">
+                <Checkbox 
+                  id={`cat-${cat}`} 
+                  checked={category === cat}
+                  onCheckedChange={() => handleCategoryChange(cat)}
+                />
+                <Label 
+                  htmlFor={`cat-${cat}`} 
+                  className="text-sm font-normal cursor-pointer leading-none"
+                >
+                  {cat}
+                </Label>
+              </div>
+            ))}
+          </div>
+        </ScrollArea>
+      </div>
+
+      <Separator />
+
+      <div className="space-y-3">
+        <div className="flex justify-between items-center">
+          <h4 className="text-sm font-medium">Price Range</h4>
+          <span className="text-xs text-muted-foreground">₹{priceRange[0]} - ₹{priceRange[1]}+</span>
+        </div>
+        <div className="px-2">
+          <Slider
+            defaultValue={[0, 5000]}
+            value={[priceRange[0], priceRange[1]]}
+            max={5000}
+            step={100}
+            onValueChange={(val) => setPriceRange([val[0], val[1]])}
+            className="py-4"
+          />
+        </div>
       </div>
 
       <Separator />
