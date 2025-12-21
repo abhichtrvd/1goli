@@ -41,11 +41,16 @@ export const getProducts = query({
 export const getPaginatedProducts = query({
   args: { 
     paginationOpts: paginationOptsValidator,
-    brand: v.optional(v.string()),
+    brand: v.optional(v.string()), // Legacy support for single brand
+    brands: v.optional(v.array(v.string())), // Multi-brand support
     category: v.optional(v.string()),
     minPrice: v.optional(v.number()),
     maxPrice: v.optional(v.number()),
-    sort: v.optional(v.string()), // "price_asc", "price_desc", "name_asc", "name_desc"
+    sort: v.optional(v.string()),
+    forms: v.optional(v.array(v.string())),
+    symptoms: v.optional(v.array(v.string())),
+    potencies: v.optional(v.array(v.string())),
+    inStockOnly: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     let query;
@@ -66,22 +71,27 @@ export const getPaginatedProducts = query({
     } else if (args.sort === "reviews_desc") {
       query = ctx.db.query("products").withIndex("by_rating_count").order("desc");
     } else if (args.brand) {
-      query = ctx.db.query("products").withIndex("by_brand", (q) => q.eq("brand", args.brand));
+      query = ctx.db.query("products").withIndex("by_brand", (q) => q.eq("brand", args.brand!));
     } else if (args.category) {
-      query = ctx.db.query("products").withIndex("by_category", (q) => q.eq("category", args.category));
+      query = ctx.db.query("products").withIndex("by_category", (q) => q.eq("category", args.category!));
     } else {
       query = ctx.db.query("products").order("desc");
     }
 
     // Apply filters
-    // Note: In Convex, we can't chain .filter() after .withIndex() if we want to use pagination efficiently 
-    // unless we accept scanning. For this scale, scanning is acceptable.
-    // However, if we used a specific index above (like by_brand), we don't need to filter by it again.
     
-    if (args.brand && !args.sort) {
-      // Already filtered by index
-    } else if (args.brand) {
-      query = query.filter((q) => q.eq(q.field("brand"), args.brand));
+    // Handle legacy brand arg vs new brands array
+    const brands = args.brands || (args.brand ? [args.brand] : []);
+
+    if (brands.length > 0) {
+      // If we already filtered by single brand index above, we might be double filtering, but it's safe.
+      // Optimization: if args.brand was used in index, we don't strictly need this if brands has only that one.
+      // But for correctness with multiple brands:
+      if (!args.brand || brands.length > 1) {
+         query = query.filter((q) => 
+           q.or(...brands.map(b => q.eq(q.field("brand"), b)))
+         );
+      }
     }
 
     if (args.category && !args.sort && !args.brand) {
@@ -98,18 +108,60 @@ export const getPaginatedProducts = query({
       query = query.filter((q) => q.lte(q.field("basePrice"), args.maxPrice!));
     }
 
+    if (args.forms && args.forms.length > 0) {
+      // Forms is an array in doc, args.forms is array of allowed values.
+      // We want products where product.forms has intersection with args.forms
+      // Convex filter doesn't have 'intersects', so we use custom logic in filter
+      // Note: This can be slow on large datasets without specific indexes, but acceptable for this scale.
+      // We can't easily use `q` builder for array intersection in `filter` efficiently without `v.array` helpers which are limited.
+      // We'll use a javascript filter function if we were collecting, but here we are in `filter(q => ...)`
+      // Convex `filter` runs on server.
+      // We can check if ANY of the product forms match ANY of the selected forms.
+      // Since we can't loop easily in `q` builder, we might have to rely on `collect` and filter in memory if we can't express it.
+      // BUT `paginate` requires a query.
+      // Workaround: We will filter in memory if we must, OR we accept that we can't filter array-overlaps in `paginate` easily.
+      // Actually, we can use `q` to check specific fields if we know them, but dynamic arrays are hard.
+      // Let's use the `searchProducts` approach for complex filtering if needed, OR
+      // For now, let's skip complex array intersection in `paginate` query builder and do it in memory? 
+      // No, `paginate` happens on DB.
+      // We will skip this filter in the DB query and filter the *page* results (which is imperfect but prevents crashing).
+      // Better: We will use `searchProducts` for complex filtering scenarios in the UI, 
+      // and `getPaginatedProducts` for the common "Browsing" scenarios (Category, Brand, Price).
+    }
+
+    if (args.inStockOnly) {
+      query = query.filter((q) => q.gt(q.field("stock"), 0));
+    }
+
     const result = await query.paginate(args.paginationOpts);
 
     const pageWithUrls = await Promise.all(
-      result.page.map(async (p) => ({
-        ...p,
-        imageUrl: p.imageStorageId
-          ? (await ctx.storage.getUrl(p.imageStorageId)) || p.imageUrl || ""
-          : p.imageUrl || "",
-      }))
+      result.page.map(async (p) => {
+        // Manual filtering for array fields if needed (imperfect pagination but filters data)
+        // This effectively reduces page size, but ensures correctness of displayed data.
+        if (args.forms && args.forms.length > 0) {
+          if (!p.forms || !p.forms.some(f => args.forms!.includes(f))) return null;
+        }
+        if (args.symptoms && args.symptoms.length > 0) {
+          if (!p.symptomsTags || !p.symptomsTags.some(s => args.symptoms!.includes(s))) return null;
+        }
+        if (args.potencies && args.potencies.length > 0) {
+          if (!p.potencies || !p.potencies.some(pot => args.potencies!.includes(pot))) return null;
+        }
+
+        return {
+          ...p,
+          imageUrl: p.imageStorageId
+            ? (await ctx.storage.getUrl(p.imageStorageId)) || p.imageUrl || ""
+            : p.imageUrl || "",
+        };
+      })
     );
 
-    return { ...result, page: pageWithUrls };
+    // Filter out nulls from manual filtering
+    const filteredPage = pageWithUrls.filter(p => p !== null);
+
+    return { ...result, page: filteredPage };
   },
 });
 

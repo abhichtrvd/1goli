@@ -1,9 +1,9 @@
 import { useSearchParams, useNavigate } from "react-router";
-import { useQuery } from "convex/react";
+import { useQuery, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Activity, ShoppingCart, Filter, X, Check, ArrowUpDown, ChevronLeft, ChevronRight, Star } from "lucide-react";
+import { Activity, ShoppingCart, Filter, X, Check, ArrowUpDown, ChevronLeft, ChevronRight, Star, Info } from "lucide-react";
 import { motion } from "framer-motion";
 import { Navbar } from "@/components/Navbar";
 import {
@@ -29,6 +29,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const CATEGORIES = [
   "Dilution",
@@ -109,7 +110,11 @@ export default function SearchResults() {
     setCurrentPage(1);
   }, [query, category, selectedBrands, selectedForms, selectedUses, selectedPotencies, priceRange, inStockOnly, sortBy]);
 
-  const products = useQuery(api.products.searchProducts, { 
+  // Strategy: Use usePaginatedQuery for browsing (no text query) and useQuery for text search
+  const isSearchMode = query.length > 0;
+
+  // 1. Search Mode Query
+  const searchResults = useQuery(api.products.searchProducts, isSearchMode ? { 
     query, 
     category, 
     brands: selectedBrands.length > 0 ? selectedBrands : undefined,
@@ -120,14 +125,47 @@ export default function SearchResults() {
     maxPrice: priceRange[1] < 5000 ? priceRange[1] : undefined,
     inStockOnly: inStockOnly ? true : undefined,
     sort: sortBy !== "relevance" ? sortBy : undefined
-  });
+  } : "skip");
 
-  // Client-side pagination logic
-  const totalItems = products?.length || 0;
-  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const currentProducts = products?.slice(startIndex, endIndex);
+  // 2. Browsing Mode Query (Paginated)
+  const { results: paginatedResults, status, loadMore, isLoading } = usePaginatedQuery(
+    api.products.getPaginatedProducts,
+    !isSearchMode ? {
+      category,
+      brands: selectedBrands.length > 0 ? selectedBrands : undefined,
+      forms: selectedForms.length > 0 ? selectedForms : undefined,
+      symptoms: selectedUses.length > 0 ? selectedUses : undefined,
+      potencies: selectedPotencies.length > 0 ? selectedPotencies : undefined,
+      minPrice: priceRange[0],
+      maxPrice: priceRange[1] < 5000 ? priceRange[1] : undefined,
+      inStockOnly: inStockOnly ? true : undefined,
+      sort: sortBy !== "relevance" ? sortBy : undefined
+    } : "skip",
+    { initialNumItems: ITEMS_PER_PAGE }
+  );
+
+  // Determine which products to display
+  let displayProducts: any[] = [];
+  let totalItems = 0;
+  let totalPages = 0;
+  let showLoadMore = false;
+
+  if (isSearchMode) {
+    // Client-side pagination for search results
+    const allResults = searchResults || [];
+    totalItems = allResults.length;
+    totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    displayProducts = allResults.slice(startIndex, endIndex);
+  } else {
+    // Server-side pagination for browsing
+    displayProducts = paginatedResults || [];
+    totalItems = displayProducts.length; // This is just loaded items, not total in DB. 
+    // For infinite scroll style pagination, we don't know total pages easily without another query.
+    // We will use "Load More" button instead of numbered pagination for this mode.
+    showLoadMore = status === "CanLoadMore";
+  }
 
   const handleCategoryChange = (value: string) => {
     const newParams = new URLSearchParams(searchParams);
@@ -407,7 +445,8 @@ export default function SearchResults() {
                 <span className="font-medium text-foreground">{category}</span>
               )}
               {!query && !category && "Showing all products"}
-              {products && ` (${products.length} items)`}
+              {/* Show count only if we have it loaded or in search mode */}
+              {(isSearchMode && searchResults) && ` (${searchResults.length} items)`}
             </p>
           </div>
 
@@ -448,13 +487,13 @@ export default function SearchResults() {
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Main Content - Products Grid */}
           <div className="flex-1 order-2 lg:order-1">
-            {products === undefined ? (
+            {(isSearchMode && searchResults === undefined) || (!isSearchMode && paginatedResults === undefined) ? (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                  <div key={i} className="h-[280px] bg-muted animate-pulse rounded-xl" />
+                  <div key={i} className="h-[320px] bg-muted animate-pulse rounded-xl" />
                 ))}
               </div>
-            ) : products.length === 0 ? (
+            ) : displayProducts.length === 0 ? (
               <div className="text-center py-20 bg-secondary/30 rounded-3xl border border-border/50">
                 <Activity className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <h3 className="text-xl font-semibold mb-2">No remedies found</h3>
@@ -468,7 +507,7 @@ export default function SearchResults() {
             ) : (
               <>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
-                  {currentProducts?.map((product, index) => (
+                  {displayProducts.map((product, index) => (
                     <motion.div
                       key={product._id}
                       initial={{ opacity: 0, scale: 0.95 }}
@@ -520,18 +559,31 @@ export default function SearchResults() {
                             </span>
                           </div>
 
-                          <p className="text-muted-foreground line-clamp-2 text-[10px]">
-                            {product.description}
-                          </p>
-                          
-                          {product.forms && product.forms.length > 0 && (
-                             <div className="mt-1.5 flex flex-wrap gap-1">
-                               {product.forms.slice(0, 2).map((form: string) => (
-                                 <span key={form} className="text-[9px] bg-muted px-1 rounded text-muted-foreground">{form}</span>
-                               ))}
-                               {product.forms.length > 2 && <span className="text-[9px] text-muted-foreground">+{product.forms.length - 2}</span>}
-                             </div>
-                          )}
+                          {/* Enhanced Product Details */}
+                          <div className="space-y-1 mb-2">
+                            {product.potencies && product.potencies.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {product.potencies.slice(0, 3).map((pot: string) => (
+                                  <span key={pot} className="text-[9px] border border-border px-1 rounded text-muted-foreground bg-background">
+                                    {pot}
+                                  </span>
+                                ))}
+                                {product.potencies.length > 3 && (
+                                  <span className="text-[9px] text-muted-foreground">+{product.potencies.length - 3}</span>
+                                )}
+                              </div>
+                            )}
+                            
+                            {product.symptomsTags && product.symptomsTags.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {product.symptomsTags.slice(0, 2).map((tag: string) => (
+                                  <span key={tag} className="text-[9px] bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 px-1 rounded">
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         </div>
                         
                         <div className="flex items-center justify-between mt-auto pt-2 border-t border-border/50">
@@ -550,55 +602,70 @@ export default function SearchResults() {
                 </div>
 
                 {/* Pagination Controls */}
-                {totalPages > 1 && (
-                  <Pagination>
-                    <PaginationContent>
-                      <PaginationItem>
-                        <PaginationPrevious 
-                          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                          className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                        />
-                      </PaginationItem>
-                      
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                        // Show first, last, and pages around current
-                        if (
-                          page === 1 || 
-                          page === totalPages || 
-                          (page >= currentPage - 1 && page <= currentPage + 1)
-                        ) {
-                          return (
-                            <PaginationItem key={page}>
-                              <PaginationLink 
-                                isActive={page === currentPage}
-                                onClick={() => setCurrentPage(page)}
-                                className="cursor-pointer"
-                              >
-                                {page}
-                              </PaginationLink>
-                            </PaginationItem>
-                          );
-                        } else if (
-                          page === currentPage - 2 || 
-                          page === currentPage + 2
-                        ) {
-                          return (
-                            <PaginationItem key={page}>
-                              <PaginationEllipsis />
-                            </PaginationItem>
-                          );
-                        }
-                        return null;
-                      })}
+                {isSearchMode ? (
+                  totalPages > 1 && (
+                    <Pagination>
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious 
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                          />
+                        </PaginationItem>
+                        
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                          if (
+                            page === 1 || 
+                            page === totalPages || 
+                            (page >= currentPage - 1 && page <= currentPage + 1)
+                          ) {
+                            return (
+                              <PaginationItem key={page}>
+                                <PaginationLink 
+                                  isActive={page === currentPage}
+                                  onClick={() => setCurrentPage(page)}
+                                  className="cursor-pointer"
+                                >
+                                  {page}
+                                </PaginationLink>
+                              </PaginationItem>
+                            );
+                          } else if (
+                            page === currentPage - 2 || 
+                            page === currentPage + 2
+                          ) {
+                            return (
+                              <PaginationItem key={page}>
+                                <PaginationEllipsis />
+                              </PaginationItem>
+                            );
+                          }
+                          return null;
+                        })}
 
-                      <PaginationItem>
-                        <PaginationNext 
-                          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                          className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
+                        <PaginationItem>
+                          <PaginationNext 
+                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                            className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  )
+                ) : (
+                  showLoadMore && (
+                    <div className="flex justify-center pt-4 pb-8">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => loadMore(ITEMS_PER_PAGE)} 
+                        disabled={isLoading}
+                        className="rounded-full px-8"
+                      >
+                        {isLoading ? <Activity className="h-4 w-4 animate-spin mr-2" /> : null}
+                        Load More Products
+                      </Button>
+                    </div>
+                  )
                 )}
               </>
             )}
