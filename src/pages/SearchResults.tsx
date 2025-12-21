@@ -573,16 +573,29 @@ export default function SearchResults() {
                           </div>
 
                           {/* Enhanced Product Details */}
-                          <div className="space-y-1 mb-2">
+                          <div className="space-y-1.5 mb-2">
+                            {product.forms && product.forms.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {product.forms.slice(0, 2).map((form: string) => (
+                                  <span key={form} className="text-[9px] border border-border px-1 rounded text-muted-foreground bg-background">
+                                    {form}
+                                  </span>
+                                ))}
+                                {product.forms.length > 2 && (
+                                  <span className="text-[9px] text-muted-foreground">+{product.forms.length - 2}</span>
+                                )}
+                              </div>
+                            )}
+
                             {product.potencies && product.potencies.length > 0 && (
                               <div className="flex flex-wrap gap-1">
-                                {product.potencies.slice(0, 3).map((pot: string) => (
+                                {product.potencies.slice(0, 2).map((pot: string) => (
                                   <span key={pot} className="text-[9px] border border-border px-1 rounded text-muted-foreground bg-background">
                                     {pot}
                                   </span>
                                 ))}
-                                {product.potencies.length > 3 && (
-                                  <span className="text-[9px] text-muted-foreground">+{product.potencies.length - 3}</span>
+                                {product.potencies.length > 2 && (
+                                  <span className="text-[9px] text-muted-foreground">+{product.potencies.length - 2}</span>
                                 )}
                               </div>
                             )}
@@ -594,6 +607,9 @@ export default function SearchResults() {
                                     {tag}
                                   </span>
                                 ))}
+                                {product.symptomsTags.length > 2 && (
+                                  <span className="text-[9px] text-muted-foreground">+{product.symptomsTags.length - 2}</span>
+                                )}
                               </div>
                             )}
                           </div>

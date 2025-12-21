@@ -127,9 +127,14 @@ export const getPaginatedProducts = query({
     inStockOnly: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    const hasArrayFilters = (args.forms && args.forms.length > 0) || 
+                            (args.symptoms && args.symptoms.length > 0) || 
+                            (args.potencies && args.potencies.length > 0);
+
     let query;
     
     // Base query selection based on sort or primary filter
+    // We keep this logic to optimize the initial fetch even if we filter manually later
     if (args.sort === "price_asc") {
       query = ctx.db.query("products").withIndex("by_price").order("asc");
     } else if (args.sort === "price_desc") {
@@ -153,14 +158,9 @@ export const getPaginatedProducts = query({
     }
 
     // Apply filters
-    
-    // Handle legacy brand arg vs new brands array
     const brands = args.brands || (args.brand ? [args.brand] : []);
 
     if (brands.length > 0) {
-      // If we already filtered by single brand index above, we might be double filtering, but it's safe.
-      // Optimization: if args.brand was used in index, we don't strictly need this if brands has only that one.
-      // But for correctness with multiple brands:
       if (!args.brand || brands.length > 1) {
          query = query.filter((q) => 
            q.or(...brands.map(b => q.eq(q.field("brand"), b)))
@@ -182,60 +182,74 @@ export const getPaginatedProducts = query({
       query = query.filter((q) => q.lte(q.field("basePrice"), args.maxPrice!));
     }
 
-    if (args.forms && args.forms.length > 0) {
-      // Forms is an array in doc, args.forms is array of allowed values.
-      // We want products where product.forms has intersection with args.forms
-      // Convex filter doesn't have 'intersects', so we use custom logic in filter
-      // Note: This can be slow on large datasets without specific indexes, but acceptable for this scale.
-      // We can't easily use `q` builder for array intersection in `filter` efficiently without `v.array` helpers which are limited.
-      // We'll use a javascript filter function if we were collecting, but here we are in `filter(q => ...)`
-      // Convex `filter` runs on server.
-      // We can check if ANY of the product forms match ANY of the selected forms.
-      // Since we can't loop easily in `q` builder, we might have to rely on `collect` and filter in memory if we can't express it.
-      // BUT `paginate` requires a query.
-      // Workaround: We will filter in memory if we must, OR we accept that we can't filter array-overlaps in `paginate` easily.
-      // Actually, we can use `q` to check specific fields if we know them, but dynamic arrays are hard.
-      // Let's use the `searchProducts` approach for complex filtering if needed, OR
-      // For now, let's skip complex array intersection in `paginate` query builder and do it in memory? 
-      // No, `paginate` happens on DB.
-      // We will skip this filter in the DB query and filter the *page* results (which is imperfect but prevents crashing).
-      // Better: We will use `searchProducts` for complex filtering scenarios in the UI, 
-      // and `getPaginatedProducts` for the common "Browsing" scenarios (Category, Brand, Price).
-    }
-
     if (args.inStockOnly) {
       query = query.filter((q) => q.gt(q.field("stock"), 0));
     }
 
-    const result = await query.paginate(args.paginationOpts);
-
-    const pageWithUrls = await Promise.all(
-      result.page.map(async (p) => {
-        // Manual filtering for array fields if needed (imperfect pagination but filters data)
-        // This effectively reduces page size, but ensures correctness of displayed data.
+    // If we have array filters, we must collect all results, filter in memory, and manually paginate
+    // to ensure consistent page sizes.
+    if (hasArrayFilters) {
+      const allProducts = await query.collect();
+      
+      // Manual filtering
+      let filtered = allProducts.filter(p => {
         if (args.forms && args.forms.length > 0) {
-          if (!p.forms || !p.forms.some(f => args.forms!.includes(f))) return null;
+          if (!p.forms || !p.forms.some(f => args.forms!.includes(f))) return false;
         }
         if (args.symptoms && args.symptoms.length > 0) {
-          if (!p.symptomsTags || !p.symptomsTags.some(s => args.symptoms!.includes(s))) return null;
+          if (!p.symptomsTags || !p.symptomsTags.some(s => args.symptoms!.includes(s))) return false;
         }
         if (args.potencies && args.potencies.length > 0) {
-          if (!p.potencies || !p.potencies.some(pot => args.potencies!.includes(pot))) return null;
+          if (!p.potencies || !p.potencies.some(pot => args.potencies!.includes(pot))) return false;
         }
+        return true;
+      });
 
-        return {
+      // Manual sorting (if needed - query might have sorted, but array filtering preserves order usually)
+      // However, if we used an index for filtering (e.g. brand) but wanted price sort, the query above
+      // might not have sorted by price if it used brand index.
+      // The query construction above prioritizes sort index over filter index, so sort should be correct.
+      // EXCEPT if we fell through to default sort.
+      // Let's trust the query sort order for now as it's complex to replicate all sort logic here.
+      
+      // Manual Pagination
+      const cursor = args.paginationOpts.cursor ? parseInt(args.paginationOpts.cursor) : 0;
+      const numItems = args.paginationOpts.numItems;
+      
+      const pageItems = filtered.slice(cursor, cursor + numItems);
+      const isDone = cursor + numItems >= filtered.length;
+      const continueCursor = (cursor + numItems).toString();
+
+      const pageWithUrls = await Promise.all(
+        pageItems.map(async (p) => ({
           ...p,
           imageUrl: p.imageStorageId
             ? (await ctx.storage.getUrl(p.imageStorageId)) || p.imageUrl || ""
             : p.imageUrl || "",
-        };
-      })
-    );
+        }))
+      );
 
-    // Filter out nulls from manual filtering
-    const filteredPage = pageWithUrls.filter(p => p !== null);
+      return {
+        page: pageWithUrls,
+        isDone,
+        continueCursor
+      };
 
-    return { ...result, page: filteredPage };
+    } else {
+      // Use efficient DB pagination if no array filters
+      const result = await query.paginate(args.paginationOpts);
+
+      const pageWithUrls = await Promise.all(
+        result.page.map(async (p) => ({
+          ...p,
+          imageUrl: p.imageStorageId
+            ? (await ctx.storage.getUrl(p.imageStorageId)) || p.imageUrl || ""
+            : p.imageUrl || "",
+        }))
+      );
+
+      return { ...result, page: pageWithUrls };
+    }
   },
 });
 
