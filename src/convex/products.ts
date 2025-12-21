@@ -4,6 +4,16 @@ import { requireAdmin } from "./users";
 import { paginationOptsValidator } from "convex/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
+// Helper to generate search text
+function generateSearchText(
+  name: string, 
+  brand: string | undefined, 
+  description: string, 
+  symptomsTags: string[]
+): string {
+  return `${name} ${brand || ""} ${description} ${symptomsTags.join(" ")}`.toLowerCase();
+}
+
 export const getProducts = query({
   args: {},
   handler: async (ctx) => {
@@ -165,12 +175,19 @@ export const searchProducts = query({
     inStockOnly: v.optional(v.boolean()), 
   },
   handler: async (ctx, args) => {
-    // Simple search implementation
-    // In a real app, we would use ctx.db.query("products").withSearchIndex(...)
-    // But for "Intelligent Symptom Search" filtering by tags, we can do a scan if data is small
-    // or use the search index.
-    
-    const products = await ctx.db.query("products").collect();
+    let products;
+
+    // Use search index if query is present
+    if (args.query) {
+      products = await ctx.db
+        .query("products")
+        .withSearchIndex("search_all", (q) => q.search("searchText", args.query!))
+        .collect();
+    } else {
+      // Fallback to full scan or specific index if no query
+      // Note: We could optimize this with indexes for specific filters if needed
+      products = await ctx.db.query("products").collect();
+    }
     
     let filtered = products;
 
@@ -211,82 +228,10 @@ export const searchProducts = query({
       filtered = filtered.filter((p) => p.stock > 0);
     }
 
-    // Scoring logic (only if query is present and NO explicit sort is requested)
-    if (args.query && !args.sort) {
-      const lowerQuery = args.query.toLowerCase();
-      const queryTerms = lowerQuery.split(/\s+/).filter(t => t.length > 2); // Split into terms for better matching
-      
-      // Calculate relevance score
-      const scoredProducts = filtered.map((product) => {
-        let score = 0;
-        const name = product.name.toLowerCase();
-        const brand = product.brand?.toLowerCase() || "";
-        const category = product.category?.toLowerCase() || "";
-        const description = product.description.toLowerCase();
-        const tags = product.symptomsTags.map(t => t.toLowerCase());
-        
-        // Exact name match gets highest priority
-        if (name === lowerQuery) score += 100;
-        // Starts with query
-        else if (name.startsWith(lowerQuery)) score += 50;
-        // Name contains query
-        else if (name.includes(lowerQuery)) score += 30;
-        
-        // Brand match
-        if (brand === lowerQuery) score += 40; // Exact brand match
-        else if (brand.includes(lowerQuery)) score += 15;
-        
-        // Category match
-        if (category === lowerQuery) score += 30; // Exact category match
-        else if (category.includes(lowerQuery)) score += 15;
-        
-        // Tag match
-        if (tags.includes(lowerQuery)) score += 40; // Exact tag match
-        else if (tags.some(tag => tag.includes(lowerQuery))) score += 20;
-        
-        // Description match (lowest priority)
-        if (description.includes(lowerQuery)) score += 5;
-        
-        // Form match
-        if (product.forms?.some(f => f.toLowerCase().includes(lowerQuery))) score += 10;
-
-        // Multi-term matching (boost if multiple terms match)
-        if (queryTerms.length > 1) {
-           let termMatches = 0;
-           for (const term of queryTerms) {
-             if (name.includes(term) || brand.includes(term) || tags.some(t => t.includes(term))) {
-               termMatches++;
-             }
-           }
-           score += (termMatches * 10);
-        }
-
-        return { product, score };
-      });
-
-      // Filter out non-matches and sort by score
-      filtered = scoredProducts
-        .filter(item => item.score > 0)
-        .sort((a, b) => b.score - a.score)
-        .map(item => item.product);
-    } else if (args.query) {
-       // If query is present but we are sorting by something else, we still need to filter by query match
-       // Simple inclusion check
-       const lowerQuery = args.query.toLowerCase();
-       filtered = filtered.filter(p => {
-          const name = p.name.toLowerCase();
-          const brand = p.brand?.toLowerCase() || "";
-          const description = p.description.toLowerCase();
-          const tags = p.symptomsTags.map(t => t.toLowerCase());
-          
-          return name.includes(lowerQuery) || 
-                 brand.includes(lowerQuery) || 
-                 description.includes(lowerQuery) ||
-                 tags.some(t => t.includes(lowerQuery));
-       });
-    }
-
-    // Apply explicit sorting
+    // If using search index, results are already sorted by relevance.
+    // Only apply manual sorting if requested or if NOT using search index (and thus no relevance sort)
+    // However, if we have a query AND a sort, the sort overrides relevance.
+    
     if (args.sort) {
       filtered.sort((a, b) => {
         switch (args.sort) {
@@ -306,6 +251,9 @@ export const searchProducts = query({
             return 0;
         }
       });
+    } else if (!args.query) {
+       // Default sort if no query and no sort specified
+       filtered.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0));
     }
 
     return await Promise.all(
@@ -314,7 +262,6 @@ export const searchProducts = query({
         imageUrl: p.imageStorageId
           ? (await ctx.storage.getUrl(p.imageStorageId)) || p.imageUrl || ""
           : p.imageUrl || "",
-        // We don't need gallery for search results usually, keeping it light
       }))
     );
   },
@@ -359,12 +306,20 @@ export const createProduct = mutation({
     await requireAdmin(ctx);
     const userId = await getAuthUserId(ctx);
     
+    const searchText = generateSearchText(
+      args.name, 
+      args.brand, 
+      args.description, 
+      args.symptomsTags
+    );
+
     const productId = await ctx.db.insert("products", {
       ...args,
       category: args.category || "Classical",
       availability: args.availability || "in_stock",
       images: args.images || [],
       packingSizes: args.packingSizes || ["30ml", "100ml"],
+      searchText,
     });
 
     await ctx.db.insert("auditLogs", {
@@ -412,7 +367,22 @@ export const updateProduct = mutation({
     await requireAdmin(ctx);
     const userId = await getAuthUserId(ctx);
     const { id, ...updates } = args;
-    await ctx.db.patch(id, updates);
+    
+    const product = await ctx.db.get(id);
+    if (!product) throw new Error("Product not found");
+
+    // Re-generate search text if relevant fields are updated
+    let searchText = product.searchText;
+    if (updates.name || updates.brand || updates.description || updates.symptomsTags) {
+      searchText = generateSearchText(
+        updates.name || product.name,
+        updates.brand !== undefined ? updates.brand : product.brand,
+        updates.description || product.description,
+        updates.symptomsTags || product.symptomsTags
+      );
+    }
+
+    await ctx.db.patch(id, { ...updates, searchText });
 
     await ctx.db.insert("auditLogs", {
       action: "update_product",
@@ -566,7 +536,31 @@ export const seedProducts = mutation({
     ];
 
     for (const product of [...products, ...products.slice(3)]) {
-      await ctx.db.insert("products", product);
+      const searchText = generateSearchText(
+        product.name,
+        product.brand,
+        product.description,
+        product.symptomsTags
+      );
+      await ctx.db.insert("products", { ...product, searchText });
+    }
+  },
+});
+
+export const backfillSearchText = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const products = await ctx.db.query("products").collect();
+    for (const product of products) {
+      if (!product.searchText) {
+        const searchText = generateSearchText(
+          product.name,
+          product.brand,
+          product.description,
+          product.symptomsTags
+        );
+        await ctx.db.patch(product._id, { searchText });
+      }
     }
   },
 });

@@ -3,7 +3,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Activity, ShoppingCart, Filter, X, Check, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { Activity, ShoppingCart, Filter, X, Check, ArrowUpDown, ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { motion } from "framer-motion";
 import { Navbar } from "@/components/Navbar";
 import {
@@ -491,6 +491,11 @@ export default function SearchResults() {
                               <span className="text-[10px]">No Image</span>
                             </div>
                           )}
+                          {product.stock <= 0 && (
+                            <div className="absolute inset-0 bg-white/60 flex items-center justify-center">
+                              <Badge variant="destructive">Out of Stock</Badge>
+                            </div>
+                          )}
                         </div>
 
                         <div className="mb-2 flex-1">
@@ -505,14 +510,37 @@ export default function SearchResults() {
                             )}
                           </div>
                           <h4 className="text-sm font-semibold leading-tight group-hover:text-primary transition-colors line-clamp-2 mb-1" title={product.name}>{product.name}</h4>
+                          
+                          <div className="flex items-center gap-1 mb-1.5">
+                            <div className="flex items-center bg-green-700 text-white px-1 py-0 rounded-[2px] text-[9px] font-bold">
+                              {product.averageRating ? product.averageRating.toFixed(1) : "0.0"} <Star className="h-2 w-2 ml-0.5 fill-current" />
+                            </div>
+                            <span className="text-[9px] text-muted-foreground">
+                              ({product.ratingCount || 0} reviews)
+                            </span>
+                          </div>
+
                           <p className="text-muted-foreground line-clamp-2 text-[10px]">
                             {product.description}
                           </p>
+                          
+                          {product.forms && product.forms.length > 0 && (
+                             <div className="mt-1.5 flex flex-wrap gap-1">
+                               {product.forms.slice(0, 2).map((form: string) => (
+                                 <span key={form} className="text-[9px] bg-muted px-1 rounded text-muted-foreground">{form}</span>
+                               ))}
+                               {product.forms.length > 2 && <span className="text-[9px] text-muted-foreground">+{product.forms.length - 2}</span>}
+                             </div>
+                          )}
                         </div>
                         
                         <div className="flex items-center justify-between mt-auto pt-2 border-t border-border/50">
                           <span className="text-sm font-bold text-lime-600">₹{product.basePrice}</span>
-                          <Button size="icon" className="h-7 w-7 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm">
+                          <Button 
+                            size="icon" 
+                            className="h-7 w-7 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
+                            disabled={product.stock <= 0}
+                          >
                             <ShoppingCart className="h-3.5 w-3.5" />
                           </Button>
                         </div>

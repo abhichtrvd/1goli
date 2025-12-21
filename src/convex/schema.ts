@@ -72,10 +72,17 @@ const schema = defineSchema(
       // Rating Fields (Cached for performance)
       ratingCount: v.optional(v.number()),
       averageRating: v.optional(v.number()),
+
+      // Search Field
+      searchText: v.optional(v.string()),
     })
       .searchIndex("search_body", {
         searchField: "description",
         filterFields: ["name"],
+      })
+      .searchIndex("search_all", {
+        searchField: "searchText",
+        filterFields: ["category", "brand"],
       })
       .index("by_brand", ["brand"])
       .index("by_price", ["basePrice"])
