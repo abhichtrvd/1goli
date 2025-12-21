@@ -156,6 +156,8 @@ export const searchProducts = query({
     query: v.optional(v.string()),
     category: v.optional(v.string()),
     brands: v.optional(v.array(v.string())),
+    forms: v.optional(v.array(v.string())),
+    symptoms: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     // Simple search implementation
@@ -178,6 +180,14 @@ export const searchProducts = query({
 
     if (args.brands && args.brands.length > 0) {
       filtered = filtered.filter((p) => p.brand && args.brands!.includes(p.brand));
+    }
+
+    if (args.forms && args.forms.length > 0) {
+      filtered = filtered.filter((p) => p.forms && p.forms.some(f => args.forms!.includes(f)));
+    }
+
+    if (args.symptoms && args.symptoms.length > 0) {
+      filtered = filtered.filter((p) => p.symptomsTags && p.symptomsTags.some(s => args.symptoms!.includes(s)));
     }
 
     if (args.query) {
