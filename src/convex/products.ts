@@ -158,10 +158,11 @@ export const searchProducts = query({
     brands: v.optional(v.array(v.string())),
     forms: v.optional(v.array(v.string())),
     symptoms: v.optional(v.array(v.string())),
+    potencies: v.optional(v.array(v.string())),
     minPrice: v.optional(v.number()),
     maxPrice: v.optional(v.number()),
-    sort: v.optional(v.string()), // Added sort argument
-    inStockOnly: v.optional(v.boolean()), // Added availability filter
+    sort: v.optional(v.string()), 
+    inStockOnly: v.optional(v.boolean()), 
   },
   handler: async (ctx, args) => {
     // Simple search implementation
@@ -194,6 +195,10 @@ export const searchProducts = query({
       filtered = filtered.filter((p) => p.symptomsTags && p.symptomsTags.some(s => args.symptoms!.includes(s)));
     }
 
+    if (args.potencies && args.potencies.length > 0) {
+      filtered = filtered.filter((p) => p.potencies && p.potencies.some(pot => args.potencies!.includes(pot)));
+    }
+
     if (args.minPrice !== undefined) {
       filtered = filtered.filter((p) => p.basePrice >= args.minPrice!);
     }
@@ -209,6 +214,7 @@ export const searchProducts = query({
     // Scoring logic (only if query is present and NO explicit sort is requested)
     if (args.query && !args.sort) {
       const lowerQuery = args.query.toLowerCase();
+      const queryTerms = lowerQuery.split(/\s+/).filter(t => t.length > 2); // Split into terms for better matching
       
       // Calculate relevance score
       const scoredProducts = filtered.map((product) => {
@@ -217,28 +223,43 @@ export const searchProducts = query({
         const brand = product.brand?.toLowerCase() || "";
         const category = product.category?.toLowerCase() || "";
         const description = product.description.toLowerCase();
+        const tags = product.symptomsTags.map(t => t.toLowerCase());
         
         // Exact name match gets highest priority
         if (name === lowerQuery) score += 100;
         // Starts with query
         else if (name.startsWith(lowerQuery)) score += 50;
         // Name contains query
-        else if (name.includes(lowerQuery)) score += 25;
+        else if (name.includes(lowerQuery)) score += 30;
         
         // Brand match
-        if (brand.includes(lowerQuery)) score += 15;
+        if (brand === lowerQuery) score += 40; // Exact brand match
+        else if (brand.includes(lowerQuery)) score += 15;
         
         // Category match
-        if (category.includes(lowerQuery)) score += 15;
+        if (category === lowerQuery) score += 30; // Exact category match
+        else if (category.includes(lowerQuery)) score += 15;
         
         // Tag match
-        if (product.symptomsTags.some(tag => tag.toLowerCase().includes(lowerQuery))) score += 10;
+        if (tags.includes(lowerQuery)) score += 40; // Exact tag match
+        else if (tags.some(tag => tag.includes(lowerQuery))) score += 20;
         
         // Description match (lowest priority)
         if (description.includes(lowerQuery)) score += 5;
         
         // Form match
-        if (product.forms?.some(f => f.toLowerCase().includes(lowerQuery))) score += 5;
+        if (product.forms?.some(f => f.toLowerCase().includes(lowerQuery))) score += 10;
+
+        // Multi-term matching (boost if multiple terms match)
+        if (queryTerms.length > 1) {
+           let termMatches = 0;
+           for (const term of queryTerms) {
+             if (name.includes(term) || brand.includes(term) || tags.some(t => t.includes(term))) {
+               termMatches++;
+             }
+           }
+           score += (termMatches * 10);
+        }
 
         return { product, score };
       });

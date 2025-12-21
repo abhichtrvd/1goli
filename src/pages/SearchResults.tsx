@@ -75,6 +75,18 @@ const USES = [
   "Headache"
 ];
 
+const POTENCIES = [
+  "Mother Tincture",
+  "30C",
+  "200C",
+  "1M",
+  "10M",
+  "3X",
+  "6X",
+  "12X",
+  "CM"
+];
+
 const ITEMS_PER_PAGE = 12;
 
 export default function SearchResults() {
@@ -86,6 +98,7 @@ export default function SearchResults() {
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [selectedForms, setSelectedForms] = useState<string[]>([]);
   const [selectedUses, setSelectedUses] = useState<string[]>([]);
+  const [selectedPotencies, setSelectedPotencies] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 5000]);
   const [inStockOnly, setInStockOnly] = useState<boolean>(false);
   const [sortBy, setSortBy] = useState<string>("relevance");
@@ -94,7 +107,7 @@ export default function SearchResults() {
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [query, category, selectedBrands, selectedForms, selectedUses, priceRange, inStockOnly, sortBy]);
+  }, [query, category, selectedBrands, selectedForms, selectedUses, selectedPotencies, priceRange, inStockOnly, sortBy]);
 
   const products = useQuery(api.products.searchProducts, { 
     query, 
@@ -102,6 +115,7 @@ export default function SearchResults() {
     brands: selectedBrands.length > 0 ? selectedBrands : undefined,
     forms: selectedForms.length > 0 ? selectedForms : undefined,
     symptoms: selectedUses.length > 0 ? selectedUses : undefined,
+    potencies: selectedPotencies.length > 0 ? selectedPotencies : undefined,
     minPrice: priceRange[0],
     maxPrice: priceRange[1] < 5000 ? priceRange[1] : undefined,
     inStockOnly: inStockOnly ? true : undefined,
@@ -143,6 +157,12 @@ export default function SearchResults() {
     );
   };
 
+  const togglePotency = (potency: string) => {
+    setSelectedPotencies(prev => 
+      prev.includes(potency) ? prev.filter(p => p !== potency) : [...prev, potency]
+    );
+  };
+
   const clearFilters = () => {
     const newParams = new URLSearchParams(searchParams);
     newParams.delete("category");
@@ -151,6 +171,7 @@ export default function SearchResults() {
     setSelectedBrands([]);
     setSelectedForms([]);
     setSelectedUses([]);
+    setSelectedPotencies([]);
     setPriceRange([0, 5000]);
     setInStockOnly(false);
     setSortBy("relevance");
@@ -162,6 +183,7 @@ export default function SearchResults() {
     selectedBrands.length + 
     selectedForms.length + 
     selectedUses.length +
+    selectedPotencies.length +
     (priceRange[0] > 0 || priceRange[1] < 5000 ? 1 : 0) +
     (inStockOnly ? 1 : 0);
 
@@ -307,6 +329,31 @@ export default function SearchResults() {
                   className="text-sm font-normal cursor-pointer leading-none"
                 >
                   {form}
+                </Label>
+              </div>
+            ))}
+          </div>
+        </ScrollArea>
+      </div>
+
+      <Separator />
+
+      <div className="space-y-3">
+        <h4 className="text-sm font-medium">Potency</h4>
+        <ScrollArea className="h-[150px] pr-4">
+          <div className="space-y-2">
+            {POTENCIES.map((potency) => (
+              <div key={potency} className="flex items-center space-x-2">
+                <Checkbox 
+                  id={`potency-${potency}`} 
+                  checked={selectedPotencies.includes(potency)}
+                  onCheckedChange={() => togglePotency(potency)}
+                />
+                <Label 
+                  htmlFor={`potency-${potency}`} 
+                  className="text-sm font-normal cursor-pointer leading-none"
+                >
+                  {potency}
                 </Label>
               </div>
             ))}
