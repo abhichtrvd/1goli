@@ -9,10 +9,25 @@ function generateSearchText(
   name: string, 
   brand: string | undefined, 
   description: string, 
-  symptomsTags: string[]
+  symptomsTags: string[],
+  forms: string[] = [],
+  potencies: string[] = []
 ): string {
-  // Boost name relevance by repeating it
-  return `${name} ${name} ${name} ${brand || ""} ${description} ${symptomsTags.join(" ")}`.toLowerCase();
+  // Weighted relevance generation
+  // Name: Weight 3
+  // Brand: Weight 2
+  // Symptoms: Weight 2
+  // Forms: Weight 1
+  // Potencies: Weight 1
+  // Description: Weight 1
+  
+  const nameText = `${name} ${name} ${name}`;
+  const brandText = brand ? `${brand} ${brand}` : "";
+  const symptomsText = symptomsTags.map(s => `${s} ${s}`).join(" ");
+  const formsText = forms.join(" ");
+  const potenciesText = potencies.join(" ");
+  
+  return `${nameText} ${brandText} ${symptomsText} ${formsText} ${potenciesText} ${description}`.toLowerCase();
 }
 
 export const getProducts = query({
@@ -55,6 +70,7 @@ export const getProductsCount = query({
     let query;
 
     // Select index based on primary filters to optimize scan
+    // Priority: Brand > Category > Full Scan
     if (args.brand) {
       query = ctx.db.query("products").withIndex("by_brand", (q) => q.eq("brand", args.brand!));
     } else if (args.category) {
@@ -134,20 +150,23 @@ export const getPaginatedProducts = query({
     let query;
     
     // Base query selection based on sort or primary filter
-    // We keep this logic to optimize the initial fetch even if we filter manually later
-    if (args.sort === "price_asc") {
+    // We prioritize specific indexes if they help reduce the dataset significantly before sorting
+    
+    const useSortIndex = !args.brand && !args.category && !hasArrayFilters;
+
+    if (useSortIndex && args.sort === "price_asc") {
       query = ctx.db.query("products").withIndex("by_price").order("asc");
-    } else if (args.sort === "price_desc") {
+    } else if (useSortIndex && args.sort === "price_desc") {
       query = ctx.db.query("products").withIndex("by_price").order("desc");
-    } else if (args.sort === "name_asc") {
+    } else if (useSortIndex && args.sort === "name_asc") {
       query = ctx.db.query("products").withIndex("by_name").order("asc");
-    } else if (args.sort === "name_desc") {
+    } else if (useSortIndex && args.sort === "name_desc") {
       query = ctx.db.query("products").withIndex("by_name").order("desc");
-    } else if (args.sort === "rating_desc") {
+    } else if (useSortIndex && args.sort === "rating_desc") {
       query = ctx.db.query("products").withIndex("by_rating").order("desc");
-    } else if (args.sort === "rating_asc") {
+    } else if (useSortIndex && args.sort === "rating_asc") {
       query = ctx.db.query("products").withIndex("by_rating").order("asc");
-    } else if (args.sort === "reviews_desc") {
+    } else if (useSortIndex && args.sort === "reviews_desc") {
       query = ctx.db.query("products").withIndex("by_rating_count").order("desc");
     } else if (args.brand) {
       query = ctx.db.query("products").withIndex("by_brand", (q) => q.eq("brand", args.brand!));
@@ -188,7 +207,7 @@ export const getPaginatedProducts = query({
 
     // If we have array filters, we must collect all results, filter in memory, and manually paginate
     // to ensure consistent page sizes.
-    if (hasArrayFilters) {
+    if (hasArrayFilters || (args.sort && !useSortIndex)) {
       const allProducts = await query.collect();
       
       // Manual filtering
@@ -205,12 +224,29 @@ export const getPaginatedProducts = query({
         return true;
       });
 
-      // Manual sorting (if needed - query might have sorted, but array filtering preserves order usually)
-      // However, if we used an index for filtering (e.g. brand) but wanted price sort, the query above
-      // might not have sorted by price if it used brand index.
-      // The query construction above prioritizes sort index over filter index, so sort should be correct.
-      // EXCEPT if we fell through to default sort.
-      // Let's trust the query sort order for now as it's complex to replicate all sort logic here.
+      // Manual sorting
+      if (args.sort) {
+        filtered.sort((a, b) => {
+          switch (args.sort) {
+            case "price_asc":
+              return a.basePrice - b.basePrice;
+            case "price_desc":
+              return b.basePrice - a.basePrice;
+            case "name_asc":
+              return a.name.localeCompare(b.name);
+            case "name_desc":
+              return b.name.localeCompare(a.name);
+            case "rating_desc":
+              return (b.averageRating || 0) - (a.averageRating || 0);
+            case "rating_asc":
+              return (a.averageRating || 0) - (b.averageRating || 0);
+            case "reviews_desc":
+              return (b.ratingCount || 0) - (a.ratingCount || 0);
+            default:
+              return 0;
+          }
+        });
+      }
       
       // Manual Pagination
       const cursor = args.paginationOpts.cursor ? parseInt(args.paginationOpts.cursor) : 0;
@@ -236,7 +272,7 @@ export const getPaginatedProducts = query({
       };
 
     } else {
-      // Use efficient DB pagination if no array filters
+      // Use efficient DB pagination if no array filters and using sort index
       const result = await query.paginate(args.paginationOpts);
 
       const pageWithUrls = await Promise.all(
@@ -450,7 +486,9 @@ export const createProduct = mutation({
       args.name, 
       args.brand, 
       args.description, 
-      args.symptomsTags
+      args.symptomsTags,
+      args.forms,
+      args.potencies
     );
 
     const productId = await ctx.db.insert("products", {
@@ -513,12 +551,14 @@ export const updateProduct = mutation({
 
     // Re-generate search text if relevant fields are updated
     let searchText = product.searchText;
-    if (updates.name || updates.brand || updates.description || updates.symptomsTags) {
+    if (updates.name || updates.brand || updates.description || updates.symptomsTags || updates.forms || updates.potencies) {
       searchText = generateSearchText(
         updates.name || product.name,
         updates.brand !== undefined ? updates.brand : product.brand,
         updates.description || product.description,
-        updates.symptomsTags || product.symptomsTags
+        updates.symptomsTags || product.symptomsTags,
+        updates.forms || product.forms,
+        updates.potencies || product.potencies
       );
     }
 
@@ -680,7 +720,9 @@ export const seedProducts = mutation({
         product.name,
         product.brand,
         product.description,
-        product.symptomsTags
+        product.symptomsTags,
+        product.forms,
+        product.potencies
       );
       await ctx.db.insert("products", { ...product, searchText });
     }
@@ -697,7 +739,9 @@ export const backfillSearchText = mutation({
         product.name,
         product.brand,
         product.description,
-        product.symptomsTags
+        product.symptomsTags,
+        product.forms,
+        product.potencies
       );
       await ctx.db.patch(product._id, { searchText });
     }

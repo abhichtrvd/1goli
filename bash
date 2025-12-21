@@ -1,1 +1,1 @@
-npx convex run prescriptions:backfillSearchText
+npx convex run products:backfillSearchText
