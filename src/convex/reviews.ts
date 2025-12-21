@@ -249,3 +249,21 @@ export const dismissReports = mutation({
     }
   },
 });
+
+export const replyToReview = mutation({
+  args: { 
+    reviewId: v.id("reviews"),
+    reply: v.string()
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    
+    const review = await ctx.db.get(args.reviewId);
+    if (!review) throw new Error("Review not found");
+
+    await ctx.db.patch(args.reviewId, {
+      adminReply: args.reply,
+      adminRepliedAt: Date.now(),
+    });
+  },
+});

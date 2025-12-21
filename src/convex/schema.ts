@@ -80,7 +80,8 @@ const schema = defineSchema(
       .index("by_brand", ["brand"])
       .index("by_price", ["basePrice"])
       .index("by_name", ["name"])
-      .index("by_rating", ["averageRating"]),
+      .index("by_rating", ["averageRating"])
+      .index("by_rating_count", ["ratingCount"]),
 
     cartItems: defineTable({
       userId: v.string(),
@@ -147,6 +148,9 @@ const schema = defineSchema(
       helpfulCount: v.optional(v.number()),
       isEdited: v.optional(v.boolean()),
       lastEditedAt: v.optional(v.number()),
+      // Admin Reply
+      adminReply: v.optional(v.string()),
+      adminRepliedAt: v.optional(v.number()),
     })
       .index("by_product", ["productId"])
       .index("by_user", ["userId"]),

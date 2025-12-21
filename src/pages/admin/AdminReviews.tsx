@@ -19,7 +19,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Loader2, MoreHorizontal, Search, Star, Trash2, ShieldCheck, AlertTriangle, Filter } from "lucide-react";
+import { Loader2, MoreHorizontal, Search, Star, Trash2, ShieldCheck, AlertTriangle, Filter, MessageCircle, Reply } from "lucide-react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import {
@@ -32,17 +32,32 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function AdminReviews() {
   const reviews = useQuery(api.reviews.getAllReviews);
   const deleteReview = useMutation(api.reviews.deleteReview);
   const dismissReports = useMutation(api.reviews.dismissReports);
+  const replyToReview = useMutation(api.reviews.replyToReview);
   
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [ratingFilter, setRatingFilter] = useState("all");
   const [reviewToDelete, setReviewToDelete] = useState<Id<"reviews"> | null>(null);
+  
+  // Reply state
+  const [replyReviewId, setReplyReviewId] = useState<Id<"reviews"> | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [isSubmittingReply, setIsSubmittingReply] = useState(false);
 
   const filteredReviews = reviews?.filter((review) => {
     const searchLower = searchQuery.toLowerCase();
@@ -85,6 +100,27 @@ export default function AdminReviews() {
     } catch (error) {
       toast.error("Failed to dismiss reports");
     }
+  };
+
+  const handleReply = async () => {
+    if (!replyReviewId || !replyText.trim()) return;
+    
+    setIsSubmittingReply(true);
+    try {
+      await replyToReview({ reviewId: replyReviewId, reply: replyText });
+      toast.success("Reply posted successfully");
+      setReplyReviewId(null);
+      setReplyText("");
+    } catch (error) {
+      toast.error("Failed to post reply");
+    } finally {
+      setIsSubmittingReply(false);
+    }
+  };
+
+  const openReplyDialog = (review: any) => {
+    setReplyReviewId(review._id);
+    setReplyText(review.adminReply || "");
   };
 
   if (reviews === undefined) {
@@ -179,6 +215,11 @@ export default function AdminReviews() {
                     <div className="space-y-1">
                       <p className="font-medium text-sm">{review.title}</p>
                       <p className="text-sm text-muted-foreground line-clamp-2">{review.comment}</p>
+                      {review.adminReply && (
+                        <div className="mt-2 p-2 bg-secondary/50 rounded text-xs border-l-2 border-primary">
+                          <span className="font-semibold text-primary">Admin Reply:</span> {review.adminReply}
+                        </div>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -204,6 +245,9 @@ export default function AdminReviews() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => openReplyDialog(review)}>
+                          <Reply className="mr-2 h-4 w-4" /> {review.adminReply ? "Edit Reply" : "Reply"}
+                        </DropdownMenuItem>
                         {review.reportCount > 0 && (
                           <DropdownMenuItem onClick={() => handleDismissReports(review._id)}>
                             <ShieldCheck className="mr-2 h-4 w-4" /> Dismiss Reports
@@ -225,6 +269,7 @@ export default function AdminReviews() {
         </Table>
       </div>
 
+      {/* Delete Dialog */}
       <AlertDialog open={!!reviewToDelete} onOpenChange={(open) => !open && setReviewToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -241,6 +286,33 @@ export default function AdminReviews() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Reply Dialog */}
+      <Dialog open={!!replyReviewId} onOpenChange={(open) => !open && setReplyReviewId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reply to Review</DialogTitle>
+            <DialogDescription>
+              Your reply will be visible publicly on the product page.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Textarea 
+              placeholder="Write your reply here..." 
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value)}
+              className="min-h-[100px]"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReplyReviewId(null)}>Cancel</Button>
+            <Button onClick={handleReply} disabled={isSubmittingReply || !replyText.trim()}>
+              {isSubmittingReply && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Post Reply
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
