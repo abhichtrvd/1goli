@@ -12,6 +12,8 @@ import { FeatureSection } from "./landing/FeatureSection";
 export default function Landing() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBrand, setSelectedBrand] = useState<string | undefined>(undefined);
+  const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 5000]);
   const [sortBy, setSortBy] = useState<string>("newest");
   
   // Use paginated query for products
@@ -19,6 +21,9 @@ export default function Landing() {
     api.products.getPaginatedProducts,
     { 
       brand: selectedBrand,
+      category: selectedCategory,
+      minPrice: priceRange[0],
+      maxPrice: priceRange[1] < 5000 ? priceRange[1] : undefined, // Only apply max if not at top
       sort: sortBy === "newest" ? undefined : sortBy 
     },
     { initialNumItems: 10 }
@@ -72,6 +77,10 @@ export default function Landing() {
       <ProductsGrid 
         selectedBrand={selectedBrand}
         setSelectedBrand={setSelectedBrand}
+        selectedCategory={selectedCategory}
+        setSelectedCategory={setSelectedCategory}
+        priceRange={priceRange}
+        setPriceRange={setPriceRange}
         sortBy={sortBy}
         setSortBy={setSortBy}
         products={products}

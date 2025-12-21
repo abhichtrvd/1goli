@@ -81,7 +81,8 @@ const schema = defineSchema(
       .index("by_price", ["basePrice"])
       .index("by_name", ["name"])
       .index("by_rating", ["averageRating"])
-      .index("by_rating_count", ["ratingCount"]),
+      .index("by_rating_count", ["ratingCount"])
+      .index("by_category", ["category"]),
 
     cartItems: defineTable({
       userId: v.string(),
@@ -151,9 +152,13 @@ const schema = defineSchema(
       // Admin Reply
       adminReply: v.optional(v.string()),
       adminRepliedAt: v.optional(v.number()),
+      // Status for approval workflow
+      status: v.optional(v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected"))),
     })
       .index("by_product", ["productId"])
-      .index("by_user", ["userId"]),
+      .index("by_user", ["userId"])
+      .index("by_status", ["status"])
+      .index("by_product_status", ["productId", "status"]),
 
     reviewInteractions: defineTable({
       userId: v.string(),

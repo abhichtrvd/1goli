@@ -19,7 +19,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Loader2, MoreHorizontal, Search, Star, Trash2, ShieldCheck, AlertTriangle, Filter, MessageCircle, Reply } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CheckCircle, XCircle, Clock, Loader2, Search, Star, AlertTriangle, MoreHorizontal, Reply, ShieldCheck, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import {
@@ -44,20 +45,25 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function AdminReviews() {
-  const reviews = useQuery(api.reviews.getAllReviews);
-  const deleteReview = useMutation(api.reviews.deleteReview);
-  const dismissReports = useMutation(api.reviews.dismissReports);
-  const replyToReview = useMutation(api.reviews.replyToReview);
-  
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [ratingFilter, setRatingFilter] = useState("all");
   const [reviewToDelete, setReviewToDelete] = useState<Id<"reviews"> | null>(null);
+  const [activeTab, setActiveTab] = useState("pending");
   
   // Reply state
   const [replyReviewId, setReplyReviewId] = useState<Id<"reviews"> | null>(null);
   const [replyText, setReplyText] = useState("");
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
+
+  const reviews = useQuery(api.reviews.getAllReviews, { 
+    status: activeTab === "all" ? undefined : activeTab 
+  });
+  
+  const deleteReview = useMutation(api.reviews.deleteReview);
+  const dismissReports = useMutation(api.reviews.dismissReports);
+  const replyToReview = useMutation(api.reviews.replyToReview);
+  const updateStatus = useMutation(api.reviews.updateReviewStatus);
 
   const filteredReviews = reviews?.filter((review) => {
     const searchLower = searchQuery.toLowerCase();
@@ -68,6 +74,7 @@ export default function AdminReviews() {
       review.title?.toLowerCase().includes(searchLower)
     );
 
+    // Status filter is now handled by the query/tabs mostly, but we keep this for extra filtering if needed
     const matchesStatus = statusFilter === "all" 
       ? true 
       : statusFilter === "reported" 
@@ -80,6 +87,15 @@ export default function AdminReviews() {
 
     return matchesSearch && matchesStatus && matchesRating;
   });
+
+  const handleStatusUpdate = async (reviewId: Id<"reviews">, newStatus: "approved" | "rejected" | "pending") => {
+    try {
+      await updateStatus({ reviewId, status: newStatus });
+      toast.success(`Review ${newStatus}`);
+    } catch (error) {
+      toast.error("Failed to update status");
+    }
+  };
 
   const handleDelete = async () => {
     if (!reviewToDelete) return;
@@ -140,6 +156,21 @@ export default function AdminReviews() {
         </div>
       </div>
 
+      <Tabs defaultValue="pending" value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList>
+          <TabsTrigger value="pending" className="flex items-center gap-2">
+            <Clock className="h-4 w-4" /> Pending
+          </TabsTrigger>
+          <TabsTrigger value="approved" className="flex items-center gap-2">
+            <CheckCircle className="h-4 w-4" /> Approved
+          </TabsTrigger>
+          <TabsTrigger value="rejected" className="flex items-center gap-2">
+            <XCircle className="h-4 w-4" /> Rejected
+          </TabsTrigger>
+          <TabsTrigger value="all">All Reviews</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
         <div className="relative flex-1 max-w-sm w-full">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -152,18 +183,6 @@ export default function AdminReviews() {
         </div>
         
         <div className="flex items-center gap-2 w-full md:w-auto">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[150px]">
-              <Filter className="w-4 h-4 mr-2 text-muted-foreground" />
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="published">Published</SelectItem>
-              <SelectItem value="reported">Reported</SelectItem>
-            </SelectContent>
-          </Select>
-
           <Select value={ratingFilter} onValueChange={setRatingFilter}>
             <SelectTrigger className="w-[150px]">
               <Star className="w-4 h-4 mr-2 text-muted-foreground" />
@@ -223,44 +242,67 @@ export default function AdminReviews() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    {review.reportCount > 0 ? (
-                      <Badge variant="destructive" className="gap-1">
-                        <AlertTriangle className="h-3 w-3" /> {review.reportCount} Reports
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-green-600 border-green-600/20 bg-green-50">
-                        Published
-                      </Badge>
-                    )}
+                    <div className="flex flex-col gap-1">
+                      {review.status === "pending" && (
+                        <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 w-fit">Pending</Badge>
+                      )}
+                      {review.status === "approved" && (
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 w-fit">Approved</Badge>
+                      )}
+                      {review.status === "rejected" && (
+                        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 w-fit">Rejected</Badge>
+                      )}
+                      {(!review.status) && (
+                        <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200 w-fit">Legacy</Badge>
+                      )}
+                      
+                      {review.reportCount > 0 && (
+                        <Badge variant="destructive" className="gap-1 w-fit">
+                          <AlertTriangle className="h-3 w-3" /> {review.reportCount} Reports
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
                     {new Date(review._creationTime).toLocaleDateString()}
                   </TableCell>
                   <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
+                    <div className="flex items-center justify-end gap-2">
+                      {review.status !== "approved" && (
+                        <Button size="sm" variant="outline" className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleStatusUpdate(review._id, "approved")} title="Approve">
+                          <CheckCircle className="h-4 w-4" />
                         </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => openReplyDialog(review)}>
-                          <Reply className="mr-2 h-4 w-4" /> {review.adminReply ? "Edit Reply" : "Reply"}
-                        </DropdownMenuItem>
-                        {review.reportCount > 0 && (
-                          <DropdownMenuItem onClick={() => handleDismissReports(review._id)}>
-                            <ShieldCheck className="mr-2 h-4 w-4" /> Dismiss Reports
+                      )}
+                      {review.status !== "rejected" && (
+                        <Button size="sm" variant="outline" className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleStatusUpdate(review._id, "rejected")} title="Reject">
+                          <XCircle className="h-4 w-4" />
+                        </Button>
+                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuItem onClick={() => openReplyDialog(review)}>
+                            <Reply className="mr-2 h-4 w-4" /> {review.adminReply ? "Edit Reply" : "Reply"}
                           </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem 
-                          className="text-destructive focus:text-destructive"
-                          onClick={() => setReviewToDelete(review._id)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" /> Delete Review
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                          {review.reportCount > 0 && (
+                            <DropdownMenuItem onClick={() => handleDismissReports(review._id)}>
+                              <ShieldCheck className="mr-2 h-4 w-4" /> Dismiss Reports
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem 
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => setReviewToDelete(review._id)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" /> Delete Review
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

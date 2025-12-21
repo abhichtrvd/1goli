@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { requireAdmin } from "./users";
+import { Doc } from "./_generated/dataModel";
 
 // Helper to update product rating stats
 async function updateProductRating(ctx: any, productId: any) {
@@ -10,9 +11,14 @@ async function updateProductRating(ctx: any, productId: any) {
     .withIndex("by_product", (q: any) => q.eq("productId", productId))
     .collect();
   
-  const ratingCount = reviews.length;
+  // Filter for approved reviews only
+  const approvedReviews = reviews.filter((r: any) => 
+    r.status === "approved" || r.status === undefined
+  );
+  
+  const ratingCount = approvedReviews.length;
   const averageRating = ratingCount > 0 
-    ? reviews.reduce((acc: number, r: any) => acc + r.rating, 0) / ratingCount 
+    ? approvedReviews.reduce((acc: number, r: any) => acc + r.rating, 0) / ratingCount 
     : 0;
 
   await ctx.db.patch(productId, {
@@ -55,9 +61,27 @@ export const submitReview = mutation({
       comment: args.comment,
       verifiedPurchase: true, // In a real app, we would verify against orders
       helpfulCount: 0,
+      status: "pending", // Default to pending
     });
 
-    await updateProductRating(ctx, args.productId);
+    // We don't update product rating immediately if it's pending
+  },
+});
+
+export const updateReviewStatus = mutation({
+  args: {
+    reviewId: v.id("reviews"),
+    status: v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected")),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const review = await ctx.db.get(args.reviewId);
+    if (!review) throw new Error("Review not found");
+
+    await ctx.db.patch(args.reviewId, { status: args.status });
+
+    // Update product rating
+    await updateProductRating(ctx, review.productId);
   },
 });
 
@@ -82,6 +106,7 @@ export const editReview = mutation({
       comment: args.comment,
       isEdited: true,
       lastEditedAt: Date.now(),
+      status: "pending", // Reset to pending on edit
     });
 
     await updateProductRating(ctx, review.productId);
@@ -164,11 +189,23 @@ export const getReviews = query({
   args: { productId: v.id("products") },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
+    
+    // Use the new index if available, or fallback to filtering
+    // Since we just added the index, we can use it for approved reviews
+    // But we also want to show the user's own reviews even if pending
+    
     const reviews = await ctx.db
       .query("reviews")
       .withIndex("by_product", (q) => q.eq("productId", args.productId))
       .order("desc")
       .collect();
+
+    // Filter for approved reviews + user's own reviews (even if pending)
+    const visibleReviews = reviews.filter(r => 
+      r.status === "approved" || 
+      r.status === undefined || 
+      (userId && r.userId === userId)
+    );
 
     // If user is logged in, get their interactions
     let userInteractions = new Map();
@@ -180,7 +217,7 @@ export const getReviews = query({
       interactions.forEach((i) => userInteractions.set(i.reviewId, i.type));
     }
 
-    return reviews.map((r) => ({
+    return visibleReviews.map((r) => ({
       ...r,
       currentUserInteraction: userInteractions.get(r._id),
       isCurrentUser: r.userId === userId,
@@ -189,14 +226,25 @@ export const getReviews = query({
 });
 
 export const getAllReviews = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { 
+    status: v.optional(v.string()) 
+  },
+  handler: async (ctx, args) => {
     await requireAdmin(ctx);
-    const reviews = await ctx.db.query("reviews").order("desc").take(100);
+    
+    let query: any = ctx.db.query("reviews");
+    
+    if (args.status && args.status !== "all") {
+       query = query.withIndex("by_status", (q: any) => q.eq("status", args.status));
+    } else {
+       query = query.order("desc");
+    }
+    
+    const reviews = await query.take(100);
     
     // Enrich with product names
-    return await Promise.all(reviews.map(async (r) => {
-      const product = await ctx.db.get(r.productId);
+    return await Promise.all(reviews.map(async (r: any) => {
+      const product = await ctx.db.get(r.productId) as Doc<"products"> | null;
       const reports = await ctx.db
         .query("reviewInteractions")
         .withIndex("by_review_type", (q) => q.eq("reviewId", r._id).eq("type", "report"))

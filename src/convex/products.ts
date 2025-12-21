@@ -32,32 +32,60 @@ export const getPaginatedProducts = query({
   args: { 
     paginationOpts: paginationOptsValidator,
     brand: v.optional(v.string()),
+    category: v.optional(v.string()),
+    minPrice: v.optional(v.number()),
+    maxPrice: v.optional(v.number()),
     sort: v.optional(v.string()), // "price_asc", "price_desc", "name_asc", "name_desc"
   },
   handler: async (ctx, args) => {
     let query;
-    if (args.brand) {
-      query = ctx.db
-        .query("products")
-        .withIndex("by_brand", (q) => q.eq("brand", args.brand));
+    
+    // Base query selection based on sort or primary filter
+    if (args.sort === "price_asc") {
+      query = ctx.db.query("products").withIndex("by_price").order("asc");
+    } else if (args.sort === "price_desc") {
+      query = ctx.db.query("products").withIndex("by_price").order("desc");
+    } else if (args.sort === "name_asc") {
+      query = ctx.db.query("products").withIndex("by_name").order("asc");
+    } else if (args.sort === "name_desc") {
+      query = ctx.db.query("products").withIndex("by_name").order("desc");
+    } else if (args.sort === "rating_desc") {
+      query = ctx.db.query("products").withIndex("by_rating").order("desc");
+    } else if (args.sort === "rating_asc") {
+      query = ctx.db.query("products").withIndex("by_rating").order("asc");
+    } else if (args.sort === "reviews_desc") {
+      query = ctx.db.query("products").withIndex("by_rating_count").order("desc");
+    } else if (args.brand) {
+      query = ctx.db.query("products").withIndex("by_brand", (q) => q.eq("brand", args.brand));
+    } else if (args.category) {
+      query = ctx.db.query("products").withIndex("by_category", (q) => q.eq("category", args.category));
     } else {
-      if (args.sort === "price_asc") {
-        query = ctx.db.query("products").withIndex("by_price").order("asc");
-      } else if (args.sort === "price_desc") {
-        query = ctx.db.query("products").withIndex("by_price").order("desc");
-      } else if (args.sort === "name_asc") {
-        query = ctx.db.query("products").withIndex("by_name").order("asc");
-      } else if (args.sort === "name_desc") {
-        query = ctx.db.query("products").withIndex("by_name").order("desc");
-      } else if (args.sort === "rating_desc") {
-        query = ctx.db.query("products").withIndex("by_rating").order("desc");
-      } else if (args.sort === "rating_asc") {
-        query = ctx.db.query("products").withIndex("by_rating").order("asc");
-      } else if (args.sort === "reviews_desc") {
-        query = ctx.db.query("products").withIndex("by_rating_count").order("desc");
-      } else {
-        query = ctx.db.query("products").order("desc");
-      }
+      query = ctx.db.query("products").order("desc");
+    }
+
+    // Apply filters
+    // Note: In Convex, we can't chain .filter() after .withIndex() if we want to use pagination efficiently 
+    // unless we accept scanning. For this scale, scanning is acceptable.
+    // However, if we used a specific index above (like by_brand), we don't need to filter by it again.
+    
+    if (args.brand && !args.sort) {
+      // Already filtered by index
+    } else if (args.brand) {
+      query = query.filter((q) => q.eq(q.field("brand"), args.brand));
+    }
+
+    if (args.category && !args.sort && !args.brand) {
+      // Already filtered by index
+    } else if (args.category) {
+      query = query.filter((q) => q.eq(q.field("category"), args.category));
+    }
+
+    if (args.minPrice !== undefined) {
+      query = query.filter((q) => q.gte(q.field("basePrice"), args.minPrice!));
+    }
+
+    if (args.maxPrice !== undefined) {
+      query = query.filter((q) => q.lte(q.field("basePrice"), args.maxPrice!));
     }
 
     const result = await query.paginate(args.paginationOpts);

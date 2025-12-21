@@ -8,13 +8,20 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import { Loader2, ArrowUpDown, Activity, Star } from "lucide-react";
+import { Loader2, ArrowUpDown, Activity, Star, Filter } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router";
+import { Slider } from "@/components/ui/slider";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 
 interface ProductsGridProps {
   selectedBrand: string | undefined;
   setSelectedBrand: (brand: string | undefined) => void;
+  selectedCategory: string | undefined;
+  setSelectedCategory: (category: string | undefined) => void;
+  priceRange: [number, number];
+  setPriceRange: (range: [number, number]) => void;
   sortBy: string;
   setSortBy: (sort: string) => void;
   products: any[] | undefined;
@@ -26,6 +33,10 @@ interface ProductsGridProps {
 export function ProductsGrid({
   selectedBrand,
   setSelectedBrand,
+  selectedCategory,
+  setSelectedCategory,
+  priceRange,
+  setPriceRange,
   sortBy,
   setSortBy,
   products,
@@ -34,6 +45,8 @@ export function ProductsGrid({
   isLoading
 }: ProductsGridProps) {
   const navigate = useNavigate();
+
+  const categories = ["Classical", "Patent", "Personal Care", "Mother Tincture", "Biochemic"];
 
   return (
     <section id="products" className="py-20 bg-secondary">
@@ -48,31 +61,95 @@ export function ProductsGrid({
             </p>
           </div>
           
-          <div className="flex items-center gap-2">
-            {selectedBrand && (
-              <Button variant="ghost" onClick={() => setSelectedBrand(undefined)} className="text-muted-foreground hover:text-foreground">
-                Clear Filter
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Filters Popover */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="bg-white dark:bg-card">
+                  <Filter className="w-4 h-4 mr-2" /> Filters
+                  {(selectedCategory || priceRange[1] < 5000) && (
+                    <Badge variant="secondary" className="ml-2 h-5 px-1.5">!</Badge>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-4" align="end">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <h4 className="font-medium leading-none">Category</h4>
+                    <Select value={selectedCategory || "all"} onValueChange={(v) => setSelectedCategory(v === "all" ? undefined : v)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Categories</SelectItem>
+                        {categories.map(c => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <h4 className="font-medium leading-none">Price Range</h4>
+                      <span className="text-xs text-muted-foreground">₹{priceRange[0]} - ₹{priceRange[1]}+</span>
+                    </div>
+                    <Slider
+                      defaultValue={[0, 5000]}
+                      value={[priceRange[0], priceRange[1]]}
+                      max={5000}
+                      step={100}
+                      onValueChange={(val) => setPriceRange([val[0], val[1]])}
+                      className="py-4"
+                    />
+                  </div>
+
+                  <div className="pt-2 flex justify-end">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => {
+                        setSelectedCategory(undefined);
+                        setPriceRange([0, 5000]);
+                      }}
+                    >
+                      Reset Filters
+                    </Button>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            {(selectedBrand || selectedCategory || priceRange[1] < 5000) && (
+              <Button 
+                variant="ghost" 
+                onClick={() => {
+                  setSelectedBrand(undefined);
+                  setSelectedCategory(undefined);
+                  setPriceRange([0, 5000]);
+                }} 
+                className="text-muted-foreground hover:text-foreground"
+              >
+                Clear All
               </Button>
             )}
             
-            {!selectedBrand && (
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-[180px] bg-white dark:bg-card">
-                  <ArrowUpDown className="w-4 h-4 mr-2 text-muted-foreground" />
-                  <SelectValue placeholder="Sort By" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="newest">Newest Arrivals</SelectItem>
-                  <SelectItem value="reviews_desc">Most Reviewed</SelectItem>
-                  <SelectItem value="price_asc">Price: Low to High</SelectItem>
-                  <SelectItem value="price_desc">Price: High to Low</SelectItem>
-                  <SelectItem value="name_asc">Name: A to Z</SelectItem>
-                  <SelectItem value="name_desc">Name: Z to A</SelectItem>
-                  <SelectItem value="rating_desc">Rating: High to Low</SelectItem>
-                  <SelectItem value="rating_asc">Rating: Low to High</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-[180px] bg-white dark:bg-card">
+                <ArrowUpDown className="w-4 h-4 mr-2 text-muted-foreground" />
+                <SelectValue placeholder="Sort By" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">Newest Arrivals</SelectItem>
+                <SelectItem value="reviews_desc">Most Reviewed</SelectItem>
+                <SelectItem value="price_asc">Price: Low to High</SelectItem>
+                <SelectItem value="price_desc">Price: High to Low</SelectItem>
+                <SelectItem value="name_asc">Name: A to Z</SelectItem>
+                <SelectItem value="name_desc">Name: Z to A</SelectItem>
+                <SelectItem value="rating_desc">Rating: High to Low</SelectItem>
+                <SelectItem value="rating_asc">Rating: Low to High</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -84,7 +161,17 @@ export function ProductsGrid({
           </div>
         ) : products.length === 0 ? (
           <div className="text-center py-20">
-            <p className="text-muted-foreground text-xl">No remedies found.</p>
+            <p className="text-muted-foreground text-xl">No remedies found matching your criteria.</p>
+            <Button 
+              variant="link" 
+              onClick={() => {
+                setSelectedBrand(undefined);
+                setSelectedCategory(undefined);
+                setPriceRange([0, 5000]);
+              }}
+            >
+              Clear Filters
+            </Button>
           </div>
         ) : (
           <div className="space-y-8">
