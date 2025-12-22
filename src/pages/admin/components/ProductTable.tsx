@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, Eye, MoreHorizontal, ChevronLeft, ChevronRight } from "lucide-react";
+import { Edit, Trash2, Eye, MoreHorizontal, ChevronLeft, ChevronRight, RefreshCw, AlertCircle } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +17,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Id } from "@/convex/_generated/dataModel";
+import { useAction } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { toast } from "sonner";
+import { useState } from "react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ProductTableProps {
   products: any[];
@@ -44,6 +49,25 @@ export function ProductTable({
   onSelectAll
 }: ProductTableProps) {
   const allSelected = products.length > 0 && products.every(p => selectedIds.includes(p._id));
+  const syncImage = useAction(api.productActions.syncProductImage);
+  const [syncingId, setSyncingId] = useState<string | null>(null);
+
+  const handleSyncImage = async (product: any) => {
+    if (!product.imageUrl) return;
+    setSyncingId(product._id);
+    try {
+      const result = await syncImage({ id: product._id, imageUrl: product.imageUrl });
+      if (result.success) {
+        toast.success("Image synced successfully");
+      } else {
+        toast.error("Failed to sync image");
+      }
+    } catch (error) {
+      toast.error("Error syncing image");
+    } finally {
+      setSyncingId(null);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -74,8 +98,10 @@ export function ProductTable({
                 </TableCell>
               </TableRow>
             ) : (
-              products.map((product) => (
-                <TableRow key={product._id}>
+              products.map((product) => {
+                const needsSync = product.imageUrl && !product.imageStorageId;
+                return (
+                <TableRow key={product._id} className={needsSync ? "bg-destructive/10" : ""}>
                   <TableCell>
                     <Checkbox 
                       checked={selectedIds.includes(product._id)}
@@ -84,7 +110,21 @@ export function ProductTable({
                   </TableCell>
                   <TableCell className="font-medium">
                     <div className="flex flex-col">
-                      <span>{product.name}</span>
+                      <div className="flex items-center gap-2">
+                        <span>{product.name}</span>
+                        {needsSync && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <AlertCircle className="h-3 w-3 text-destructive" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Image URL exists but not synced to storage</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
                       <span className="text-xs text-muted-foreground truncate max-w-[200px]">
                         {product.description}
                       </span>
@@ -123,6 +163,12 @@ export function ProductTable({
                         <DropdownMenuItem onClick={() => onEdit(product)}>
                           <Edit className="mr-2 h-4 w-4" /> Edit
                         </DropdownMenuItem>
+                        {needsSync && (
+                          <DropdownMenuItem onClick={() => handleSyncImage(product)} disabled={syncingId === product._id}>
+                            <RefreshCw className={`mr-2 h-4 w-4 ${syncingId === product._id ? "animate-spin" : ""}`} /> 
+                            {syncingId === product._id ? "Syncing..." : "Sync Image"}
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem 
                           onClick={() => onDelete(product._id)}
                           className="text-destructive focus:text-destructive"
@@ -133,7 +179,7 @@ export function ProductTable({
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))
+              )})
             )}
           </TableBody>
         </Table>

@@ -657,6 +657,65 @@ export const bulkDeleteProducts = mutation({
   },
 });
 
+export const bulkCreateProducts = mutation({
+  args: {
+    products: v.array(
+      v.object({
+        name: v.string(),
+        description: v.string(),
+        brand: v.optional(v.string()),
+        imageUrl: v.optional(v.string()),
+        basePrice: v.number(),
+        stock: v.number(),
+        category: v.optional(v.string()),
+        availability: v.optional(v.string()),
+        potencies: v.array(v.string()),
+        forms: v.array(v.string()),
+        symptomsTags: v.array(v.string()),
+        keyBenefits: v.optional(v.array(v.string())),
+        directionsForUse: v.optional(v.string()),
+        safetyInformation: v.optional(v.string()),
+        ingredients: v.optional(v.string()),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const userId = await getAuthUserId(ctx);
+    let count = 0;
+
+    for (const product of args.products) {
+      const searchText = generateSearchText(
+        product.name,
+        product.brand,
+        product.description,
+        product.symptomsTags,
+        product.forms,
+        product.potencies
+      );
+
+      await ctx.db.insert("products", {
+        ...product,
+        category: product.category || "Classical",
+        availability: product.availability || "in_stock",
+        packingSizes: ["30ml", "100ml"], // Default
+        searchText,
+      });
+      count++;
+    }
+
+    await ctx.db.insert("auditLogs", {
+      action: "bulk_create_products",
+      entityType: "product",
+      performedBy: userId || "admin",
+      details: `Imported ${count} products via CSV`,
+      timestamp: Date.now(),
+    });
+
+    return count;
+  },
+});
+
 export const seedProducts = mutation({
   args: {},
   handler: async (ctx) => {

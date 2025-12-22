@@ -2,10 +2,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Plus, Search, Download, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Plus, Search, Download, Trash2, Upload, RefreshCw } from "lucide-react";
+import { useState, useRef } from "react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -17,6 +17,8 @@ export default function AdminProducts() {
   const products = useQuery(api.products.getProducts);
   const deleteProduct = useMutation(api.products.deleteProduct);
   const bulkDeleteProducts = useMutation(api.products.bulkDeleteProducts);
+  const bulkCreateProducts = useMutation(api.products.bulkCreateProducts);
+  const bulkSyncImages = useAction(api.productActions.bulkSyncImages);
   
   const [search, setSearch] = useState("");
   const [formFilter, setFormFilter] = useState<string>("all");
@@ -32,6 +34,8 @@ export default function AdminProducts() {
   const [viewingProduct, setViewingProduct] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Id<"products">[]>([]);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const itemsPerPage = 5;
 
@@ -132,18 +136,30 @@ export default function AdminProducts() {
       return;
     }
 
-    const headers = ["Name", "Category", "Price", "Stock", "Availability", "Brand", "Potencies", "Forms"];
+    const headers = [
+      "Name", "Description", "Brand", "Category", "Base Price", "Stock", "Availability", 
+      "Potencies", "Forms", "Symptoms Tags", "Image URL", "Key Benefits", 
+      "Directions For Use", "Safety Information", "Ingredients"
+    ];
+
     const csvContent = [
       headers.join(","),
       ...filteredProducts.map(p => [
-        `"${p.name.replace(/"/g, '""')}"`,
-        `"${p.category || ""}"`,
+        `"${(p.name || "").replace(/"/g, '""')}"`,
+        `"${(p.description || "").replace(/"/g, '""')}"`,
+        `"${(p.brand || "").replace(/"/g, '""')}"`,
+        `"${(p.category || "").replace(/"/g, '""')}"`,
         p.basePrice,
         p.stock,
         p.availability,
-        `"${p.brand || ""}"`,
-        `"${p.potencies.join("; ")}"`,
-        `"${p.forms.join("; ")}"`
+        `"${(p.potencies || []).join("; ")}"`,
+        `"${(p.forms || []).join("; ")}"`,
+        `"${(p.symptomsTags || []).join("; ")}"`,
+        `"${(p.imageUrl || "").replace(/"/g, '""')}"`,
+        `"${(p.keyBenefits || []).join("; ").replace(/"/g, '""')}"`,
+        `"${(p.directionsForUse || "").replace(/"/g, '""')}"`,
+        `"${(p.safetyInformation || "").replace(/"/g, '""')}"`,
+        `"${(p.ingredients || "").replace(/"/g, '""')}"`
       ].join(","))
     ].join("\n");
 
@@ -157,6 +173,95 @@ export default function AdminProducts() {
     document.body.removeChild(link);
   };
 
+  const handleImportCSV = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const text = e.target?.result as string;
+      if (!text) return;
+
+      try {
+        const rows = text.split("\n").map(row => row.trim()).filter(row => row);
+        const headers = rows[0].split(",").map(h => h.replace(/^"|"$/g, '').trim());
+        
+        const productsToImport = [];
+        
+        // Simple CSV parser (handles quoted strings roughly)
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
+          // Regex to split by comma but ignore commas inside quotes
+          const values = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
+          const cleanValues = values.map(v => v.replace(/^"|"$/g, '').replace(/""/g, '"').trim());
+          
+          if (cleanValues.length < 5) continue; // Skip invalid rows
+
+          const product: any = {};
+          headers.forEach((header, index) => {
+            const value = cleanValues[index];
+            if (!value) return;
+
+            switch(header) {
+              case "Name": product.name = value; break;
+              case "Description": product.description = value; break;
+              case "Brand": product.brand = value; break;
+              case "Category": product.category = value; break;
+              case "Base Price": product.basePrice = parseFloat(value); break;
+              case "Stock": product.stock = parseInt(value); break;
+              case "Availability": product.availability = value; break;
+              case "Potencies": product.potencies = value.split(";").map(s => s.trim()).filter(Boolean); break;
+              case "Forms": product.forms = value.split(";").map(s => s.trim()).filter(Boolean); break;
+              case "Symptoms Tags": product.symptomsTags = value.split(";").map(s => s.trim()).filter(Boolean); break;
+              case "Image URL": product.imageUrl = value; break;
+              case "Key Benefits": product.keyBenefits = value.split(";").map(s => s.trim()).filter(Boolean); break;
+              case "Directions For Use": product.directionsForUse = value; break;
+              case "Safety Information": product.safetyInformation = value; break;
+              case "Ingredients": product.ingredients = value; break;
+            }
+          });
+
+          // Validation defaults
+          if (!product.name) continue;
+          if (!product.description) product.description = "";
+          if (!product.basePrice) product.basePrice = 0;
+          if (!product.stock) product.stock = 0;
+          if (!product.potencies) product.potencies = [];
+          if (!product.forms) product.forms = [];
+          if (!product.symptomsTags) product.symptomsTags = [];
+
+          productsToImport.push(product);
+        }
+
+        if (productsToImport.length > 0) {
+          await bulkCreateProducts({ products: productsToImport });
+          toast.success(`Successfully imported ${productsToImport.length} products`);
+        } else {
+          toast.error("No valid products found in CSV");
+        }
+      } catch (error) {
+        console.error(error);
+        toast.error("Failed to import CSV");
+      }
+      
+      // Reset input
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    };
+    reader.readAsText(file);
+  };
+
+  const handleBulkSyncImages = async () => {
+    setIsSyncing(true);
+    try {
+      const result = await bulkSyncImages({});
+      toast.success(`Synced ${result.syncedCount} images. Failed: ${result.failedCount}`);
+    } catch (error) {
+      toast.error("Failed to sync images");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -165,8 +270,22 @@ export default function AdminProducts() {
           <p className="text-muted-foreground">Manage your product inventory.</p>
         </div>
         <div className="flex items-center gap-2">
+          <input 
+            type="file" 
+            accept=".csv" 
+            className="hidden" 
+            ref={fileInputRef}
+            onChange={handleImportCSV}
+          />
+          <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+            <Upload className="mr-2 h-4 w-4" /> Import CSV
+          </Button>
           <Button variant="outline" onClick={handleExportCSV}>
             <Download className="mr-2 h-4 w-4" /> Export CSV
+          </Button>
+          <Button variant="secondary" onClick={handleBulkSyncImages} disabled={isSyncing}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? "animate-spin" : ""}`} /> 
+            {isSyncing ? "Syncing..." : "Sync Images"}
           </Button>
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
             setIsDialogOpen(open);
