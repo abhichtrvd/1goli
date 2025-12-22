@@ -1,46 +1,76 @@
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { TagInput } from "./TagInput";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Plus, Trash2 } from "lucide-react";
 
 interface ProductAttributesProps {
-  tagsInput: string;
-  setTagsInput: (value: string) => void;
+  tags: string[];
+  setTags: (value: string[]) => void;
+  keyBenefits: string[];
+  setKeyBenefits: (value: string[]) => void;
   initialData?: any;
 }
 
 export function ProductAttributes({
-  tagsInput,
-  setTagsInput,
+  tags,
+  setTags,
+  keyBenefits,
+  setKeyBenefits,
   initialData
 }: ProductAttributesProps) {
+  
+  const addBenefit = () => {
+    setKeyBenefits([...keyBenefits, ""]);
+  };
+
+  const updateBenefit = (index: number, value: string) => {
+    const newBenefits = [...keyBenefits];
+    newBenefits[index] = value;
+    setKeyBenefits(newBenefits);
+  };
+
+  const removeBenefit = (index: number) => {
+    setKeyBenefits(keyBenefits.filter((_, i) => i !== index));
+  };
+
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="symptomsTags">Tags</Label>
-        <Input 
-          id="symptomsTags" 
-          name="symptomsTags" 
-          required 
-          value={tagsInput}
-          onChange={(e) => setTagsInput(e.target.value)}
+        <Label htmlFor="symptomsTags">Symptoms / Tags</Label>
+        <TagInput 
+          tags={tags}
+          setTags={setTags}
           placeholder="fever, pain, flu" 
         />
-        <div className="flex flex-wrap gap-1 mt-2 min-h-[24px]">
-          {tagsInput.split(",").map((s: string) => s.trim()).filter(Boolean).map((tag: string, i: number) => (
-            <Badge key={i} variant="outline" className="text-[10px]">{tag}</Badge>
-          ))}
-        </div>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="keyBenefits">Key Benefits (semicolon separated)</Label>
-        <Textarea 
-          id="keyBenefits" 
-          name="keyBenefits" 
-          defaultValue={initialData?.keyBenefits?.join("; ")} 
-          placeholder="Benefit 1; Benefit 2; Benefit 3" 
-        />
+        <Label>Key Benefits</Label>
+        <div className="space-y-2">
+          {keyBenefits.map((benefit, index) => (
+            <div key={index} className="flex gap-2">
+              <Input 
+                value={benefit}
+                onChange={(e) => updateBenefit(index, e.target.value)}
+                placeholder={`Benefit ${index + 1}`}
+              />
+              <Button 
+                type="button" 
+                variant="ghost" 
+                size="icon"
+                onClick={() => removeBenefit(index)}
+                className="text-destructive hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+          <Button type="button" variant="outline" size="sm" onClick={addBenefit} className="w-full">
+            <Plus className="h-4 w-4 mr-2" /> Add Benefit
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-2">

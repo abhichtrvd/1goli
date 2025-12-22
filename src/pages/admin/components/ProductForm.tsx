@@ -9,7 +9,7 @@ import { ProductBasicInfo } from "./product-form/ProductBasicInfo";
 import { ProductMedia, GalleryItem } from "./product-form/ProductMedia";
 import { ProductVariants } from "./product-form/ProductVariants";
 import { ProductAttributes } from "./product-form/ProductAttributes";
-import { compressImage } from "@/lib/utils";
+import { compressImage, isValidUrl } from "@/lib/utils";
 
 interface ProductFormProps {
   initialData?: any;
@@ -24,9 +24,12 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   
-  const [potenciesInput, setPotenciesInput] = useState(initialData?.potencies?.join(", ") || "");
-  const [formsInput, setFormsInput] = useState(initialData?.forms?.join(", ") || "");
-  const [tagsInput, setTagsInput] = useState(initialData?.symptomsTags?.join(", ") || "");
+  // State for array fields
+  const [potencies, setPotencies] = useState<string[]>(initialData?.potencies || []);
+  const [forms, setForms] = useState<string[]>(initialData?.forms || []);
+  const [tags, setTags] = useState<string[]>(initialData?.symptomsTags || []);
+  const [keyBenefits, setKeyBenefits] = useState<string[]>(initialData?.keyBenefits || []);
+
   const [imagePreview, setImagePreview] = useState(initialData?.imageUrl || "");
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [videoUrlInput, setVideoUrlInput] = useState(initialData?.videoUrl || "");
@@ -54,37 +57,14 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
     }
   }, [videoUrlInput]);
 
-  const compressImage = async (file: File): Promise<File> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.src = URL.createObjectURL(file);
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-        const maxWidth = 1200; 
-        const scale = maxWidth / img.width;
-        const width = scale < 1 ? maxWidth : img.width;
-        const height = scale < 1 ? img.height * scale : img.height;
-        
-        canvas.width = width;
-        canvas.height = height;
-        ctx?.drawImage(img, 0, 0, width, height);
-        
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", { type: "image/webp" });
-            resolve(newFile);
-          } else {
-            reject(new Error("Compression failed"));
-          }
-        }, "image/webp", 0.8);
-      };
-      img.onerror = reject;
-    });
-  };
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    
+    if (videoUrlInput && !isValidUrl(videoUrlInput)) {
+      toast.error("Please enter a valid Video URL");
+      return;
+    }
+
     setIsSubmitting(true);
     setUploadProgress(0);
     const formData = new FormData(e.currentTarget);
@@ -173,10 +153,10 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
       stock: parseInt(formData.get("stock") as string) || 0,
       category: formData.get("category") as string,
       availability: formData.get("availability") as string,
-      potencies: (formData.get("potencies") as string).split(",").map(s => s.trim()).filter(Boolean),
-      forms: (formData.get("forms") as string).split(",").map(s => s.trim()).filter(Boolean),
-      symptomsTags: (formData.get("symptomsTags") as string).split(",").map(s => s.trim()).filter(Boolean),
-      keyBenefits: (formData.get("keyBenefits") as string).split(";").map(s => s.trim()).filter(Boolean),
+      potencies: potencies,
+      forms: forms,
+      symptomsTags: tags,
+      keyBenefits: keyBenefits.filter(b => b.trim().length > 0),
       directionsForUse: formData.get("directionsForUse") as string,
       safetyInformation: formData.get("safetyInformation") as string,
       ingredients: formData.get("ingredients") as string,
@@ -222,15 +202,17 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
       />
 
       <ProductVariants 
-        potenciesInput={potenciesInput}
-        setPotenciesInput={setPotenciesInput}
-        formsInput={formsInput}
-        setFormsInput={setFormsInput}
+        potencies={potencies}
+        setPotencies={setPotencies}
+        forms={forms}
+        setForms={setForms}
       />
 
       <ProductAttributes 
-        tagsInput={tagsInput}
-        setTagsInput={setTagsInput}
+        tags={tags}
+        setTags={setTags}
+        keyBenefits={keyBenefits}
+        setKeyBenefits={setKeyBenefits}
         initialData={initialData}
       />
 

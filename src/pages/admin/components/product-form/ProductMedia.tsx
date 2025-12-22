@@ -4,6 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { Reorder } from "framer-motion";
 import { X, Video, GripVertical } from "lucide-react";
 import { Id } from "@/convex/_generated/dataModel";
+import { isValidUrl } from "@/lib/utils";
 
 export type GalleryItem = {
   id: string;
@@ -84,6 +85,8 @@ export function ProductMedia({
   const removeGalleryItem = (index: number) => {
     setGalleryItems(galleryItems.filter((_, i) => i !== index));
   };
+
+  const isVideoUrlValid = !videoUrlInput || isValidUrl(videoUrlInput);
 
   return (
     <div className="space-y-4">
@@ -216,9 +219,12 @@ export function ProductMedia({
                   value={videoUrlInput}
                   onChange={(e) => setVideoUrlInput(e.target.value)}
                   placeholder="https://youtube.com/..." 
-                  className="pl-8"
+                  className={`pl-8 ${!isVideoUrlValid ? "border-destructive focus-visible:ring-destructive" : ""}`}
                 />
               </div>
+              {!isVideoUrlValid && (
+                <p className="text-xs text-destructive">Please enter a valid URL.</p>
+              )}
               <p className="text-[10px] text-muted-foreground">Supports YouTube. Thumbnail auto-generated.</p>
             </div>
             {videoThumbnail && (
