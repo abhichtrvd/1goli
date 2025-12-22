@@ -209,6 +209,27 @@ export const updateOrderStatus = mutation({
     const order = await ctx.db.get(args.orderId);
     if (!order) throw new Error("Order not found");
 
+    // Handle stock adjustments based on status change
+    if (args.status === "cancelled" && order.status !== "cancelled") {
+      // Restock items when cancelling
+      for (const item of order.items) {
+        const product = await ctx.db.get(item.productId);
+        if (product) {
+          await ctx.db.patch(item.productId, { stock: product.stock + item.quantity });
+        }
+      }
+    } else if (order.status === "cancelled" && args.status !== "cancelled") {
+      // Deduct stock when un-cancelling (re-activating order)
+      for (const item of order.items) {
+        const product = await ctx.db.get(item.productId);
+        if (!product) throw new Error(`Product ${item.name} not found`);
+        if (product.stock < item.quantity) {
+          throw new Error(`Insufficient stock for ${item.name} to restore order. Available: ${product.stock}`);
+        }
+        await ctx.db.patch(item.productId, { stock: product.stock - item.quantity });
+      }
+    }
+
     const history = order.statusHistory || [];
     history.push({
       status: args.status,
@@ -245,6 +266,27 @@ export const bulkUpdateOrderStatus = mutation({
     for (const orderId of args.orderIds) {
       const order = await ctx.db.get(orderId);
       if (order) {
+        // Handle stock adjustments for bulk update
+        if (args.status === "cancelled" && order.status !== "cancelled") {
+          // Restock items
+          for (const item of order.items) {
+            const product = await ctx.db.get(item.productId);
+            if (product) {
+              await ctx.db.patch(item.productId, { stock: product.stock + item.quantity });
+            }
+          }
+        } else if (order.status === "cancelled" && args.status !== "cancelled") {
+          // Deduct stock (re-activate)
+          for (const item of order.items) {
+            const product = await ctx.db.get(item.productId);
+            if (!product) throw new Error(`Product ${item.name} (in Order ${orderId}) not found`);
+            if (product.stock < item.quantity) {
+              throw new Error(`Insufficient stock for ${item.name} to restore Order ${orderId}`);
+            }
+            await ctx.db.patch(item.productId, { stock: product.stock - item.quantity });
+          }
+        }
+
         const history = order.statusHistory || [];
         history.push({
           status: args.status,
