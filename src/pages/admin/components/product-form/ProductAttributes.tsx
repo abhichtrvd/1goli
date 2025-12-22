@@ -1,9 +1,7 @@
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { TagInput } from "./TagInput";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Plus, Trash2 } from "lucide-react";
+import { DynamicList } from "./DynamicList";
 
 interface ProductAttributesProps {
   tags: string[];
@@ -20,21 +18,6 @@ export function ProductAttributes({
   setKeyBenefits,
   initialData
 }: ProductAttributesProps) {
-  
-  const addBenefit = () => {
-    setKeyBenefits([...keyBenefits, ""]);
-  };
-
-  const updateBenefit = (index: number, value: string) => {
-    const newBenefits = [...keyBenefits];
-    newBenefits[index] = value;
-    setKeyBenefits(newBenefits);
-  };
-
-  const removeBenefit = (index: number) => {
-    setKeyBenefits(keyBenefits.filter((_, i) => i !== index));
-  };
-
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -48,29 +31,13 @@ export function ProductAttributes({
 
       <div className="space-y-2">
         <Label>Key Benefits</Label>
-        <div className="space-y-2">
-          {keyBenefits.map((benefit, index) => (
-            <div key={index} className="flex gap-2">
-              <Input 
-                value={benefit}
-                onChange={(e) => updateBenefit(index, e.target.value)}
-                placeholder={`Benefit ${index + 1}`}
-              />
-              <Button 
-                type="button" 
-                variant="ghost" 
-                size="icon"
-                onClick={() => removeBenefit(index)}
-                className="text-destructive hover:text-destructive"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          ))}
-          <Button type="button" variant="outline" size="sm" onClick={addBenefit} className="w-full">
-            <Plus className="h-4 w-4 mr-2" /> Add Benefit
-          </Button>
-        </div>
+        <DynamicList 
+          items={keyBenefits}
+          setItems={setKeyBenefits}
+          placeholder="e.g. Reduces inflammation"
+          addButtonLabel="Add Benefit"
+          emptyMessage="No key benefits added yet."
+        />
       </div>
 
       <div className="space-y-2">

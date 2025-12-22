@@ -65,9 +65,16 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
       return;
     }
 
+    const formData = new FormData(e.currentTarget);
+    const basePrice = parseFloat(formData.get("basePrice") as string);
+
+    if (isNaN(basePrice)) {
+      toast.error("Please enter a valid base price");
+      return;
+    }
+
     setIsSubmitting(true);
     setUploadProgress(0);
-    const formData = new FormData(e.currentTarget);
     
     let imageStorageId: Id<"_storage"> | null | undefined = undefined;
     let imageUrl: string | null | undefined = formData.get("imageUrl") as string | null;
@@ -149,7 +156,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
       images: finalGalleryImages,
       videoUrl: videoUrlInput,
       videoThumbnail: videoThumbnail,
-      basePrice: parseFloat(formData.get("basePrice") as string),
+      basePrice: basePrice,
       stock: parseInt(formData.get("stock") as string) || 0,
       category: formData.get("category") as string,
       availability: formData.get("availability") as string,
