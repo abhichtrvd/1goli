@@ -67,9 +67,15 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
 
     const formData = new FormData(e.currentTarget);
     const basePrice = parseFloat(formData.get("basePrice") as string);
+    const stock = parseInt(formData.get("stock") as string);
 
-    if (isNaN(basePrice)) {
-      toast.error("Please enter a valid base price");
+    if (isNaN(basePrice) || basePrice < 0) {
+      toast.error("Please enter a valid non-negative base price");
+      return;
+    }
+
+    if (isNaN(stock) || stock < 0) {
+      toast.error("Please enter a valid non-negative stock quantity");
       return;
     }
 
@@ -157,7 +163,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
       videoUrl: videoUrlInput,
       videoThumbnail: videoThumbnail,
       basePrice: basePrice,
-      stock: parseInt(formData.get("stock") as string) || 0,
+      stock: stock,
       category: formData.get("category") as string,
       availability: formData.get("availability") as string,
       potencies: potencies,

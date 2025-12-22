@@ -17,7 +17,7 @@ export function ProductBasicInfo({ initialData }: ProductBasicInfoProps) {
         </div>
         <div className="space-y-2">
           <Label htmlFor="basePrice">Base Price (₹)</Label>
-          <Input id="basePrice" name="basePrice" type="number" step="0.01" required defaultValue={initialData?.basePrice} placeholder="1299" />
+          <Input id="basePrice" name="basePrice" type="number" step="0.01" min="0" required defaultValue={initialData?.basePrice} placeholder="1299" />
         </div>
       </div>
 
@@ -65,7 +65,7 @@ export function ProductBasicInfo({ initialData }: ProductBasicInfoProps) {
       
       <div className="space-y-2">
         <Label htmlFor="stock">Stock Quantity</Label>
-        <Input id="stock" name="stock" type="number" required defaultValue={initialData?.stock || 0} placeholder="100" />
+        <Input id="stock" name="stock" type="number" min="0" required defaultValue={initialData?.stock || 0} placeholder="100" />
       </div>
       
       <div className="space-y-2">

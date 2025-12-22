@@ -2,6 +2,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Plus, Search, Download, Trash2, Upload, RefreshCw } from "lucide-react";
@@ -77,6 +87,10 @@ export default function AdminProducts() {
   const [isSyncing, setIsSyncing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
+  // Delete Confirmation State
+  const [productToDelete, setProductToDelete] = useState<Id<"products"> | null>(null);
+  const [showBulkDeleteAlert, setShowBulkDeleteAlert] = useState(false);
+  
   const itemsPerPage = 5;
 
   // Derive unique options from data for dynamic filters
@@ -128,27 +142,36 @@ export default function AdminProducts() {
     setIsViewDialogOpen(true);
   };
 
-  const handleDelete = async (id: Id<"products">) => {
-    if (confirm("Are you sure you want to delete this product?")) {
-      try {
-        await deleteProduct({ id });
-        toast.success("Product deleted");
-      } catch (error) {
-        toast.error("Failed to delete product");
-      }
+  const handleDeleteClick = (id: Id<"products">) => {
+    setProductToDelete(id);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!productToDelete) return;
+    try {
+      await deleteProduct({ id: productToDelete });
+      toast.success("Product deleted");
+    } catch (error) {
+      toast.error("Failed to delete product");
+    } finally {
+      setProductToDelete(null);
     }
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDeleteClick = () => {
     if (selectedIds.length === 0) return;
-    if (confirm(`Are you sure you want to delete ${selectedIds.length} products?`)) {
-      try {
-        await bulkDeleteProducts({ ids: selectedIds });
-        toast.success(`${selectedIds.length} products deleted`);
-        setSelectedIds([]);
-      } catch (error) {
-        toast.error("Failed to delete products");
-      }
+    setShowBulkDeleteAlert(true);
+  };
+
+  const handleConfirmBulkDelete = async () => {
+    try {
+      await bulkDeleteProducts({ ids: selectedIds });
+      toast.success(`${selectedIds.length} products deleted`);
+      setSelectedIds([]);
+    } catch (error) {
+      toast.error("Failed to delete products");
+    } finally {
+      setShowBulkDeleteAlert(false);
     }
   };
 
@@ -355,6 +378,42 @@ export default function AdminProducts() {
           open={isViewDialogOpen} 
           onOpenChange={setIsViewDialogOpen} 
         />
+        
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={!!productToDelete} onOpenChange={(open) => !open && setProductToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the product from the database.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Bulk Delete Confirmation Dialog */}
+        <AlertDialog open={showBulkDeleteAlert} onOpenChange={setShowBulkDeleteAlert}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure you want to delete multiple products?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete {selectedIds.length} selected products. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Delete {selectedIds.length} Products
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
       <Card>
@@ -363,7 +422,7 @@ export default function AdminProducts() {
             <div className="flex items-center justify-between">
               <CardTitle>All Products</CardTitle>
               {selectedIds.length > 0 && (
-                <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
+                <Button variant="destructive" size="sm" onClick={handleBulkDeleteClick}>
                   <Trash2 className="mr-2 h-4 w-4" /> Delete Selected ({selectedIds.length})
                 </Button>
               )}
@@ -467,7 +526,7 @@ export default function AdminProducts() {
             setCurrentPage={setCurrentPage}
             onView={openViewDialog}
             onEdit={openEditDialog}
-            onDelete={handleDelete}
+            onDelete={handleDeleteClick}
             selectedIds={selectedIds}
             onSelect={handleSelect}
             onSelectAll={handleSelectAll}
