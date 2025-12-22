@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Plus, Search, Download, Trash2, Upload, RefreshCw } from "lucide-react";
+import { Plus, Search, Download, Trash2, Upload, RefreshCw, FileSpreadsheet } from "lucide-react";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
@@ -193,8 +193,44 @@ export default function AdminProducts() {
     }
   };
 
+  const handleDownloadTemplate = () => {
+    const headers = [
+      "Name", "Description", "Brand", "Category", "Base Price", "Stock", "Availability", 
+      "Potencies", "Forms", "Symptoms Tags", "Image URL", "Key Benefits", 
+      "Directions For Use", "Safety Information", "Ingredients", "Video URL"
+    ];
+    
+    const exampleRow = [
+      "Example Product", "Description here...", "Brand Name", "Classical", "100", "50", "in_stock",
+      "30C; 200C", "Dilution; Globules", "fever; pain", "https://example.com/image.jpg", "Relieves pain; Reduces fever",
+      "Take 5 drops", "Keep away from children", "Arnica Montana", "https://youtube.com/..."
+    ];
+
+    const csvContent = [
+      headers.join(","),
+      exampleRow.map(field => `"${field.replace(/"/g, '""')}"`).join(",")
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "product_import_template.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleExportCSV = () => {
-    if (!filteredProducts || filteredProducts.length === 0) {
+    // Determine which products to export
+    let productsToExport = filteredProducts || [];
+    
+    // If items are selected, only export those
+    if (selectedIds.length > 0 && products) {
+      productsToExport = products.filter(p => selectedIds.includes(p._id));
+    }
+
+    if (productsToExport.length === 0) {
       toast.error("No data to export");
       return;
     }
@@ -202,12 +238,12 @@ export default function AdminProducts() {
     const headers = [
       "Name", "Description", "Brand", "Category", "Base Price", "Stock", "Availability", 
       "Potencies", "Forms", "Symptoms Tags", "Image URL", "Key Benefits", 
-      "Directions For Use", "Safety Information", "Ingredients"
+      "Directions For Use", "Safety Information", "Ingredients", "Video URL"
     ];
 
     const csvContent = [
       headers.join(","),
-      ...filteredProducts.map(p => [
+      ...productsToExport.map(p => [
         `"${(p.name || "").replace(/"/g, '""')}"`,
         `"${(p.description || "").replace(/"/g, '""')}"`,
         `"${(p.brand || "").replace(/"/g, '""')}"`,
@@ -222,7 +258,8 @@ export default function AdminProducts() {
         `"${(p.keyBenefits || []).join("; ").replace(/"/g, '""')}"`,
         `"${(p.directionsForUse || "").replace(/"/g, '""')}"`,
         `"${(p.safetyInformation || "").replace(/"/g, '""')}"`,
-        `"${(p.ingredients || "").replace(/"/g, '""')}"`
+        `"${(p.ingredients || "").replace(/"/g, '""')}"`,
+        `"${(p.videoUrl || "").replace(/"/g, '""')}"`
       ].join(","))
     ].join("\n");
 
@@ -253,11 +290,15 @@ export default function AdminProducts() {
         }
 
         const headers = rows[0].map((h: string) => h.trim());
-        const productsToImport = [];
+        const productsToImport: any[] = [];
+        let skippedCount = 0;
         
         for (let i = 1; i < rows.length; i++) {
           const values = rows[i];
-          if (values.length < 2) continue; // Skip empty/invalid rows
+          if (values.length < 2) {
+             skippedCount++;
+             continue; 
+          }
 
           const product: any = {};
           headers.forEach((header: string, index: number) => {
@@ -280,24 +321,29 @@ export default function AdminProducts() {
               case "Directions For Use": product.directionsForUse = value; break;
               case "Safety Information": product.safetyInformation = value; break;
               case "Ingredients": product.ingredients = value; break;
+              case "Video URL": product.videoUrl = value; break;
             }
           });
 
           // Validation defaults
-          if (!product.name) continue;
+          if (!product.name) {
+            skippedCount++;
+            continue;
+          }
           if (!product.description) product.description = "";
           if (!product.basePrice) product.basePrice = 0;
           if (!product.stock) product.stock = 0;
           if (!product.potencies) product.potencies = [];
           if (!product.forms) product.forms = [];
           if (!product.symptomsTags) product.symptomsTags = [];
+          if (!product.keyBenefits) product.keyBenefits = [];
 
           productsToImport.push(product);
         }
 
         if (productsToImport.length > 0) {
           await bulkCreateProducts({ products: productsToImport });
-          toast.success(`Successfully imported ${productsToImport.length} products`);
+          toast.success(`Imported ${productsToImport.length} products.${skippedCount > 0 ? ` Skipped ${skippedCount} invalid rows.` : ""}`);
         } else {
           toast.error("No valid products found in CSV");
         }
@@ -339,6 +385,9 @@ export default function AdminProducts() {
             ref={fileInputRef}
             onChange={handleImportCSV}
           />
+          <Button variant="outline" onClick={handleDownloadTemplate}>
+            <FileSpreadsheet className="mr-2 h-4 w-4" /> Template
+          </Button>
           <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
             <Upload className="mr-2 h-4 w-4" /> Import CSV
           </Button>
