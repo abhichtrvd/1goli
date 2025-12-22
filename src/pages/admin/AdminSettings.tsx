@@ -4,11 +4,114 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Loader2, Save } from "lucide-react";
+import {
+  DEFAULT_FEATURE_CARDS,
+  DEFAULT_HEALTH_CONCERNS,
+  DEFAULT_QUICK_ACTIONS,
+  FeatureCardSetting,
+  HealthConcernSetting,
+  QuickActionSetting,
+} from "@/data/siteDefaults";
+import { Loader2, Save, Trash2, Plus } from "lucide-react";
+
+type SettingsFormState = {
+  siteName: string;
+  supportEmail: string;
+  supportPhone: string;
+  shippingFee: number;
+  freeShippingThreshold: number;
+  maintenanceMode: boolean;
+  bannerMessage: string;
+  heroHeadline: string;
+  heroDescription: string;
+  address: string;
+  facebookUrl: string;
+  twitterUrl: string;
+  instagramUrl: string;
+  linkedinUrl: string;
+  featuredBrands: string;
+  quickActions: QuickActionSetting[];
+  healthConcerns: HealthConcernSetting[];
+  featureCards: FeatureCardSetting[];
+};
+
+const QUICK_ACTION_ICON_OPTIONS = [
+  { label: "Upload", value: "upload" },
+  { label: "Stethoscope", value: "stethoscope" },
+  { label: "Pill", value: "pill" },
+  { label: "Star", value: "star" },
+] as const;
+
+const QUICK_ACTION_ACCENT_OPTIONS = [
+  { label: "Lime", value: "lime" },
+  { label: "Blue", value: "blue" },
+  { label: "Pink", value: "pink" },
+  { label: "Purple", value: "purple" },
+] as const;
+
+const HEALTH_CONCERN_ICON_OPTIONS = [
+  { label: "Activity", value: "activity" },
+  { label: "Heart", value: "heart" },
+  { label: "Pill", value: "pill" },
+  { label: "Thermometer", value: "thermometer" },
+  { label: "Flask", value: "flask" },
+  { label: "Stethoscope", value: "stethoscope" },
+] as const;
+
+const HEALTH_CONCERN_COLOR_OPTIONS = [
+  { label: "Sunset Orange", value: "orange" },
+  { label: "Rose", value: "red" },
+  { label: "Lime", value: "lime" },
+  { label: "Herbal Green", value: "green" },
+  { label: "Lavender", value: "purple" },
+  { label: "Teal", value: "teal" },
+] as const;
+
+const FEATURE_CARD_THEME_OPTIONS = [
+  { label: "Light", value: "light" },
+  { label: "Dark", value: "dark" },
+] as const;
+
+const cloneQuickActions = () =>
+  DEFAULT_QUICK_ACTIONS.map((action) => ({ ...action }));
+const cloneHealthConcerns = () =>
+  DEFAULT_HEALTH_CONCERNS.map((concern) => ({ ...concern }));
+const cloneFeatureCards = () =>
+  DEFAULT_FEATURE_CARDS.map((card) => ({ ...card }));
+
+const createDefaultState = (): SettingsFormState => ({
+  siteName: "1goli",
+  supportEmail: "support@1goli.com",
+  supportPhone: "+91 98765 43210",
+  shippingFee: 50,
+  freeShippingThreshold: 500,
+  maintenanceMode: false,
+  bannerMessage: "",
+  heroHeadline: "Homoeopathy, Simplified by 1goli",
+  heroDescription:
+    "India's trusted Homeopathic Pharmacy. Authentic remedies, expert guidance, and doorstep delivery.",
+  address: "123 Wellness Street, Health City, India 400001",
+  facebookUrl: "",
+  twitterUrl: "",
+  instagramUrl: "",
+  linkedinUrl: "",
+  featuredBrands:
+    "Dr. Reckeweg, SBL World Class, Schwabe India, Adel Pekana, Bakson's, Bjain Pharma",
+  quickActions: cloneQuickActions(),
+  healthConcerns: cloneHealthConcerns(),
+  featureCards: cloneFeatureCards(),
+});
 
 export default function AdminSettings() {
   const settings = useQuery(api.settings.getSettings);
@@ -16,44 +119,37 @@ export default function AdminSettings() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Local state for form
-  const [formData, setFormData] = useState({
-    siteName: "1goli",
-    supportEmail: "support@1goli.com",
-    supportPhone: "+91 98765 43210",
-    shippingFee: 50,
-    freeShippingThreshold: 500,
-    maintenanceMode: false,
-    bannerMessage: "",
-    heroHeadline: "Homoeopathy, Simplified by 1goli",
-    heroDescription: "India's trusted Homeopathic Pharmacy. Authentic remedies, expert guidance, and doorstep delivery.",
-    address: "123 Wellness Street, Health City, India 400001",
-    facebookUrl: "",
-    twitterUrl: "",
-    instagramUrl: "",
-    linkedinUrl: "",
-    featuredBrands: "Dr. Reckeweg, SBL World Class, Schwabe India, Adel Pekana, Bakson's, Bjain Pharma",
-  });
+  const [formData, setFormData] = useState<SettingsFormState>(() => createDefaultState());
 
   useEffect(() => {
-    if (settings) {
-      setFormData({
-        siteName: settings.siteName,
-        supportEmail: settings.supportEmail,
-        supportPhone: settings.supportPhone,
-        shippingFee: settings.shippingFee,
-        freeShippingThreshold: settings.freeShippingThreshold,
-        maintenanceMode: settings.maintenanceMode,
-        bannerMessage: settings.bannerMessage || "",
-        heroHeadline: settings.heroHeadline || "Homoeopathy, Simplified by 1goli",
-        heroDescription: settings.heroDescription || "India's trusted Homeopathic Pharmacy. Authentic remedies, expert guidance, and doorstep delivery.",
-        address: settings.address || "123 Wellness Street, Health City, India 400001",
-        facebookUrl: settings.facebookUrl || "",
-        twitterUrl: settings.twitterUrl || "",
-        instagramUrl: settings.instagramUrl || "",
-        linkedinUrl: settings.linkedinUrl || "",
-        featuredBrands: settings.featuredBrands ? settings.featuredBrands.join(", ") : "Dr. Reckeweg, SBL World Class, Schwabe India, Adel Pekana, Bakson's, Bjain Pharma",
-      });
-    }
+    if (!settings) return;
+
+    const defaults = createDefaultState();
+
+    setFormData({
+      siteName: settings.siteName ?? defaults.siteName,
+      supportEmail: settings.supportEmail ?? defaults.supportEmail,
+      supportPhone: settings.supportPhone ?? defaults.supportPhone,
+      shippingFee: settings.shippingFee ?? defaults.shippingFee,
+      freeShippingThreshold: settings.freeShippingThreshold ?? defaults.freeShippingThreshold,
+      maintenanceMode: settings.maintenanceMode ?? defaults.maintenanceMode,
+      bannerMessage: settings.bannerMessage ?? "",
+      heroHeadline: settings.heroHeadline ?? defaults.heroHeadline,
+      heroDescription: settings.heroDescription ?? defaults.heroDescription,
+      address: settings.address ?? defaults.address,
+      facebookUrl: settings.facebookUrl ?? "",
+      twitterUrl: settings.twitterUrl ?? "",
+      instagramUrl: settings.instagramUrl ?? "",
+      linkedinUrl: settings.linkedinUrl ?? "",
+      featuredBrands:
+        settings.featuredBrands?.join(", ") ?? defaults.featuredBrands,
+      quickActions:
+        ((settings.quickActions ?? defaults.quickActions).map((action) => ({ ...action })) as QuickActionSetting[]),
+      healthConcerns:
+        ((settings.healthConcerns ?? defaults.healthConcerns).map((concern) => ({ ...concern })) as HealthConcernSetting[]),
+      featureCards:
+        ((settings.featureCards ?? defaults.featureCards).map((card) => ({ ...card })) as FeatureCardSetting[]),
+    });
   }, [settings]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -70,10 +166,27 @@ export default function AdminSettings() {
     setIsSubmitting(true);
     try {
       await updateSettings({
-        ...formData,
+        siteName: formData.siteName,
+        supportEmail: formData.supportEmail,
+        supportPhone: formData.supportPhone,
         shippingFee: Number(formData.shippingFee),
         freeShippingThreshold: Number(formData.freeShippingThreshold),
-        featuredBrands: formData.featuredBrands.split(",").map(b => b.trim()).filter(b => b.length > 0),
+        maintenanceMode: formData.maintenanceMode,
+        bannerMessage: formData.bannerMessage || undefined,
+        heroHeadline: formData.heroHeadline || undefined,
+        heroDescription: formData.heroDescription || undefined,
+        address: formData.address || undefined,
+        facebookUrl: formData.facebookUrl || undefined,
+        twitterUrl: formData.twitterUrl || undefined,
+        instagramUrl: formData.instagramUrl || undefined,
+        linkedinUrl: formData.linkedinUrl || undefined,
+        featuredBrands: formData.featuredBrands
+          .split(",")
+          .map((b) => b.trim())
+          .filter((b) => b.length > 0),
+        quickActions: formData.quickActions,
+        healthConcerns: formData.healthConcerns,
+        featureCards: formData.featureCards,
       });
       toast.success("Settings updated successfully");
     } catch (error) {
@@ -82,6 +195,109 @@ export default function AdminSettings() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const updateQuickAction = <T extends keyof QuickActionSetting>(
+    index: number,
+    field: T,
+    value: QuickActionSetting[T],
+  ) => {
+    setFormData((prev) => {
+      const updated = [...prev.quickActions];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...prev, quickActions: updated };
+    });
+  };
+
+  const addQuickAction = () => {
+    setFormData((prev) => ({
+      ...prev,
+      quickActions: [
+        ...prev.quickActions,
+        {
+          title: "New Action",
+          description: "Describe this action",
+          href: "/",
+          icon: "upload",
+          accent: "lime",
+        },
+      ],
+    }));
+  };
+
+  const removeQuickAction = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      quickActions: prev.quickActions.filter((_, i) => i !== index),
+    }));
+  };
+
+  const updateHealthConcern = <T extends keyof HealthConcernSetting>(
+    index: number,
+    field: T,
+    value: HealthConcernSetting[T],
+  ) => {
+    setFormData((prev) => {
+      const updated = [...prev.healthConcerns];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...prev, healthConcerns: updated };
+    });
+  };
+
+  const addHealthConcern = () => {
+    setFormData((prev) => ({
+      ...prev,
+      healthConcerns: [
+        ...prev.healthConcerns,
+        {
+          title: "New Concern",
+          query: "New Concern",
+          icon: "activity",
+          color: "orange",
+        },
+      ],
+    }));
+  };
+
+  const removeHealthConcern = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      healthConcerns: prev.healthConcerns.filter((_, i) => i !== index),
+    }));
+  };
+
+  const updateFeatureCard = <T extends keyof FeatureCardSetting>(
+    index: number,
+    field: T,
+    value: FeatureCardSetting[T],
+  ) => {
+    setFormData((prev) => {
+      const updated = [...prev.featureCards];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...prev, featureCards: updated };
+    });
+  };
+
+  const addFeatureCard = () => {
+    setFormData((prev) => ({
+      ...prev,
+      featureCards: [
+        ...prev.featureCards,
+        {
+          title: "New Card",
+          description: "Describe this AI capability",
+          href: "/",
+          theme: "light",
+        },
+      ],
+    }));
+  };
+
+  const removeFeatureCard = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      featureCards: prev.featureCards.filter((_, i) => i !== index),
+    }));
   };
 
   if (settings === undefined) {
@@ -178,6 +394,233 @@ export default function AdminSettings() {
                   placeholder="India's trusted Homeopathic Pharmacy..."
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Actions</CardTitle>
+              <CardDescription>
+                Customize the action tiles shown under the hero section.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {formData.quickActions.map((action, index) => (
+                <div
+                  key={`quick-action-${index}`}
+                  className="rounded-xl border p-4 space-y-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-sm">
+                      Action {index + 1}
+                    </h4>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeQuickAction(index)}
+                      aria-label="Remove quick action"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Title</Label>
+                      <Input
+                        value={action.title}
+                        onChange={(e) =>
+                          updateQuickAction(index, "title", e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Link</Label>
+                      <Input
+                        value={action.href}
+                        onChange={(e) =>
+                          updateQuickAction(index, "href", e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label>Description</Label>
+                      <Textarea
+                        value={action.description}
+                        onChange={(e) =>
+                          updateQuickAction(index, "description", e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Icon</Label>
+                      <Select
+                        value={action.icon}
+                        onValueChange={(value) =>
+                          updateQuickAction(
+                            index,
+                            "icon",
+                            value as QuickActionSetting["icon"],
+                          )
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose icon" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {QUICK_ACTION_ICON_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Accent</Label>
+                      <Select
+                        value={action.accent}
+                        onValueChange={(value) =>
+                          updateQuickAction(
+                            index,
+                            "accent",
+                            value as QuickActionSetting["accent"],
+                          )
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose accent" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {QUICK_ACTION_ACCENT_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={addQuickAction}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Quick Action
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Health Concerns</CardTitle>
+              <CardDescription>
+                Control the "Shop by Health Concern" grid.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {formData.healthConcerns.map((concern, index) => (
+                <div
+                  key={`health-concern-${index}`}
+                  className="rounded-xl border p-4 space-y-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-sm">
+                      Concern {index + 1}
+                    </h4>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeHealthConcern(index)}
+                      aria-label="Remove health concern"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Title</Label>
+                      <Input
+                        value={concern.title}
+                        onChange={(e) =>
+                          updateHealthConcern(index, "title", e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Search Query</Label>
+                      <Input
+                        value={concern.query}
+                        onChange={(e) =>
+                          updateHealthConcern(index, "query", e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Icon</Label>
+                      <Select
+                        value={concern.icon}
+                        onValueChange={(value) =>
+                          updateHealthConcern(
+                            index,
+                            "icon",
+                            value as HealthConcernSetting["icon"],
+                          )
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose icon" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {HEALTH_CONCERN_ICON_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Color</Label>
+                      <Select
+                        value={concern.color}
+                        onValueChange={(value) =>
+                          updateHealthConcern(
+                            index,
+                            "color",
+                            value as HealthConcernSetting["color"],
+                          )
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose color" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {HEALTH_CONCERN_COLOR_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={addHealthConcern}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Health Concern
+              </Button>
             </CardContent>
           </Card>
 
@@ -315,6 +758,102 @@ export default function AdminSettings() {
                 />
                 <p className="text-xs text-muted-foreground">Leave empty to hide the banner.</p>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>AI Feature Section</CardTitle>
+              <CardDescription>
+                Configure the cards displayed in the AI highlight section.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {formData.featureCards.map((cardData, index) => (
+                <div
+                  key={`feature-card-${index}`}
+                  className="rounded-xl border p-4 space-y-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-sm">Card {index + 1}</h4>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeFeatureCard(index)}
+                      aria-label="Remove feature card"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Title</Label>
+                      <Input
+                        value={cardData.title}
+                        onChange={(e) =>
+                          updateFeatureCard(index, "title", e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Link</Label>
+                      <Input
+                        value={cardData.href}
+                        onChange={(e) =>
+                          updateFeatureCard(index, "href", e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label>Description</Label>
+                      <Textarea
+                        value={cardData.description}
+                        onChange={(e) =>
+                          updateFeatureCard(
+                            index,
+                            "description",
+                            e.target.value,
+                          )
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Theme</Label>
+                      <Select
+                        value={cardData.theme}
+                        onValueChange={(value) =>
+                          updateFeatureCard(
+                            index,
+                            "theme",
+                            value as FeatureCardSetting["theme"],
+                          )
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose theme" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {FEATURE_CARD_THEME_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={addFeatureCard}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Feature Card
+              </Button>
             </CardContent>
           </Card>
 

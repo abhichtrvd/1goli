@@ -290,6 +290,37 @@ const schema = defineSchema(
       
       // Featured Brands
       featuredBrands: v.optional(v.array(v.string())),
+      quickActions: v.optional(
+        v.array(
+          v.object({
+            title: v.string(),
+            description: v.string(),
+            href: v.string(),
+            icon: v.string(),
+            accent: v.string(),
+          })
+        )
+      ),
+      healthConcerns: v.optional(
+        v.array(
+          v.object({
+            title: v.string(),
+            query: v.string(),
+            icon: v.string(),
+            color: v.string(),
+          })
+        )
+      ),
+      featureCards: v.optional(
+        v.array(
+          v.object({
+            title: v.string(),
+            description: v.string(),
+            href: v.string(),
+            theme: v.string(),
+          })
+        )
+      ),
     }),
 
     auditLogs: defineTable({
