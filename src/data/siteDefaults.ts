@@ -60,3 +60,12 @@ export const DEFAULT_FEATURE_CARDS: FeatureCardSetting[] = [
     theme: "dark",
   },
 ];
+
+export const DEFAULT_FEATURED_BRANDS: string[] = [
+  "Dr. Reckeweg",
+  "SBL World Class",
+  "Schwabe India",
+  "Adel Pekana",
+  "Bakson's",
+  "Bjain Pharma",
+];

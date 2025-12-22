@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -22,8 +23,10 @@ import {
   FeatureCardSetting,
   HealthConcernSetting,
   QuickActionSetting,
+  DEFAULT_FEATURED_BRANDS,
 } from "@/data/siteDefaults";
-import { Loader2, Save, Trash2, Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Loader2, Save, Trash2, Plus, Upload, Stethoscope, Pill, Star } from "lucide-react";
 
 type SettingsFormState = {
   siteName: string;

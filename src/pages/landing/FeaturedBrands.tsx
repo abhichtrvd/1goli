@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { DEFAULT_FEATURED_BRANDS } from "@/data/siteDefaults";
 
 interface FeaturedBrandsProps {
   selectedBrand: string | undefined;
@@ -10,16 +11,10 @@ interface FeaturedBrandsProps {
 export function FeaturedBrands({ selectedBrand, handleBrandClick }: FeaturedBrandsProps) {
   const settings = useQuery(api.settings.getSettings);
   
-  const featuredBrands = settings?.featuredBrands && settings.featuredBrands.length > 0 
-    ? settings.featuredBrands 
-    : [
-        "Dr. Reckeweg", 
-        "SBL World Class", 
-        "Schwabe India", 
-        "Adel Pekana", 
-        "Bakson's", 
-        "Bjain Pharma"
-      ];
+  const featuredBrands =
+    settings?.featuredBrands && settings.featuredBrands.length > 0
+      ? settings.featuredBrands
+      : DEFAULT_FEATURED_BRANDS;
 
   return (
     <section className="py-12 bg-secondary border-y border-border">
