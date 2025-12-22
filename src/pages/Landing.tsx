@@ -29,7 +29,7 @@ export default function Landing() {
     { initialNumItems: 10 }
   );
 
-  const seed = useMutation(api.products.seedProducts);
+  const seed = useMutation(api.products_admin.seedProducts);
   const navigate = useNavigate();
 
   useEffect(() => {

@@ -13,11 +13,51 @@ import { ProductForm } from "./components/ProductForm";
 import { ProductTable } from "./components/ProductTable";
 import { ProductViewDialog } from "./components/ProductViewDialog";
 
+// Robust CSV Parser
+function parseCSV(text: string) {
+  const rows = [];
+  let currentRow = [];
+  let currentField = '';
+  let insideQuotes = false;
+  
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const nextChar = text[i + 1];
+    
+    if (char === '"') {
+      if (insideQuotes && nextChar === '"') {
+        currentField += '"';
+        i++; // Skip next quote
+      } else {
+        insideQuotes = !insideQuotes;
+      }
+    } else if (char === ',' && !insideQuotes) {
+      currentRow.push(currentField.trim());
+      currentField = '';
+    } else if ((char === '\n' || char === '\r') && !insideQuotes) {
+      if (currentField || currentRow.length > 0) {
+        currentRow.push(currentField.trim());
+        rows.push(currentRow);
+      }
+      currentRow = [];
+      currentField = '';
+      if (char === '\r' && nextChar === '\n') i++;
+    } else {
+      currentField += char;
+    }
+  }
+  if (currentField || currentRow.length > 0) {
+    currentRow.push(currentField.trim());
+    rows.push(currentRow);
+  }
+  return rows;
+}
+
 export default function AdminProducts() {
   const products = useQuery(api.products.getProducts);
-  const deleteProduct = useMutation(api.products.deleteProduct);
-  const bulkDeleteProducts = useMutation(api.products.bulkDeleteProducts);
-  const bulkCreateProducts = useMutation(api.products.bulkCreateProducts);
+  const deleteProduct = useMutation(api.products_admin.deleteProduct);
+  const bulkDeleteProducts = useMutation(api.products_admin.bulkDeleteProducts);
+  const bulkCreateProducts = useMutation(api.products_admin.bulkCreateProducts);
   const bulkSyncImages = useAction(api.productActions.bulkSyncImages);
   
   const [search, setSearch] = useState("");
@@ -183,23 +223,22 @@ export default function AdminProducts() {
       if (!text) return;
 
       try {
-        const rows = text.split("\n").map(row => row.trim()).filter(row => row);
-        const headers = rows[0].split(",").map(h => h.replace(/^"|"$/g, '').trim());
-        
+        const rows = parseCSV(text);
+        if (rows.length < 2) {
+          toast.error("CSV file is empty or invalid");
+          return;
+        }
+
+        const headers = rows[0].map((h: string) => h.trim());
         const productsToImport = [];
         
-        // Simple CSV parser (handles quoted strings roughly)
         for (let i = 1; i < rows.length; i++) {
-          const row = rows[i];
-          // Regex to split by comma but ignore commas inside quotes
-          const values = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
-          const cleanValues = values.map(v => v.replace(/^"|"$/g, '').replace(/""/g, '"').trim());
-          
-          if (cleanValues.length < 5) continue; // Skip invalid rows
+          const values = rows[i];
+          if (values.length < 2) continue; // Skip empty/invalid rows
 
           const product: any = {};
-          headers.forEach((header, index) => {
-            const value = cleanValues[index];
+          headers.forEach((header: string, index: number) => {
+            const value = values[index];
             if (!value) return;
 
             switch(header) {
@@ -210,11 +249,11 @@ export default function AdminProducts() {
               case "Base Price": product.basePrice = parseFloat(value); break;
               case "Stock": product.stock = parseInt(value); break;
               case "Availability": product.availability = value; break;
-              case "Potencies": product.potencies = value.split(";").map(s => s.trim()).filter(Boolean); break;
-              case "Forms": product.forms = value.split(";").map(s => s.trim()).filter(Boolean); break;
-              case "Symptoms Tags": product.symptomsTags = value.split(";").map(s => s.trim()).filter(Boolean); break;
+              case "Potencies": product.potencies = value.split(";").map((s: string) => s.trim()).filter(Boolean); break;
+              case "Forms": product.forms = value.split(";").map((s: string) => s.trim()).filter(Boolean); break;
+              case "Symptoms Tags": product.symptomsTags = value.split(";").map((s: string) => s.trim()).filter(Boolean); break;
               case "Image URL": product.imageUrl = value; break;
-              case "Key Benefits": product.keyBenefits = value.split(";").map(s => s.trim()).filter(Boolean); break;
+              case "Key Benefits": product.keyBenefits = value.split(";").map((s: string) => s.trim()).filter(Boolean); break;
               case "Directions For Use": product.directionsForUse = value; break;
               case "Safety Information": product.safetyInformation = value; break;
               case "Ingredients": product.ingredients = value; break;

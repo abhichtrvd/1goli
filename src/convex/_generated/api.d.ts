@@ -22,6 +22,7 @@ import type * as payments from "../payments.js";
 import type * as prescriptions from "../prescriptions.js";
 import type * as productActions from "../productActions.js";
 import type * as products from "../products.js";
+import type * as products_admin from "../products_admin.js";
 import type * as products_internal from "../products_internal.js";
 import type * as reviews from "../reviews.js";
 import type * as settings from "../settings.js";
@@ -49,6 +50,7 @@ declare const fullApi: ApiFromModules<{
   prescriptions: typeof prescriptions;
   productActions: typeof productActions;
   products: typeof products;
+  products_admin: typeof products_admin;
   products_internal: typeof products_internal;
   reviews: typeof reviews;
   settings: typeof settings;

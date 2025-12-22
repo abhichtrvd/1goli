@@ -71,7 +71,7 @@ const getProductCategory = (product: any) => {
 export default function Wholesale() {
   const products = useQuery(api.products.getWholesaleProducts);
   const addToCart = useMutation(api.cart.addToCart);
-  const seed = useMutation(api.products.seedProducts);
+  const seed = useMutation(api.products_admin.seedProducts);
 
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
