@@ -218,13 +218,15 @@ export const bulkCreateProducts = mutation({
         directionsForUse: v.optional(v.string()),
         safetyInformation: v.optional(v.string()),
         ingredients: v.optional(v.string()),
+        videoUrl: v.optional(v.string()),
       })
     ),
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
     const userId = await getAuthUserId(ctx);
-    let count = 0;
+    let createdCount = 0;
+    let updatedCount = 0;
 
     for (const product of args.products) {
       const searchText = generateSearchText(
@@ -236,25 +238,40 @@ export const bulkCreateProducts = mutation({
         product.potencies
       );
 
-      await ctx.db.insert("products", {
+      const commonData = {
         ...product,
         category: product.category || "Classical",
         availability: product.availability || "in_stock",
-        packingSizes: ["30ml", "100ml"],
         searchText,
-      });
-      count++;
+      };
+
+      // Check if product exists by name
+      const existingProduct = await ctx.db
+        .query("products")
+        .withIndex("by_name", (q) => q.eq("name", product.name))
+        .first();
+
+      if (existingProduct) {
+        await ctx.db.patch(existingProduct._id, commonData);
+        updatedCount++;
+      } else {
+        await ctx.db.insert("products", {
+          ...commonData,
+          packingSizes: ["30ml", "100ml"], // Default for new products
+        });
+        createdCount++;
+      }
     }
 
     await ctx.db.insert("auditLogs", {
-      action: "bulk_create_products",
+      action: "bulk_import_products",
       entityType: "product",
       performedBy: userId || "admin",
-      details: `Imported ${count} products via CSV`,
+      details: `Imported products: ${createdCount} created, ${updatedCount} updated`,
       timestamp: Date.now(),
     });
 
-    return count;
+    return { created: createdCount, updated: updatedCount };
   },
 });
 

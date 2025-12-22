@@ -342,8 +342,8 @@ export default function AdminProducts() {
         }
 
         if (productsToImport.length > 0) {
-          await bulkCreateProducts({ products: productsToImport });
-          toast.success(`Imported ${productsToImport.length} products.${skippedCount > 0 ? ` Skipped ${skippedCount} invalid rows.` : ""}`);
+          const result = await bulkCreateProducts({ products: productsToImport });
+          toast.success(`Import complete: ${result.created} created, ${result.updated} updated.${skippedCount > 0 ? ` Skipped ${skippedCount} invalid rows.` : ""}`);
         } else {
           toast.error("No valid products found in CSV");
         }
