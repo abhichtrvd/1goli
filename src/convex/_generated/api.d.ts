@@ -28,6 +28,7 @@ import type * as reviews from "../reviews.js";
 import type * as settings from "../settings.js";
 import type * as test_integration from "../test_integration.js";
 import type * as users from "../users.js";
+import type * as utils from "../utils.js";
 
 import type {
   ApiFromModules,
@@ -56,6 +57,7 @@ declare const fullApi: ApiFromModules<{
   settings: typeof settings;
   test_integration: typeof test_integration;
   users: typeof users;
+  utils: typeof utils;
 }>;
 
 /**

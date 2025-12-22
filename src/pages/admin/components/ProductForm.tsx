@@ -9,6 +9,7 @@ import { ProductBasicInfo } from "./product-form/ProductBasicInfo";
 import { ProductMedia, GalleryItem } from "./product-form/ProductMedia";
 import { ProductVariants } from "./product-form/ProductVariants";
 import { ProductAttributes } from "./product-form/ProductAttributes";
+import { compressImage } from "@/lib/utils";
 
 interface ProductFormProps {
   initialData?: any;

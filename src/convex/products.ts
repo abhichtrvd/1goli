@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
 import { paginationOptsValidator } from "convex/server";
+import { filterProductsInMemory } from "./utils";
 
 export const getProducts = query({
   args: {},
@@ -86,18 +87,7 @@ export const getProductsCount = query({
 
     // Manual filtering for array fields
     const filterStartTime = Date.now();
-    const filtered = products.filter(p => {
-      if (args.forms && args.forms.length > 0) {
-        if (!p.forms || !p.forms.some(f => args.forms!.includes(f))) return false;
-      }
-      if (args.symptoms && args.symptoms.length > 0) {
-        if (!p.symptomsTags || !p.symptomsTags.some(s => args.symptoms!.includes(s))) return false;
-      }
-      if (args.potencies && args.potencies.length > 0) {
-        if (!p.potencies || !p.potencies.some(pot => args.potencies!.includes(pot))) return false;
-      }
-      return true;
-    });
+    const filtered = filterProductsInMemory(products, args);
     const filterTime = Date.now() - filterStartTime;
 
     // Log performance metrics for monitoring
@@ -195,18 +185,7 @@ export const getPaginatedProducts = query({
       
       // Manual filtering
       const filterStartTime = Date.now();
-      let filtered = allProducts.filter(p => {
-        if (args.forms && args.forms.length > 0) {
-          if (!p.forms || !p.forms.some(f => args.forms!.includes(f))) return false;
-        }
-        if (args.symptoms && args.symptoms.length > 0) {
-          if (!p.symptomsTags || !p.symptomsTags.some(s => args.symptoms!.includes(s))) return false;
-        }
-        if (args.potencies && args.potencies.length > 0) {
-          if (!p.potencies || !p.potencies.some(pot => args.potencies!.includes(pot))) return false;
-        }
-        return true;
-      });
+      let filtered = filterProductsInMemory(allProducts, args);
       const filterTime = Date.now() - filterStartTime;
 
       console.log(`[Perf:getPaginatedProducts] Array/Sort Mode: Fetched ${allProducts.length} in ${fetchTime}ms. Filtered to ${filtered.length} in ${filterTime}ms.`);
