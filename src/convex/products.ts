@@ -373,17 +373,39 @@ export const searchProducts = query({
     inStockOnly: v.optional(v.boolean()), 
   },
   handler: async (ctx, args) => {
+    const trimmedQuery = args.query?.trim();
+    const normalizedQuery = trimmedQuery ? trimmedQuery.toLowerCase() : undefined;
+    const queryTokens = normalizedQuery ? normalizedQuery.split(/\s+/).filter(Boolean) : [];
+
+    const matchesFallbackQuery = (product: any) => {
+      if (queryTokens.length === 0) return true;
+      const haystack = [
+        product.name || "",
+        product.description || "",
+        product.brand || "",
+        (product.symptomsTags || []).join(" "),
+        (product.forms || []).join(" "),
+        (product.potencies || []).join(" "),
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      return queryTokens.every((token) => haystack.includes(token));
+    };
+
     let products;
 
-    // Use search index if query is present
-    if (args.query) {
+    if (normalizedQuery) {
       products = await ctx.db
         .query("products")
-        .withSearchIndex("search_all", (q) => q.search("searchText", args.query!))
+        .withSearchIndex("search_all", (q) => q.search("searchText", normalizedQuery))
         .collect();
+
+      if (products.length === 0) {
+        const fallbackProducts = await ctx.db.query("products").collect();
+        products = fallbackProducts.filter((p) => matchesFallbackQuery(p));
+      }
     } else {
-      // Fallback to full scan or specific index if no query
-      // Note: We could optimize this with indexes for specific filters if needed
       products = await ctx.db.query("products").collect();
     }
     
@@ -449,9 +471,9 @@ export const searchProducts = query({
             return 0;
         }
       });
-    } else if (!args.query) {
-       // Default sort if no query and no sort specified
-       filtered.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0));
+    } else if (!normalizedQuery) {
+      // Default sort if no query and no sort specified
+      filtered.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0));
     }
 
     return await Promise.all(
