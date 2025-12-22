@@ -1,78 +1,93 @@
-import { QuickActionSetting } from "@/data/siteDefaults";
+import { HealthConcernSetting } from "@/data/siteDefaults";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
-import { Upload, Stethoscope, Pill, Star, Trash2, Plus, ArrowUp, ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  Activity,
+  HeartPulse,
+  Pill,
+  Thermometer,
+  FlaskConical,
+  Stethoscope,
+  Trash2,
+  Plus,
+  ArrowUp,
+  ArrowDown,
+} from "lucide-react";
 
-interface QuickActionsSectionProps {
-  quickActions: QuickActionSetting[];
-  onChange: (actions: QuickActionSetting[]) => void;
-  errors?: Record<string, string | undefined>;
-  onClearError?: (key: string) => void;
+const HEALTH_CONCERN_ICON_OPTIONS = [
+  { label: "Activity", value: "activity" },
+  { label: "Heart", value: "heart" },
+  { label: "Pill", value: "pill" },
+  { label: "Thermometer", value: "thermometer" },
+  { label: "Flask", value: "flask" },
+  { label: "Stethoscope", value: "stethoscope" },
+] as const;
+
+const HEALTH_CONCERN_COLOR_OPTIONS = [
+  { label: "Sunset Orange", value: "orange" },
+  { label: "Rose", value: "red" },
+  { label: "Lime", value: "lime" },
+  { label: "Herbal Green", value: "green" },
+  { label: "Lavender", value: "purple" },
+  { label: "Teal", value: "teal" },
+] as const;
+
+const ICON_MAP: Record<HealthConcernSetting["icon"], typeof Activity> = {
+  activity: Activity,
+  heart: HeartPulse,
+  pill: Pill,
+  thermometer: Thermometer,
+  flask: FlaskConical,
+  stethoscope: Stethoscope,
+};
+
+const COLOR_STYLES: Record<HealthConcernSetting["color"], { icon: string; badge: string }> = {
+  orange: { icon: "bg-orange-100 text-orange-700", badge: "bg-orange-100 text-orange-700" },
+  red: { icon: "bg-rose-100 text-rose-700", badge: "bg-rose-100 text-rose-700" },
+  lime: { icon: "bg-lime-100 text-lime-700", badge: "bg-lime-100 text-lime-700" },
+  green: { icon: "bg-emerald-100 text-emerald-700", badge: "bg-emerald-100 text-emerald-700" },
+  purple: { icon: "bg-purple-100 text-purple-700", badge: "bg-purple-100 text-purple-700" },
+  teal: { icon: "bg-teal-100 text-teal-700", badge: "bg-teal-100 text-teal-700" },
+};
+
+interface SettingsHealthConcernsSectionProps {
+  healthConcerns: HealthConcernSetting[];
+  onChange: (concerns: HealthConcernSetting[]) => void;
 }
 
-const QUICK_ACTION_ICON_OPTIONS = [
-  { label: "Upload", value: "upload" },
-  { label: "Stethoscope", value: "stethoscope" },
-  { label: "Pill", value: "pill" },
-  { label: "Star", value: "star" },
-] as const;
-
-const QUICK_ACTION_ACCENT_OPTIONS = [
-  { label: "Lime", value: "lime" },
-  { label: "Blue", value: "blue" },
-  { label: "Pink", value: "pink" },
-  { label: "Purple", value: "purple" },
-] as const;
-
-const ICON_MAP: Record<QuickActionSetting["icon"], typeof Upload> = {
-  upload: Upload,
-  stethoscope: Stethoscope,
-  pill: Pill,
-  star: Star,
-};
-
-const ACCENT_STYLES: Record<QuickActionSetting["accent"], { container: string; badge: string }> = {
-  lime: { container: "bg-lime-100 text-lime-700", badge: "bg-lime-100 text-lime-700" },
-  blue: { container: "bg-blue-100 text-blue-700", badge: "bg-blue-100 text-blue-700" },
-  pink: { container: "bg-pink-100 text-pink-700", badge: "bg-pink-100 text-pink-700" },
-  purple: { container: "bg-purple-100 text-purple-700", badge: "bg-purple-100 text-purple-700" },
-};
-
-export function SettingsQuickActionsSection({ quickActions, onChange, errors, onClearError }: QuickActionsSectionProps) {
-  const handleActionChange = <K extends keyof QuickActionSetting>(index: number, field: K, value: QuickActionSetting[K]) => {
-    const updated = [...quickActions];
+export function SettingsHealthConcernsSection({ healthConcerns, onChange }: SettingsHealthConcernsSectionProps) {
+  const updateConcern = <K extends keyof HealthConcernSetting>(index: number, field: K, value: HealthConcernSetting[K]) => {
+    const updated = [...healthConcerns];
     updated[index] = { ...updated[index], [field]: value };
     onChange(updated);
   };
 
-  const handleAddAction = () => {
+  const handleAddConcern = () => {
     onChange([
-      ...quickActions,
+      ...healthConcerns,
       {
-        title: "New Action",
-        description: "Describe this action",
-        href: "/",
-        icon: "upload",
-        accent: "lime",
+        title: "New Concern",
+        query: "New Concern",
+        icon: "activity",
+        color: "orange",
       },
     ]);
   };
 
-  const handleRemoveAction = (index: number) => {
-    onChange(quickActions.filter((_, i) => i !== index));
+  const handleRemoveConcern = (index: number) => {
+    onChange(healthConcerns.filter((_, i) => i !== index));
   };
 
-  const handleMoveAction = (index: number, direction: "up" | "down") => {
+  const handleMoveConcern = (index: number, direction: "up" | "down") => {
     const targetIndex = direction === "up" ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= quickActions.length) return;
+    if (targetIndex < 0 || targetIndex >= healthConcerns.length) return;
 
-    const reordered = [...quickActions];
+    const reordered = [...healthConcerns];
     const [moved] = reordered.splice(index, 1);
     reordered.splice(targetIndex, 0, moved);
     onChange(reordered);
@@ -82,48 +97,45 @@ export function SettingsQuickActionsSection({ quickActions, onChange, errors, on
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between gap-3">
-          <CardTitle>Quick Actions</CardTitle>
+          <CardTitle>Health Concerns</CardTitle>
           <Badge variant="secondary" className="rounded-full px-3 text-xs">
-            {quickActions.length}
+            {healthConcerns.length}
           </Badge>
         </div>
-        <CardDescription>Guide customers toward key flows with curated shortcuts.</CardDescription>
+        <CardDescription>Control the “Shop by Health Concern” grid.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {quickActions.length === 0 ? (
+        {healthConcerns.length === 0 ? (
           <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-            Add quick action tiles to highlight uploads, consultations, offers, and more.
+            Add concern cards to guide shoppers toward popular conditions.
           </div>
         ) : (
           <Accordion type="single" collapsible className="space-y-3">
-            {quickActions.map((action, index) => {
-              const Icon = ICON_MAP[action.icon];
-              const accent = ACCENT_STYLES[action.accent];
-              const urlError = errors?.[`quickAction-${index}`];
+            {healthConcerns.map((concern, index) => {
+              const Icon = ICON_MAP[concern.icon];
+              const color = COLOR_STYLES[concern.color];
 
               return (
                 <AccordionItem
-                  key={`quick-action-${index}`}
-                  value={`quick-action-${index}`}
+                  key={`health-concern-${index}`}
+                  value={`health-concern-${index}`}
                   className="overflow-hidden rounded-xl border bg-card/40"
                 >
                   <AccordionTrigger className="flex items-center gap-3 px-4 py-3 text-left">
                     <div className="flex flex-1 items-center gap-3">
-                      <span className={`flex h-10 w-10 items-center justify-center rounded-2xl text-sm font-semibold ${accent.container}`}>
+                      <span className={cn("flex h-10 w-10 items-center justify-center rounded-2xl", color.icon)}>
                         <Icon className="h-5 w-5" />
                       </span>
                       <div className="flex flex-col">
                         <span className="text-sm font-medium text-foreground">
-                          {action.title || `Quick Action ${index + 1}`}
+                          {concern.title || `Health Concern ${index + 1}`}
                         </span>
-                        <span className="text-xs text-muted-foreground">
-                          {action.description || "Describe this action"}
-                        </span>
+                        <span className="text-xs text-muted-foreground">{concern.query}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge variant="secondary" className={`${accent.badge} capitalize`}>
-                        {action.accent}
+                      <Badge variant="secondary" className={cn("capitalize", color.badge)}>
+                        {concern.color}
                       </Badge>
                       <Button
                         type="button"
@@ -134,7 +146,7 @@ export function SettingsQuickActionsSection({ quickActions, onChange, errors, on
                         onClick={(event) => {
                           event.preventDefault();
                           event.stopPropagation();
-                          handleMoveAction(index, "up");
+                          handleMoveConcern(index, "up");
                         }}
                       >
                         <ArrowUp className="h-4 w-4" />
@@ -145,11 +157,11 @@ export function SettingsQuickActionsSection({ quickActions, onChange, errors, on
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
-                        disabled={index === quickActions.length - 1}
+                        disabled={index === healthConcerns.length - 1}
                         onClick={(event) => {
                           event.preventDefault();
                           event.stopPropagation();
-                          handleMoveAction(index, "down");
+                          handleMoveConcern(index, "down");
                         }}
                       >
                         <ArrowDown className="h-4 w-4" />
@@ -163,11 +175,11 @@ export function SettingsQuickActionsSection({ quickActions, onChange, errors, on
                         onClick={(event) => {
                           event.preventDefault();
                           event.stopPropagation();
-                          handleRemoveAction(index);
+                          handleRemoveConcern(index);
                         }}
-                        aria-label="Remove quick action"
                       >
                         <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Remove</span>
                       </Button>
                     </div>
                   </AccordionTrigger>
@@ -176,45 +188,30 @@ export function SettingsQuickActionsSection({ quickActions, onChange, errors, on
                       <div className="space-y-2">
                         <label className="text-sm font-medium text-foreground">Title</label>
                         <Input
-                          value={action.title}
-                          onChange={(event) => handleActionChange(index, "title", event.target.value)}
-                          placeholder="Upload Prescription"
+                          value={concern.title}
+                          onChange={(event) => updateConcern(index, "title", event.target.value)}
+                          placeholder="Hair Fall"
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm font-medium text-foreground">Link</label>
+                        <label className="text-sm font-medium text-foreground">Search Query</label>
                         <Input
-                          value={action.href}
-                          onChange={(event) => {
-                            handleActionChange(index, "href", event.target.value);
-                            onClearError?.(`quickAction-${index}`);
-                          }}
-                          placeholder="/upload"
-                          className={cn(urlError && "border-destructive focus-visible:ring-destructive/60")}
-                        />
-                        {urlError ? (
-                          <p className="text-xs text-destructive">{urlError}</p>
-                        ) : null}
-                      </div>
-                      <div className="space-y-2 md:col-span-2">
-                        <label className="text-sm font-medium text-foreground">Description</label>
-                        <Textarea
-                          value={action.description}
-                          onChange={(event) => handleActionChange(index, "description", event.target.value)}
-                          placeholder="We'll dispense it for you"
+                          value={concern.query}
+                          onChange={(event) => updateConcern(index, "query", event.target.value)}
+                          placeholder="Hair Fall"
                         />
                       </div>
                       <div className="space-y-2">
                         <label className="text-sm font-medium text-foreground">Icon</label>
                         <Select
-                          value={action.icon}
-                          onValueChange={(value) => handleActionChange(index, "icon", value as QuickActionSetting["icon"])}
+                          value={concern.icon}
+                          onValueChange={(value) => updateConcern(index, "icon", value as HealthConcernSetting["icon"])}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Choose icon" />
                           </SelectTrigger>
                           <SelectContent>
-                            {QUICK_ACTION_ICON_OPTIONS.map((option) => (
+                            {HEALTH_CONCERN_ICON_OPTIONS.map((option) => (
                               <SelectItem key={option.value} value={option.value}>
                                 {option.label}
                               </SelectItem>
@@ -223,16 +220,16 @@ export function SettingsQuickActionsSection({ quickActions, onChange, errors, on
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm font-medium text-foreground">Accent</label>
+                        <label className="text-sm font-medium text-foreground">Color</label>
                         <Select
-                          value={action.accent}
-                          onValueChange={(value) => handleActionChange(index, "accent", value as QuickActionSetting["accent"])}
+                          value={concern.color}
+                          onValueChange={(value) => updateConcern(index, "color", value as HealthConcernSetting["color"])}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Choose accent" />
+                            <SelectValue placeholder="Choose color" />
                           </SelectTrigger>
                           <SelectContent>
-                            {QUICK_ACTION_ACCENT_OPTIONS.map((option) => (
+                            {HEALTH_CONCERN_COLOR_OPTIONS.map((option) => (
                               <SelectItem key={option.value} value={option.value}>
                                 {option.label}
                               </SelectItem>
@@ -248,9 +245,9 @@ export function SettingsQuickActionsSection({ quickActions, onChange, errors, on
           </Accordion>
         )}
 
-        <Button type="button" variant="outline" className="w-full" onClick={handleAddAction}>
+        <Button type="button" variant="outline" className="w-full" onClick={handleAddConcern}>
           <Plus className="mr-2 h-4 w-4" />
-          Add Quick Action
+          Add Health Concern
         </Button>
       </CardContent>
     </Card>

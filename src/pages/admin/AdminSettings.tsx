@@ -4,14 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SettingsQuickActionsSection } from "./components/SettingsQuickActionsSection";
+import { SettingsHealthConcernsSection } from "./components/SettingsHealthConcernsSection";
+import { SettingsFeatureCardsSection } from "./components/SettingsFeatureCardsSection";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState, useEffect } from "react";
@@ -20,13 +15,13 @@ import {
   DEFAULT_FEATURE_CARDS,
   DEFAULT_HEALTH_CONCERNS,
   DEFAULT_QUICK_ACTIONS,
-  FeatureCardSetting,
-  HealthConcernSetting,
-  QuickActionSetting,
   DEFAULT_FEATURED_BRANDS,
+  type FeatureCardSetting,
+  type HealthConcernSetting,
+  type QuickActionSetting,
 } from "@/data/siteDefaults";
 import { cn } from "@/lib/utils";
-import { Loader2, Save, Trash2, Plus, Upload, Stethoscope, Pill, Star } from "lucide-react";
+import { Loader2, Save } from "lucide-react";
 
 type SettingsFormState = {
   siteName: string;
@@ -49,49 +44,28 @@ type SettingsFormState = {
   featureCards: FeatureCardSetting[];
 };
 
-const QUICK_ACTION_ICON_OPTIONS = [
-  { label: "Upload", value: "upload" },
-  { label: "Stethoscope", value: "stethoscope" },
-  { label: "Pill", value: "pill" },
-  { label: "Star", value: "star" },
-] as const;
+type UrlErrorMap = Record<string, string>;
 
-const QUICK_ACTION_ACCENT_OPTIONS = [
-  { label: "Lime", value: "lime" },
-  { label: "Blue", value: "blue" },
-  { label: "Pink", value: "pink" },
-  { label: "Purple", value: "purple" },
-] as const;
+const SOCIAL_URL_FIELDS: Array<keyof SettingsFormState> = [
+  "facebookUrl",
+  "twitterUrl",
+  "instagramUrl",
+  "linkedinUrl",
+];
 
-const HEALTH_CONCERN_ICON_OPTIONS = [
-  { label: "Activity", value: "activity" },
-  { label: "Heart", value: "heart" },
-  { label: "Pill", value: "pill" },
-  { label: "Thermometer", value: "thermometer" },
-  { label: "Flask", value: "flask" },
-  { label: "Stethoscope", value: "stethoscope" },
-] as const;
-
-const HEALTH_CONCERN_COLOR_OPTIONS = [
-  { label: "Sunset Orange", value: "orange" },
-  { label: "Rose", value: "red" },
-  { label: "Lime", value: "lime" },
-  { label: "Herbal Green", value: "green" },
-  { label: "Lavender", value: "purple" },
-  { label: "Teal", value: "teal" },
-] as const;
-
-const FEATURE_CARD_THEME_OPTIONS = [
-  { label: "Light", value: "light" },
-  { label: "Dark", value: "dark" },
-] as const;
-
-const cloneQuickActions = () =>
-  DEFAULT_QUICK_ACTIONS.map((action) => ({ ...action }));
-const cloneHealthConcerns = () =>
-  DEFAULT_HEALTH_CONCERNS.map((concern) => ({ ...concern }));
-const cloneFeatureCards = () =>
-  DEFAULT_FEATURE_CARDS.map((card) => ({ ...card }));
+const isValidUrl = (value: string, options?: { allowRelative?: boolean }) => {
+  if (!value) return true;
+  const trimmed = value.trim();
+  if (options?.allowRelative && trimmed.startsWith("/")) {
+    return true;
+  }
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
+};
 
 const createDefaultState = (): SettingsFormState => ({
   siteName: "1goli",
@@ -111,18 +85,17 @@ const createDefaultState = (): SettingsFormState => ({
   linkedinUrl: "",
   featuredBrands:
     "Dr. Reckeweg, SBL World Class, Schwabe India, Adel Pekana, Bakson's, Bjain Pharma",
-  quickActions: cloneQuickActions(),
-  healthConcerns: cloneHealthConcerns(),
-  featureCards: cloneFeatureCards(),
+  quickActions: DEFAULT_QUICK_ACTIONS.map((action) => ({ ...action })),
+  healthConcerns: DEFAULT_HEALTH_CONCERNS.map((concern) => ({ ...concern })),
+  featureCards: DEFAULT_FEATURE_CARDS.map((card) => ({ ...card })),
 });
 
 export default function AdminSettings() {
   const settings = useQuery(api.settings.getSettings);
   const updateSettings = useMutation(api.settings.updateSettings);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Local state for form
   const [formData, setFormData] = useState<SettingsFormState>(() => createDefaultState());
+  const [urlErrors, setUrlErrors] = useState<UrlErrorMap>({});
 
   useEffect(() => {
     if (!settings) return;
@@ -157,15 +130,71 @@ export default function AdminSettings() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (SOCIAL_URL_FIELDS.includes(name as keyof SettingsFormState)) {
+      clearUrlError(name);
+    }
   };
 
   const handleSwitchChange = (checked: boolean) => {
-    setFormData(prev => ({ ...prev, maintenanceMode: checked }));
+    setFormData((prev) => ({ ...prev, maintenanceMode: checked }));
+  };
+
+  const clearUrlError = (key: string) => {
+    setUrlErrors((prev) => {
+      if (!prev[key]) return prev;
+      const updated = { ...prev };
+      delete updated[key];
+      return updated;
+    });
+  };
+
+  const handleQuickActionsChange = (actions: QuickActionSetting[]) => {
+    setFormData((prev) => ({ ...prev, quickActions: actions }));
+  };
+
+  const handleHealthConcernsChange = (concerns: HealthConcernSetting[]) => {
+    setFormData((prev) => ({ ...prev, healthConcerns: concerns }));
+  };
+
+  const handleFeatureCardsChange = (cards: FeatureCardSetting[]) => {
+    setFormData((prev) => ({ ...prev, featureCards: cards }));
+  };
+
+  const validateUrls = () => {
+    const errors: UrlErrorMap = {};
+
+    SOCIAL_URL_FIELDS.forEach((field) => {
+      const value = (formData[field] as string | undefined)?.trim();
+      if (value && !isValidUrl(value)) {
+        errors[field] = "Enter a valid https:// link.";
+      }
+    });
+
+    formData.quickActions.forEach((action, index) => {
+      const href = action.href.trim();
+      if (href && !isValidUrl(href, { allowRelative: true })) {
+        errors[`quickAction-${index}`] = "Use https:// URL or an internal path starting with /.";
+      }
+    });
+
+    formData.featureCards.forEach((card, index) => {
+      const href = card.href.trim();
+      if (href && !isValidUrl(href, { allowRelative: true })) {
+        errors[`featureCard-${index}`] = "Use https:// URL or an internal path starting with /.";
+      }
+    });
+
+    setUrlErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateUrls()) {
+      toast.error("Please correct the highlighted URLs before saving.");
+      return;
+    }
     setIsSubmitting(true);
     try {
       await updateSettings({
@@ -179,10 +208,10 @@ export default function AdminSettings() {
         heroHeadline: formData.heroHeadline || undefined,
         heroDescription: formData.heroDescription || undefined,
         address: formData.address || undefined,
-        facebookUrl: formData.facebookUrl || undefined,
-        twitterUrl: formData.twitterUrl || undefined,
-        instagramUrl: formData.instagramUrl || undefined,
-        linkedinUrl: formData.linkedinUrl || undefined,
+        facebookUrl: formData.facebookUrl.trim() || undefined,
+        twitterUrl: formData.twitterUrl.trim() || undefined,
+        instagramUrl: formData.instagramUrl.trim() || undefined,
+        linkedinUrl: formData.linkedinUrl.trim() || undefined,
         featuredBrands: formData.featuredBrands
           .split(",")
           .map((b) => b.trim())
@@ -198,109 +227,6 @@ export default function AdminSettings() {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const updateQuickAction = <T extends keyof QuickActionSetting>(
-    index: number,
-    field: T,
-    value: QuickActionSetting[T],
-  ) => {
-    setFormData((prev) => {
-      const updated = [...prev.quickActions];
-      updated[index] = { ...updated[index], [field]: value };
-      return { ...prev, quickActions: updated };
-    });
-  };
-
-  const addQuickAction = () => {
-    setFormData((prev) => ({
-      ...prev,
-      quickActions: [
-        ...prev.quickActions,
-        {
-          title: "New Action",
-          description: "Describe this action",
-          href: "/",
-          icon: "upload",
-          accent: "lime",
-        },
-      ],
-    }));
-  };
-
-  const removeQuickAction = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      quickActions: prev.quickActions.filter((_, i) => i !== index),
-    }));
-  };
-
-  const updateHealthConcern = <T extends keyof HealthConcernSetting>(
-    index: number,
-    field: T,
-    value: HealthConcernSetting[T],
-  ) => {
-    setFormData((prev) => {
-      const updated = [...prev.healthConcerns];
-      updated[index] = { ...updated[index], [field]: value };
-      return { ...prev, healthConcerns: updated };
-    });
-  };
-
-  const addHealthConcern = () => {
-    setFormData((prev) => ({
-      ...prev,
-      healthConcerns: [
-        ...prev.healthConcerns,
-        {
-          title: "New Concern",
-          query: "New Concern",
-          icon: "activity",
-          color: "orange",
-        },
-      ],
-    }));
-  };
-
-  const removeHealthConcern = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      healthConcerns: prev.healthConcerns.filter((_, i) => i !== index),
-    }));
-  };
-
-  const updateFeatureCard = <T extends keyof FeatureCardSetting>(
-    index: number,
-    field: T,
-    value: FeatureCardSetting[T],
-  ) => {
-    setFormData((prev) => {
-      const updated = [...prev.featureCards];
-      updated[index] = { ...updated[index], [field]: value };
-      return { ...prev, featureCards: updated };
-    });
-  };
-
-  const addFeatureCard = () => {
-    setFormData((prev) => ({
-      ...prev,
-      featureCards: [
-        ...prev.featureCards,
-        {
-          title: "New Card",
-          description: "Describe this AI capability",
-          href: "/",
-          theme: "light",
-        },
-      ],
-    }));
-  };
-
-  const removeFeatureCard = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      featureCards: prev.featureCards.filter((_, i) => i !== index),
-    }));
   };
 
   if (settings === undefined) {
@@ -400,232 +326,17 @@ export default function AdminSettings() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>
-                Customize the action tiles shown under the hero section.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {formData.quickActions.map((action, index) => (
-                <div
-                  key={`quick-action-${index}`}
-                  className="rounded-xl border p-4 space-y-4"
-                >
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-semibold text-sm">
-                      Action {index + 1}
-                    </h4>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeQuickAction(index)}
-                      aria-label="Remove quick action"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Title</Label>
-                      <Input
-                        value={action.title}
-                        onChange={(e) =>
-                          updateQuickAction(index, "title", e.target.value)
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Link</Label>
-                      <Input
-                        value={action.href}
-                        onChange={(e) =>
-                          updateQuickAction(index, "href", e.target.value)
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2 md:col-span-2">
-                      <Label>Description</Label>
-                      <Textarea
-                        value={action.description}
-                        onChange={(e) =>
-                          updateQuickAction(index, "description", e.target.value)
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Icon</Label>
-                      <Select
-                        value={action.icon}
-                        onValueChange={(value) =>
-                          updateQuickAction(
-                            index,
-                            "icon",
-                            value as QuickActionSetting["icon"],
-                          )
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Choose icon" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {QUICK_ACTION_ICON_OPTIONS.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Accent</Label>
-                      <Select
-                        value={action.accent}
-                        onValueChange={(value) =>
-                          updateQuickAction(
-                            index,
-                            "accent",
-                            value as QuickActionSetting["accent"],
-                          )
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Choose accent" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {QUICK_ACTION_ACCENT_OPTIONS.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={addQuickAction}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Quick Action
-              </Button>
-            </CardContent>
-          </Card>
+          <SettingsQuickActionsSection
+            quickActions={formData.quickActions}
+            onChange={handleQuickActionsChange}
+            errors={urlErrors}
+            onClearError={clearUrlError}
+          />
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Health Concerns</CardTitle>
-              <CardDescription>
-                Control the "Shop by Health Concern" grid.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {formData.healthConcerns.map((concern, index) => (
-                <div
-                  key={`health-concern-${index}`}
-                  className="rounded-xl border p-4 space-y-4"
-                >
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-semibold text-sm">
-                      Concern {index + 1}
-                    </h4>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeHealthConcern(index)}
-                      aria-label="Remove health concern"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Title</Label>
-                      <Input
-                        value={concern.title}
-                        onChange={(e) =>
-                          updateHealthConcern(index, "title", e.target.value)
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Search Query</Label>
-                      <Input
-                        value={concern.query}
-                        onChange={(e) =>
-                          updateHealthConcern(index, "query", e.target.value)
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Icon</Label>
-                      <Select
-                        value={concern.icon}
-                        onValueChange={(value) =>
-                          updateHealthConcern(
-                            index,
-                            "icon",
-                            value as HealthConcernSetting["icon"],
-                          )
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Choose icon" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {HEALTH_CONCERN_ICON_OPTIONS.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Color</Label>
-                      <Select
-                        value={concern.color}
-                        onValueChange={(value) =>
-                          updateHealthConcern(
-                            index,
-                            "color",
-                            value as HealthConcernSetting["color"],
-                          )
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Choose color" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {HEALTH_CONCERN_COLOR_OPTIONS.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={addHealthConcern}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Health Concern
-              </Button>
-            </CardContent>
-          </Card>
+          <SettingsHealthConcernsSection
+            healthConcerns={formData.healthConcerns}
+            onChange={handleHealthConcernsChange}
+          />
 
           <Card>
             <CardHeader>
@@ -655,43 +366,63 @@ export default function AdminSettings() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="facebookUrl">Facebook URL</Label>
-                  <Input 
-                    id="facebookUrl" 
-                    name="facebookUrl" 
-                    value={formData.facebookUrl} 
-                    onChange={handleChange} 
+                  <Input
+                    id="facebookUrl"
+                    name="facebookUrl"
+                    value={formData.facebookUrl}
+                    onChange={handleChange}
                     placeholder="https://facebook.com/..."
+                    className={cn(urlErrors.facebookUrl && "border-destructive focus-visible:ring-destructive/60")}
+                    aria-invalid={Boolean(urlErrors.facebookUrl)}
                   />
+                  {urlErrors.facebookUrl ? (
+                    <p className="text-xs text-destructive">{urlErrors.facebookUrl}</p>
+                  ) : null}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="twitterUrl">Twitter URL</Label>
-                  <Input 
-                    id="twitterUrl" 
-                    name="twitterUrl" 
-                    value={formData.twitterUrl} 
-                    onChange={handleChange} 
+                  <Input
+                    id="twitterUrl"
+                    name="twitterUrl"
+                    value={formData.twitterUrl}
+                    onChange={handleChange}
                     placeholder="https://twitter.com/..."
+                    className={cn(urlErrors.twitterUrl && "border-destructive focus-visible:ring-destructive/60")}
+                    aria-invalid={Boolean(urlErrors.twitterUrl)}
                   />
+                  {urlErrors.twitterUrl ? (
+                    <p className="text-xs text-destructive">{urlErrors.twitterUrl}</p>
+                  ) : null}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="instagramUrl">Instagram URL</Label>
-                  <Input 
-                    id="instagramUrl" 
-                    name="instagramUrl" 
-                    value={formData.instagramUrl} 
-                    onChange={handleChange} 
+                  <Input
+                    id="instagramUrl"
+                    name="instagramUrl"
+                    value={formData.instagramUrl}
+                    onChange={handleChange}
                     placeholder="https://instagram.com/..."
+                    className={cn(urlErrors.instagramUrl && "border-destructive focus-visible:ring-destructive/60")}
+                    aria-invalid={Boolean(urlErrors.instagramUrl)}
                   />
+                  {urlErrors.instagramUrl ? (
+                    <p className="text-xs text-destructive">{urlErrors.instagramUrl}</p>
+                  ) : null}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="linkedinUrl">LinkedIn URL</Label>
-                  <Input 
-                    id="linkedinUrl" 
-                    name="linkedinUrl" 
-                    value={formData.linkedinUrl} 
-                    onChange={handleChange} 
+                  <Input
+                    id="linkedinUrl"
+                    name="linkedinUrl"
+                    value={formData.linkedinUrl}
+                    onChange={handleChange}
                     placeholder="https://linkedin.com/..."
+                    className={cn(urlErrors.linkedinUrl && "border-destructive focus-visible:ring-destructive/60")}
+                    aria-invalid={Boolean(urlErrors.linkedinUrl)}
                   />
+                  {urlErrors.linkedinUrl ? (
+                    <p className="text-xs text-destructive">{urlErrors.linkedinUrl}</p>
+                  ) : null}
                 </div>
               </div>
             </CardContent>
@@ -764,101 +495,12 @@ export default function AdminSettings() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>AI Feature Section</CardTitle>
-              <CardDescription>
-                Configure the cards displayed in the AI highlight section.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {formData.featureCards.map((cardData, index) => (
-                <div
-                  key={`feature-card-${index}`}
-                  className="rounded-xl border p-4 space-y-4"
-                >
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-semibold text-sm">Card {index + 1}</h4>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeFeatureCard(index)}
-                      aria-label="Remove feature card"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Title</Label>
-                      <Input
-                        value={cardData.title}
-                        onChange={(e) =>
-                          updateFeatureCard(index, "title", e.target.value)
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Link</Label>
-                      <Input
-                        value={cardData.href}
-                        onChange={(e) =>
-                          updateFeatureCard(index, "href", e.target.value)
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2 md:col-span-2">
-                      <Label>Description</Label>
-                      <Textarea
-                        value={cardData.description}
-                        onChange={(e) =>
-                          updateFeatureCard(
-                            index,
-                            "description",
-                            e.target.value,
-                          )
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Theme</Label>
-                      <Select
-                        value={cardData.theme}
-                        onValueChange={(value) =>
-                          updateFeatureCard(
-                            index,
-                            "theme",
-                            value as FeatureCardSetting["theme"],
-                          )
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Choose theme" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {FEATURE_CARD_THEME_OPTIONS.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={addFeatureCard}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Feature Card
-              </Button>
-            </CardContent>
-          </Card>
+          <SettingsFeatureCardsSection
+            featureCards={formData.featureCards}
+            onChange={handleFeatureCardsChange}
+            errors={urlErrors}
+            onClearError={clearUrlError}
+          />
 
           <div className="flex justify-end">
             <Button type="submit" disabled={isSubmitting} className="w-full md:w-auto">
