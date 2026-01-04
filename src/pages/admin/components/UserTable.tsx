@@ -56,69 +56,16 @@ export function UserTable({
         </TableHeader>
         <TableBody>
           {users?.map((user) => (
-            <TableRow key={user._id}>
-              <TableCell>
-                <Checkbox 
-                  checked={selectedIds.includes(user._id)}
-                  onCheckedChange={(checked) => onSelect(user._id, checked as boolean)}
-                />
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={user.image} />
-                    <AvatarFallback>{user.name?.charAt(0) || "U"}</AvatarFallback>
-                  </Avatar>
-                  <span className="font-medium">{user.name || "Anonymous"}</span>
-                </div>
-              </TableCell>
-              <TableCell>
-                {user.email || user.phone || "N/A"}
-              </TableCell>
-              <TableCell>
-                <Select 
-                  defaultValue={user.role || "user"} 
-                  onValueChange={(val: any) => onRoleChange(user._id, val)}
-                  disabled={currentUser?._id === user._id}
-                >
-                  <SelectTrigger className="w-[120px] h-8">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="user">User</SelectItem>
-                    <SelectItem value="member">Member</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                  </SelectContent>
-                </Select>
-              </TableCell>
-              <TableCell className="text-muted-foreground text-sm">
-                {new Date(user._creationTime).toLocaleDateString()}
-              </TableCell>
-              <TableCell className="text-right">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="h-8 w-8 p-0">
-                      <span className="sr-only">Open menu</span>
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => onViewDetails(user)}>
-                      <Eye className="mr-2 h-4 w-4" /> View Details
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem 
-                      className="text-red-600 focus:text-red-600"
-                      onClick={() => onDeleteUser(user._id)}
-                      disabled={currentUser?._id === user._id}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" /> Delete User
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
+            <UserRow
+              key={user._id}
+              user={user}
+              isSelected={selectedIds.includes(user._id)}
+              currentUser={currentUser}
+              onSelect={onSelect}
+              onRoleChange={onRoleChange}
+              onViewDetails={onViewDetails}
+              onDeleteUser={onDeleteUser}
+            />
           ))}
           {users?.length === 0 && (
             <TableRow>
@@ -146,5 +93,91 @@ export function UserTable({
         )}
       </div>
     </div>
+  );
+}
+
+interface UserRowProps {
+  user: any;
+  isSelected: boolean;
+  currentUser: any;
+  onSelect: (id: Id<"users">, checked: boolean) => void;
+  onRoleChange: (userId: Id<"users">, newRole: "admin" | "user" | "member") => void;
+  onViewDetails: (user: any) => void;
+  onDeleteUser: (userId: Id<"users">) => void;
+}
+
+function UserRow({
+  user,
+  isSelected,
+  currentUser,
+  onSelect,
+  onRoleChange,
+  onViewDetails,
+  onDeleteUser
+}: UserRowProps) {
+  return (
+    <TableRow>
+      <TableCell>
+        <Checkbox 
+          checked={isSelected}
+          onCheckedChange={(checked) => onSelect(user._id, checked as boolean)}
+        />
+      </TableCell>
+      <TableCell>
+        <div className="flex items-center gap-3">
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={user.image} />
+            <AvatarFallback>{user.name?.charAt(0) || "U"}</AvatarFallback>
+          </Avatar>
+          <span className="font-medium">{user.name || "Anonymous"}</span>
+        </div>
+      </TableCell>
+      <TableCell>
+        {user.email || user.phone || "N/A"}
+      </TableCell>
+      <TableCell>
+        <Select 
+          defaultValue={user.role || "user"} 
+          onValueChange={(val: any) => onRoleChange(user._id, val)}
+          disabled={currentUser?._id === user._id}
+        >
+          <SelectTrigger className="w-[120px] h-8">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="user">User</SelectItem>
+            <SelectItem value="member">Member</SelectItem>
+            <SelectItem value="admin">Admin</SelectItem>
+          </SelectContent>
+        </Select>
+      </TableCell>
+      <TableCell className="text-muted-foreground text-sm">
+        {new Date(user._creationTime).toLocaleDateString()}
+      </TableCell>
+      <TableCell className="text-right">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-8 w-8 p-0">
+              <span className="sr-only">Open menu</span>
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuItem onClick={() => onViewDetails(user)}>
+              <Eye className="mr-2 h-4 w-4" /> View Details
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem 
+              className="text-red-600 focus:text-red-600"
+              onClick={() => onDeleteUser(user._id)}
+              disabled={currentUser?._id === user._id}
+            >
+              <Trash2 className="mr-2 h-4 w-4" /> Delete User
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </TableCell>
+    </TableRow>
   );
 }

@@ -21,7 +21,7 @@ import {
 import { UserTable } from "./components/UserTable";
 import { downloadCSV } from "./utils/csvHelpers";
 import { UserDetailsDialog } from "./components/UserDetailsDialog";
-import { UserBulkUpdateDialog } from "./components/UserBulkUpdateDialog";
+import { GenericBulkUpdateDialog } from "./components/GenericBulkUpdateDialog";
 
 export default function AdminUsers() {
   const [search, setSearch] = useState("");
@@ -330,13 +330,21 @@ export default function AdminUsers() {
                 >
                   <Trash2 className="mr-2 h-4 w-4" /> Delete Selected ({selectedIds.length})
                 </Button>
-                <UserBulkUpdateDialog 
+                <GenericBulkUpdateDialog 
                   open={isBulkDialogOpen}
                   onOpenChange={setIsBulkDialogOpen}
-                  selectedCount={selectedIds.length}
-                  role={bulkRole}
-                  onRoleChange={setBulkRole}
+                  triggerLabel={`Update Selected (${selectedIds.length})`}
+                  title="Bulk Update Role"
+                  label="New Role"
+                  value={bulkRole}
+                  onValueChange={setBulkRole}
+                  options={[
+                    { label: "User", value: "user" },
+                    { label: "Member", value: "member" },
+                    { label: "Admin", value: "admin" },
+                  ]}
                   onSubmit={handleBulkUpdate}
+                  submitLabel={`Update ${selectedIds.length} Users`}
                 />
               </div>
             )}

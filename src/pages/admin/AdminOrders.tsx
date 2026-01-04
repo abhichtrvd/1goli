@@ -16,7 +16,7 @@ import { downloadCSV } from "./utils/csvHelpers";
 import { parseOrderCSV } from "./utils/orderUtils";
 import { ImportResultsDialog } from "./components/ImportResultsDialog";
 import { OrderStatusDialog } from "./components/OrderStatusDialog";
-import { OrderBulkUpdateDialog } from "./components/OrderBulkUpdateDialog";
+import { GenericBulkUpdateDialog } from "./components/GenericBulkUpdateDialog";
 
 export default function AdminOrders() {
   const [search, setSearch] = useState("");
@@ -280,13 +280,22 @@ export default function AdminOrders() {
           <div className="flex items-center justify-between">
             <CardTitle>Recent Orders</CardTitle>
             {selectedIds.length > 0 && (
-              <OrderBulkUpdateDialog 
+              <GenericBulkUpdateDialog 
                 open={isBulkDialogOpen}
                 onOpenChange={setIsBulkDialogOpen}
-                selectedCount={selectedIds.length}
-                status={bulkStatus}
-                onStatusChange={setBulkStatus}
+                triggerLabel={`Update Selected (${selectedIds.length})`}
+                title="Bulk Update Status"
+                label="New Status"
+                value={bulkStatus}
+                onValueChange={setBulkStatus}
+                options={[
+                  { label: "Pending", value: "pending" },
+                  { label: "Processing", value: "processing" },
+                  { label: "Shipped", value: "shipped" },
+                  { label: "Delivered", value: "delivered" },
+                ]}
                 onSubmit={handleBulkUpdateSubmit}
+                submitLabel={`Update ${selectedIds.length} Orders`}
               />
             )}
           </div>
