@@ -46,6 +46,7 @@ const schema = defineSchema(
       name: v.string(),
       description: v.string(),
       brand: v.optional(v.string()),
+      sku: v.optional(v.string()), // Added SKU field
       imageUrl: v.optional(v.union(v.string(), v.null())),
       imageStorageId: v.optional(v.union(v.id("_storage"), v.null())),
       images: v.optional(v.array(v.object({ 
@@ -85,6 +86,7 @@ const schema = defineSchema(
         filterFields: ["category", "brand"],
       })
       .index("by_brand", ["brand"])
+      .index("by_sku", ["sku"]) // Added SKU index
       .index("by_price", ["basePrice"])
       .index("by_name", ["name"])
       .index("by_rating", ["averageRating"])

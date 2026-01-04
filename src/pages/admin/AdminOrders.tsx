@@ -6,13 +6,15 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Filter, Search, Loader2, Download, CheckSquare, Upload, FileSpreadsheet } from "lucide-react";
 import { useState, useRef } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Id } from "@/convex/_generated/dataModel";
 import { OrderTable } from "./components/OrderTable";
 import { OrderDetailsDialog } from "./components/OrderDetailsDialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 
 export default function AdminOrders() {
   const [search, setSearch] = useState("");
@@ -44,6 +46,8 @@ export default function AdminOrders() {
   // Import state
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [importResults, setImportResults] = useState<{ imported: number; failed: number; errors: string[] } | null>(null);
+  const [isResultDialogOpen, setIsResultDialogOpen] = useState(false);
 
   const handleStatusUpdateSubmit = async () => {
     if (!orderToUpdate || !newStatus) return;
@@ -148,14 +152,14 @@ export default function AdminOrders() {
   };
 
   const handleDownloadTemplate = () => {
-    const headers = ["Email", "Shipping Address", "Payment Method", "Status", "Total", "Items (Name:Qty:Price;...)"];
+    const headers = ["Email", "Shipping Address", "Payment Method", "Status", "Total", "Items (Name:SKU:Qty:Price;...)"];
     const sampleRow = [
       "customer@example.com",
       "123 Main St, City, Country",
       "Credit Card",
       "pending",
       "50.00",
-      "Vitamin C:1:20.00; Zinc:2:15.00"
+      "Vitamin C:VITC001:1:20.00; Zinc::2:15.00"
     ];
     const csvContent = [
       headers.join(","),
@@ -176,6 +180,32 @@ export default function AdminOrders() {
     fileInputRef.current?.click();
   };
 
+  const parseCSVLine = (line: string): string[] => {
+    const row: string[] = [];
+    let inQuotes = false;
+    let currentValue = '';
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        if (i + 1 < line.length && line[i + 1] === '"') {
+          // Handle escaped quotes
+          currentValue += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        row.push(currentValue.trim());
+        currentValue = '';
+      } else {
+        currentValue += char;
+      }
+    }
+    row.push(currentValue.trim());
+    return row;
+  };
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -192,30 +222,14 @@ export default function AdminOrders() {
     reader.onload = async (e) => {
       try {
         const text = e.target?.result as string;
-        const lines = text.split('\n');
-        // Simple CSV parsing
+        const lines = text.split(/\r\n|\n/); // Handle both line endings
         const ordersToImport = [];
         
         // Skip header
         for (let i = 1; i < lines.length; i++) {
           if (!lines[i].trim()) continue;
           
-          // Handle CSV parsing with quotes (simplified)
-          const row: string[] = [];
-          let inQuotes = false;
-          let currentValue = '';
-          
-          for (let char of lines[i]) {
-            if (char === '"') {
-              inQuotes = !inQuotes;
-            } else if (char === ',' && !inQuotes) {
-              row.push(currentValue.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
-              currentValue = '';
-            } else {
-              currentValue += char;
-            }
-          }
-          row.push(currentValue.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+          const row = parseCSVLine(lines[i]);
 
           // Expected columns: Email, Shipping Address, Payment Method, Status, Total, Items
           if (row.length >= 6) {
@@ -226,14 +240,26 @@ export default function AdminOrders() {
             const total = parseFloat(row[4]);
             const itemsString = row[5];
 
-            // Parse items string: "Name:Qty:Price; Name2:Qty2:Price2"
+            // Parse items string: "Name:SKU:Qty:Price; Name2:SKU2:Qty2:Price2"
+            // Backward compatibility: "Name:Qty:Price" (3 parts) vs "Name:SKU:Qty:Price" (4 parts)
             const items = itemsString.split(';').map(itemStr => {
-              const parts = itemStr.split(':');
-              if (parts.length >= 3) {
+              const parts = itemStr.split(':').map(p => p.trim());
+              
+              if (parts.length === 4) {
+                // New format with SKU
                 return {
-                  productName: parts[0].trim(),
-                  quantity: parseInt(parts[1].trim()) || 1,
-                  price: parseFloat(parts[2].trim()) || 0
+                  productName: parts[0],
+                  sku: parts[1] || undefined,
+                  quantity: parseInt(parts[2]) || 1,
+                  price: parseFloat(parts[3]) || 0
+                };
+              } else if (parts.length === 3) {
+                // Old format without SKU
+                return {
+                  productName: parts[0],
+                  sku: undefined,
+                  quantity: parseInt(parts[1]) || 1,
+                  price: parseFloat(parts[2]) || 0
                 };
               }
               return null;
@@ -247,7 +273,7 @@ export default function AdminOrders() {
                 status,
                 total,
                 items: items as any[],
-                date: new Date().toISOString() // Default to now, or could add column for date
+                date: new Date().toISOString()
               });
             }
           }
@@ -259,15 +285,13 @@ export default function AdminOrders() {
         }
 
         const result = await importOrders({ orders: ordersToImport });
+        setImportResults(result);
+        setIsResultDialogOpen(true);
         
-        if (result.failed > 0) {
-          toast.warning(`Import completed with issues: ${result.imported} imported, ${result.failed} failed.`);
-          result.errors.slice(0, 3).forEach(err => toast.error(err));
-          if (result.errors.length > 3) {
-            toast.error(`...and ${result.errors.length - 3} more errors.`);
-          }
-        } else {
+        if (result.failed === 0) {
           toast.success(`Successfully imported ${result.imported} orders`);
+        } else {
+          toast.warning(`Import completed with ${result.failed} errors`);
         }
         
         if (fileInputRef.current) {
@@ -400,6 +424,55 @@ export default function AdminOrders() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Import Results Dialog */}
+      <Dialog open={isResultDialogOpen} onOpenChange={setIsResultDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Import Results</DialogTitle>
+            <DialogDescription>
+              Summary of the order import operation.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {importResults && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col items-center justify-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-100 dark:border-green-900/50">
+                  <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400 mb-2" />
+                  <span className="text-2xl font-bold text-green-700 dark:text-green-300">{importResults.imported}</span>
+                  <span className="text-sm text-green-600 dark:text-green-400">Imported</span>
+                </div>
+                <div className="flex flex-col items-center justify-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100 dark:border-red-900/50">
+                  <AlertCircle className="h-8 w-8 text-red-600 dark:text-red-400 mb-2" />
+                  <span className="text-2xl font-bold text-red-700 dark:text-red-300">{importResults.failed}</span>
+                  <span className="text-sm text-red-600 dark:text-red-400">Failed</span>
+                </div>
+              </div>
+
+              {importResults.errors.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Error Log</Label>
+                  <ScrollArea className="h-[200px] w-full rounded-md border p-4 bg-muted/50">
+                    <div className="space-y-2">
+                      {importResults.errors.map((error, index) => (
+                        <div key={index} className="text-sm text-destructive flex items-start gap-2">
+                          <span className="mt-1">•</span>
+                          <span>{error}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button onClick={() => setIsResultDialogOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Detailed Order View Dialog */}
       <OrderDetailsDialog 

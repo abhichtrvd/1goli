@@ -372,6 +372,7 @@ export const importOrders = mutation({
         items: v.array(
           v.object({
             productName: v.string(),
+            sku: v.optional(v.string()),
             quantity: v.number(),
             price: v.number(),
           })
@@ -399,13 +400,26 @@ export const importOrders = mutation({
         // 2. Validate and build items
         const orderItems = [];
         for (const item of orderData.items) {
-          const product = await ctx.db
-            .query("products")
-            .withIndex("by_name", (q) => q.eq("name", item.productName))
-            .first();
+          let product;
+          
+          // Try finding by SKU first if provided
+          if (item.sku) {
+             product = await ctx.db
+              .query("products")
+              .withIndex("by_sku", (q) => q.eq("sku", item.sku))
+              .first();
+          }
+
+          // Fallback to name if no SKU or product not found by SKU
+          if (!product) {
+            product = await ctx.db
+              .query("products")
+              .withIndex("by_name", (q) => q.eq("name", item.productName))
+              .first();
+          }
           
           if (!product) {
-             throw new Error(`Product not found: ${item.productName}`);
+             throw new Error(`Product not found: ${item.productName}${item.sku ? ` (SKU: ${item.sku})` : ''}`);
           }
           
           orderItems.push({
