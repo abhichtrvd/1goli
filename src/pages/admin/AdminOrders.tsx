@@ -20,13 +20,17 @@ import { GenericBulkUpdateDialog } from "./components/GenericBulkUpdateDialog";
 
 export default function AdminOrders() {
   const [search, setSearch] = useState("");
-  const { results, status, loadMore, isLoading } = usePaginatedQuery(
+  const paginatedResult = usePaginatedQuery(
     api.orders.getPaginatedOrders,
     { search: search || undefined },
     { initialNumItems: 10 }
   );
   
+  const { results, status, loadMore, isLoading } = paginatedResult;
   const orders = results || [];
+  
+  // Debug logging
+  console.log("Paginated result:", { results, status, ordersCount: orders.length });
   
   const updateStatus = useMutation(api.orders.updateOrderStatus);
   const bulkUpdateStatus = useMutation(api.orders.bulkUpdateOrderStatus);
@@ -305,23 +309,17 @@ export default function AdminOrders() {
           </div>
         </CardHeader>
         <CardContent>
-          {status === "LoadingFirstPage" ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : (
-            <OrderTable 
-              orders={filteredOrders}
-              selectedIds={selectedIds}
-              onSelect={handleSelect}
-              onSelectAll={handleSelectAll}
-              onViewDetails={openDetailsDialog}
-              onQuickStatusUpdate={openStatusDialog}
-            />
-          )}
+          <OrderTable 
+            orders={filteredOrders}
+            selectedIds={selectedIds}
+            onSelect={handleSelect}
+            onSelectAll={handleSelectAll}
+            onViewDetails={openDetailsDialog}
+            onQuickStatusUpdate={openStatusDialog}
+          />
 
-          <div className="flex items-center justify-center py-4">
-            {status === "CanLoadMore" && (
+          {status === "CanLoadMore" && (
+            <div className="flex items-center justify-center py-4">
               <Button
                 variant="outline"
                 onClick={() => loadMore(10)}
@@ -330,11 +328,8 @@ export default function AdminOrders() {
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Load More
               </Button>
-            )}
-            {status === "LoadingFirstPage" && (
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            )}
-          </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
