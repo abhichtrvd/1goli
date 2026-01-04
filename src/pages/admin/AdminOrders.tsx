@@ -15,6 +15,8 @@ import { OrderTable } from "./components/OrderTable";
 import { OrderDetailsDialog } from "./components/OrderDetailsDialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export default function AdminOrders() {
   const [search, setSearch] = useState("");
@@ -46,8 +48,9 @@ export default function AdminOrders() {
   // Import state
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = useState(false);
-  const [importResults, setImportResults] = useState<{ imported: number; failed: number; errors: string[] } | null>(null);
+  const [importResults, setImportResults] = useState<{ imported: number; failed: number; errors: { row: number; error: string }[] } | null>(null);
   const [isResultDialogOpen, setIsResultDialogOpen] = useState(false);
+  const [isDryRun, setIsDryRun] = useState(false);
 
   const handleStatusUpdateSubmit = async () => {
     if (!orderToUpdate || !newStatus) return;
@@ -152,8 +155,9 @@ export default function AdminOrders() {
   };
 
   const handleDownloadTemplate = () => {
-    const headers = ["Email", "Shipping Address", "Payment Method", "Status", "Total", "Items (Name:SKU:Qty:Price;...)"];
+    const headers = ["External ID (Optional)", "Email", "Shipping Address", "Payment Method", "Status", "Total", "Items (Name:SKU:Qty:Price;...)"];
     const sampleRow = [
+      "ORD-001",
       "customer@example.com",
       "123 Main St, City, Country",
       "Credit Card",
@@ -231,51 +235,68 @@ export default function AdminOrders() {
           
           const row = parseCSVLine(lines[i]);
 
-          // Expected columns: Email, Shipping Address, Payment Method, Status, Total, Items
-          if (row.length >= 6) {
-            const email = row[0];
-            const shippingAddress = row[1];
-            const paymentMethod = row[2];
-            const status = row[3];
-            const total = parseFloat(row[4]);
-            const itemsString = row[5];
+          // Support both new format (7 cols) and old format (6 cols)
+          // New: External ID, Email, Address, Payment, Status, Total, Items
+          // Old: Email, Address, Payment, Status, Total, Items
+          
+          let externalId, email, shippingAddress, paymentMethod, status, total, itemsString;
 
-            // Parse items string: "Name:SKU:Qty:Price; Name2:SKU2:Qty2:Price2"
-            // Backward compatibility: "Name:Qty:Price" (3 parts) vs "Name:SKU:Qty:Price" (4 parts)
-            const items = itemsString.split(';').map(itemStr => {
-              const parts = itemStr.split(':').map(p => p.trim());
-              
-              if (parts.length === 4) {
-                // New format with SKU
-                return {
-                  productName: parts[0],
-                  sku: parts[1] || undefined,
-                  quantity: parseInt(parts[2]) || 1,
-                  price: parseFloat(parts[3]) || 0
-                };
-              } else if (parts.length === 3) {
-                // Old format without SKU
-                return {
-                  productName: parts[0],
-                  sku: undefined,
-                  quantity: parseInt(parts[1]) || 1,
-                  price: parseFloat(parts[2]) || 0
-                };
-              }
-              return null;
-            }).filter(item => item !== null);
+          if (row.length >= 7) {
+             externalId = row[0];
+             email = row[1];
+             shippingAddress = row[2];
+             paymentMethod = row[3];
+             status = row[4];
+             total = parseFloat(row[5]);
+             itemsString = row[6];
+          } else if (row.length >= 6) {
+             externalId = undefined;
+             email = row[0];
+             shippingAddress = row[1];
+             paymentMethod = row[2];
+             status = row[3];
+             total = parseFloat(row[4]);
+             itemsString = row[5];
+          } else {
+            continue;
+          }
 
-            if (email && items.length > 0) {
-              ordersToImport.push({
-                email,
-                shippingAddress,
-                paymentMethod,
-                status,
-                total,
-                items: items as any[],
-                date: new Date().toISOString()
-              });
+          // Parse items string: "Name:SKU:Qty:Price; Name2:SKU2:Qty2:Price2"
+          // Backward compatibility: "Name:Qty:Price" (3 parts) vs "Name:SKU:Qty:Price" (4 parts)
+          const items = itemsString.split(';').map(itemStr => {
+            const parts = itemStr.split(':').map(p => p.trim());
+            
+            if (parts.length === 4) {
+              // New format with SKU
+              return {
+                productName: parts[0],
+                sku: parts[1] || undefined,
+                quantity: parseInt(parts[2]) || 1,
+                price: parseFloat(parts[3]) || 0
+              };
+            } else if (parts.length === 3) {
+              // Old format without SKU
+              return {
+                productName: parts[0],
+                sku: undefined,
+                quantity: parseInt(parts[1]) || 1,
+                price: parseFloat(parts[2]) || 0
+              };
             }
+            return null;
+          }).filter(item => item !== null);
+
+          if (email && items.length > 0) {
+            ordersToImport.push({
+              externalId: externalId || undefined,
+              email,
+              shippingAddress,
+              paymentMethod,
+              status,
+              total,
+              items: items as any[],
+              date: new Date().toISOString()
+            });
           }
         }
 
@@ -284,14 +305,14 @@ export default function AdminOrders() {
           return;
         }
 
-        const result = await importOrders({ orders: ordersToImport });
+        const result = await importOrders({ orders: ordersToImport, dryRun: isDryRun });
         setImportResults(result);
         setIsResultDialogOpen(true);
         
         if (result.failed === 0) {
-          toast.success(`Successfully imported ${result.imported} orders`);
+          toast.success(`${isDryRun ? 'Dry run' : 'Import'} completed successfully`);
         } else {
-          toast.warning(`Import completed with ${result.failed} errors`);
+          toast.warning(`${isDryRun ? 'Dry run' : 'Import'} completed with ${result.failed} errors`);
         }
         
         if (fileInputRef.current) {
@@ -323,12 +344,20 @@ export default function AdminOrders() {
             accept=".csv" 
             onChange={handleFileUpload}
           />
+          <div className="flex items-center space-x-2 mr-2">
+            <Switch 
+              id="dry-run-mode" 
+              checked={isDryRun}
+              onCheckedChange={setIsDryRun}
+            />
+            <Label htmlFor="dry-run-mode">Dry Run</Label>
+          </div>
           <Button variant="outline" onClick={handleDownloadTemplate} title="Download Template">
             <FileSpreadsheet className="mr-2 h-4 w-4" /> Template
           </Button>
           <Button variant="outline" onClick={handleImportClick} disabled={isImporting}>
             {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-            Import CSV
+            {isDryRun ? 'Test Import' : 'Import CSV'}
           </Button>
           <Button variant="outline" onClick={handleExportCSV}>
             <Download className="mr-2 h-4 w-4" /> Export CSV
@@ -427,11 +456,11 @@ export default function AdminOrders() {
 
       {/* Import Results Dialog */}
       <Dialog open={isResultDialogOpen} onOpenChange={setIsResultDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Import Results</DialogTitle>
+            <DialogTitle>{isDryRun ? 'Dry Run Results' : 'Import Results'}</DialogTitle>
             <DialogDescription>
-              Summary of the order import operation.
+              Summary of the {isDryRun ? 'simulated ' : ''}order import operation.
             </DialogDescription>
           </DialogHeader>
           
@@ -441,7 +470,7 @@ export default function AdminOrders() {
                 <div className="flex flex-col items-center justify-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-100 dark:border-green-900/50">
                   <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400 mb-2" />
                   <span className="text-2xl font-bold text-green-700 dark:text-green-300">{importResults.imported}</span>
-                  <span className="text-sm text-green-600 dark:text-green-400">Imported</span>
+                  <span className="text-sm text-green-600 dark:text-green-400">{isDryRun ? 'Valid Rows' : 'Imported'}</span>
                 </div>
                 <div className="flex flex-col items-center justify-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100 dark:border-red-900/50">
                   <AlertCircle className="h-8 w-8 text-red-600 dark:text-red-400 mb-2" />
@@ -453,15 +482,23 @@ export default function AdminOrders() {
               {importResults.errors.length > 0 && (
                 <div className="space-y-2">
                   <Label>Error Log</Label>
-                  <ScrollArea className="h-[200px] w-full rounded-md border p-4 bg-muted/50">
-                    <div className="space-y-2">
-                      {importResults.errors.map((error, index) => (
-                        <div key={index} className="text-sm text-destructive flex items-start gap-2">
-                          <span className="mt-1">•</span>
-                          <span>{error}</span>
-                        </div>
-                      ))}
-                    </div>
+                  <ScrollArea className="h-[300px] w-full rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[80px]">Row #</TableHead>
+                          <TableHead>Error Details</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {importResults.errors.map((error, index) => (
+                          <TableRow key={index}>
+                            <TableCell className="font-medium">{error.row}</TableCell>
+                            <TableCell className="text-destructive">{error.error}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </ScrollArea>
                 </div>
               )}

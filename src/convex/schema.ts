@@ -106,6 +106,7 @@ const schema = defineSchema(
 
     orders: defineTable({
       userId: v.string(),
+      externalId: v.optional(v.string()), // Added for imports
       items: v.array(
         v.object({
           productId: v.id("products"),
@@ -143,6 +144,7 @@ const schema = defineSchema(
       ),
     })
       .index("by_user", ["userId"])
+      .index("by_external_id", ["externalId"])
       .searchIndex("search_shipping", {
         searchField: "shippingAddress",
       }),

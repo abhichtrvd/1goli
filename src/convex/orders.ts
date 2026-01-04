@@ -364,6 +364,7 @@ export const importOrders = mutation({
   args: {
     orders: v.array(
       v.object({
+        externalId: v.optional(v.string()),
         email: v.string(),
         shippingAddress: v.string(),
         paymentMethod: v.string(),
@@ -380,13 +381,28 @@ export const importOrders = mutation({
         date: v.optional(v.string()),
       })
     ),
+    dryRun: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
-    const results = { imported: 0, failed: 0, errors: [] as string[] };
+    const results = { imported: 0, failed: 0, errors: [] as { row: number; error: string }[] };
 
+    let rowIndex = 0;
     for (const orderData of args.orders) {
+      rowIndex++;
       try {
+        // 0. Check for duplicates if externalId is provided
+        if (orderData.externalId) {
+          const existing = await ctx.db
+            .query("orders")
+            .withIndex("by_external_id", (q) => q.eq("externalId", orderData.externalId))
+            .first();
+          
+          if (existing) {
+            throw new Error(`Duplicate: Order with External ID '${orderData.externalId}' already exists.`);
+          }
+        }
+
         // 1. Find User by email
         const user = await ctx.db
           .query("users")
@@ -432,38 +448,41 @@ export const importOrders = mutation({
           });
         }
 
-        // 3. Create Order
-        await ctx.db.insert("orders", {
-          userId: user._id,
-          items: orderItems,
-          total: orderData.total,
-          status: orderData.status,
-          shippingAddress: orderData.shippingAddress,
-          paymentMethod: orderData.paymentMethod,
-          paymentStatus: ["delivered", "completed", "shipped"].includes(orderData.status) ? "paid" : "pending",
-          statusHistory: [
-            {
-              status: orderData.status,
-              timestamp: orderData.date ? new Date(orderData.date).getTime() : Date.now(),
-              note: "Imported via Admin",
-            },
-          ],
-        });
+        // 3. Create Order (if not dry run)
+        if (!args.dryRun) {
+          await ctx.db.insert("orders", {
+            userId: user._id,
+            externalId: orderData.externalId,
+            items: orderItems,
+            total: orderData.total,
+            status: orderData.status,
+            shippingAddress: orderData.shippingAddress,
+            paymentMethod: orderData.paymentMethod,
+            paymentStatus: ["delivered", "completed", "shipped"].includes(orderData.status) ? "paid" : "pending",
+            statusHistory: [
+              {
+                status: orderData.status,
+                timestamp: orderData.date ? new Date(orderData.date).getTime() : Date.now(),
+                note: "Imported via Admin",
+              },
+            ],
+          });
+        }
         
         results.imported++;
       } catch (err: any) {
         results.failed++;
-        results.errors.push(`Row for ${orderData.email}: ${err.message}`);
+        results.errors.push({ row: rowIndex, error: err.message });
       }
     }
 
     // Log the bulk action
     const userId = await getAuthUserId(ctx);
     await ctx.db.insert("auditLogs", {
-      action: "import_orders",
+      action: args.dryRun ? "import_orders_dry_run" : "import_orders",
       entityType: "order",
       performedBy: userId || "admin",
-      details: `Imported ${results.imported} orders, ${results.failed} failed`,
+      details: `${args.dryRun ? '[DRY RUN] ' : ''}Processed ${args.orders.length} rows. Imported: ${results.imported}, Failed: ${results.failed}`,
       timestamp: Date.now(),
     });
 
