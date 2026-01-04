@@ -167,3 +167,23 @@ export const deleteUser = mutation({
     });
   },
 });
+
+export const bulkDeleteUsers = mutation({
+  args: { ids: v.array(v.id("users")) },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const adminId = await getAuthUserId(ctx);
+
+    for (const id of args.ids) {
+      await ctx.db.delete(id);
+    }
+
+    await ctx.db.insert("auditLogs", {
+      action: "bulk_delete_users",
+      entityType: "user",
+      performedBy: adminId || "admin",
+      details: `Deleted ${args.ids.length} users`,
+      timestamp: Date.now(),
+    });
+  },
+});

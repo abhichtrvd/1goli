@@ -52,10 +52,12 @@ export default function AdminUsers() {
   const updateRole = useMutation(api.users.updateUserRole);
   const bulkUpdateRole = useMutation(api.users.bulkUpdateUserRole);
   const deleteUser = useMutation(api.users.deleteUser);
+  const bulkDeleteUsers = useMutation(api.users.bulkDeleteUsers);
 
   // Bulk actions state
   const [selectedIds, setSelectedIds] = useState<Id<"users">[]>([]);
   const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
+  const [isBulkDeleteAlertOpen, setIsBulkDeleteAlertOpen] = useState(false);
   const [bulkRole, setBulkRole] = useState<string>("");
 
   // Single User Action State
@@ -114,6 +116,19 @@ export default function AdminUsers() {
       setBulkRole("");
     } catch (error) {
       toast.error("Failed to update users");
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+
+    try {
+      await bulkDeleteUsers({ ids: selectedIds });
+      toast.success(`Deleted ${selectedIds.length} users`);
+      setIsBulkDeleteAlertOpen(false);
+      setSelectedIds([]);
+    } catch (error) {
+      toast.error("Failed to delete users");
     }
   };
 
@@ -185,36 +200,45 @@ export default function AdminUsers() {
           <div className="flex items-center justify-between">
             <CardTitle>All Users</CardTitle>
             {selectedIds.length > 0 && (
-              <Dialog open={isBulkDialogOpen} onOpenChange={setIsBulkDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="secondary" size="sm">
-                    <CheckSquare className="mr-2 h-4 w-4" /> Update Selected ({selectedIds.length})
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Bulk Update Role</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label>New Role</Label>
-                      <Select value={bulkRole} onValueChange={setBulkRole}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select role" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="user">User</SelectItem>
-                          <SelectItem value="member">Member</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <Button onClick={handleBulkUpdate} className="w-full">
-                      Update {selectedIds.length} Users
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={() => setIsBulkDeleteAlertOpen(true)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete Selected ({selectedIds.length})
+                </Button>
+                <Dialog open={isBulkDialogOpen} onOpenChange={setIsBulkDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="secondary" size="sm">
+                      <CheckSquare className="mr-2 h-4 w-4" /> Update Selected ({selectedIds.length})
                     </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Bulk Update Role</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label>New Role</Label>
+                        <Select value={bulkRole} onValueChange={setBulkRole}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="user">User</SelectItem>
+                            <SelectItem value="member">Member</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button onClick={handleBulkUpdate} className="w-full">
+                        Update {selectedIds.length} Users
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
             )}
           </div>
         </CardHeader>
@@ -341,6 +365,25 @@ export default function AdminUsers() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteUser} className="bg-red-600 hover:bg-red-700">
               Delete User
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <AlertDialog open={isBulkDeleteAlertOpen} onOpenChange={setIsBulkDeleteAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedIds.length} Users?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the selected {selectedIds.length} user accounts
+              and remove their data from our servers.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkDelete} className="bg-red-600 hover:bg-red-700">
+              Delete {selectedIds.length} Users
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
