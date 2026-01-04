@@ -49,10 +49,11 @@ export default function AdminOrders() {
 
 function OrdersContent() {
   const [search, setSearch] = useState("");
+  const normalizedSearch = search.trim();
   const paginatedResult = usePaginatedQuery(
     api.orders.getPaginatedOrders,
-    { search: search || undefined },
-    { initialNumItems: 10 }
+    normalizedSearch ? { search: normalizedSearch } : {},
+    { initialNumItems: 10 },
   );
   
   const { results, status, loadMore, isLoading } = paginatedResult;
