@@ -57,6 +57,11 @@ export function OrderDetailsDialog({ order, open, onOpenChange }: OrderDetailsDi
     }
   };
 
+  // Safe accessors
+  const orderId = order._id ? order._id.slice(-6) : "???";
+  const status = order.status || "unknown";
+  const dateStr = order._creationTime ? new Date(order._creationTime).toLocaleString() : "N/A";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] h-[95vh] flex flex-col p-0 gap-0 bg-background sm:max-w-[95vw] overflow-hidden">
@@ -64,14 +69,14 @@ export function OrderDetailsDialog({ order, open, onOpenChange }: OrderDetailsDi
           <div className="flex items-center justify-between">
             <div className="space-y-1">
               <div className="flex items-center gap-3">
-                <DialogTitle className="text-2xl font-bold">Order #{order._id.slice(-6)}</DialogTitle>
-                <Badge variant="outline" className={getStatusColor(order.status)}>
-                  {order.status.toUpperCase()}
+                <DialogTitle className="text-2xl font-bold">Order #{orderId}</DialogTitle>
+                <Badge variant="outline" className={getStatusColor(status)}>
+                  {status.toUpperCase()}
                 </Badge>
               </div>
               <p className="text-sm text-muted-foreground flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
-                Placed on {new Date(order._creationTime).toLocaleString()}
+                Placed on {dateStr}
               </p>
             </div>
             <div className="flex items-center gap-2">

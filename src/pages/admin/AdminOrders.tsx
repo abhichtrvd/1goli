@@ -102,7 +102,8 @@ export default function AdminOrders() {
   };
 
   const filteredOrders = orders?.filter(order => 
-    statusFilter === "all" ? true : order.status === statusFilter
+    (statusFilter === "all" ? true : order.status === statusFilter) &&
+    order && order._id // Ensure order and ID exist to prevent crashes
   );
 
   const handleSelect = (id: Id<"orders">, checked: boolean) => {

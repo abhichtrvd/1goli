@@ -84,6 +84,9 @@ function OrderRow({
   onViewDetails,
   onQuickStatusUpdate
 }: OrderRowProps) {
+  // Defensive check: ensure order and _id exist
+  if (!order || !order._id) return null;
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -111,9 +114,21 @@ function OrderRow({
           </Badge>
         );
       default:
-        return <Badge variant="secondary">{status}</Badge>;
+        return <Badge variant="secondary">{status || "Unknown"}</Badge>;
     }
   };
+
+  // Safe accessors for all fields to prevent crashes
+  const orderId = order._id ? order._id.slice(-6) : "???";
+  const dateStr = order._creationTime ? new Date(order._creationTime).toLocaleDateString() : "N/A";
+  const userName = order.userName || "Unknown";
+  const userContact = order.userContact || "N/A";
+  const itemsCount = Array.isArray(order.items) ? order.items.length : 0;
+  const itemsSummary = Array.isArray(order.items) 
+    ? order.items.map((i: any) => i?.name || "Item").join(", ") 
+    : "No items";
+  const totalAmount = typeof order.total === 'number' ? order.total.toFixed(2) : "0.00";
+  const status = order.status || "unknown";
 
   return (
     <TableRow>
@@ -123,26 +138,26 @@ function OrderRow({
           onCheckedChange={(checked) => onSelect(order._id, checked as boolean)}
         />
       </TableCell>
-      <TableCell className="font-mono text-xs">{order._id.slice(-6)}</TableCell>
-      <TableCell>{new Date(order._creationTime).toLocaleDateString()}</TableCell>
+      <TableCell className="font-mono text-xs">{orderId}</TableCell>
+      <TableCell>{dateStr}</TableCell>
       <TableCell>
         <div className="flex flex-col">
-          <span className="text-sm font-medium">{order.userName || "Unknown"}</span>
-          <span className="text-xs text-muted-foreground truncate max-w-[150px]">{order.userContact || "N/A"}</span>
+          <span className="text-sm font-medium">{userName}</span>
+          <span className="text-xs text-muted-foreground truncate max-w-[150px]">{userContact}</span>
         </div>
       </TableCell>
       <TableCell>
         <div className="text-sm">
-          {order.items?.length || 0} items
+          {itemsCount} items
           <div className="text-xs text-muted-foreground truncate max-w-[200px]">
-            {order.items?.map((i: any) => i.name).join(", ") || "No items"}
+            {itemsSummary}
           </div>
         </div>
       </TableCell>
-      <TableCell className="font-bold">₹{order.total?.toFixed(2) || "0.00"}</TableCell>
+      <TableCell className="font-bold">₹{totalAmount}</TableCell>
       <TableCell>
         <div className="flex items-center gap-2">
-          {getStatusBadge(order.status)}
+          {getStatusBadge(status)}
         </div>
       </TableCell>
       <TableCell className="text-right">
