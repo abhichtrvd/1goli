@@ -155,6 +155,10 @@ export const deleteUser = mutation({
     await requireAdmin(ctx);
     const adminId = await getAuthUserId(ctx);
     
+    if (args.id === adminId) {
+      throw new Error("You cannot delete your own account.");
+    }
+    
     await ctx.db.delete(args.id);
 
     await ctx.db.insert("auditLogs", {
@@ -174,7 +178,10 @@ export const bulkDeleteUsers = mutation({
     await requireAdmin(ctx);
     const adminId = await getAuthUserId(ctx);
 
-    for (const id of args.ids) {
+    const idsToDelete = args.ids.filter(id => id !== adminId);
+    const skippedCount = args.ids.length - idsToDelete.length;
+
+    for (const id of idsToDelete) {
       await ctx.db.delete(id);
     }
 
@@ -182,8 +189,10 @@ export const bulkDeleteUsers = mutation({
       action: "bulk_delete_users",
       entityType: "user",
       performedBy: adminId || "admin",
-      details: `Deleted ${args.ids.length} users`,
+      details: `Deleted ${idsToDelete.length} users${skippedCount > 0 ? ` (Skipped ${skippedCount} self-deletion attempts)` : ""}`,
       timestamp: Date.now(),
     });
+
+    return { deleted: idsToDelete.length, skipped: skippedCount };
   },
 });

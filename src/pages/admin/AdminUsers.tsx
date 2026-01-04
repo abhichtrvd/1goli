@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useMutation, usePaginatedQuery } from "convex/react";
+import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
@@ -39,6 +39,8 @@ import { Badge } from "@/components/ui/badge";
 export default function AdminUsers() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
+  
+  const currentUser = useQuery(api.users.currentUser);
   
   const { results: users, status, loadMore, isLoading } = usePaginatedQuery(
     api.users.searchUsers,
@@ -123,8 +125,12 @@ export default function AdminUsers() {
     if (selectedIds.length === 0) return;
 
     try {
-      await bulkDeleteUsers({ ids: selectedIds });
-      toast.success(`Deleted ${selectedIds.length} users`);
+      const result = await bulkDeleteUsers({ ids: selectedIds });
+      if (result && typeof result === 'object' && 'skipped' in result && result.skipped > 0) {
+        toast.success(`Deleted ${result.deleted} users. Skipped ${result.skipped} (cannot delete yourself).`);
+      } else {
+        toast.success(`Deleted ${selectedIds.length} users`);
+      }
       setIsBulkDeleteAlertOpen(false);
       setSelectedIds([]);
     } catch (error) {
@@ -315,6 +321,7 @@ export default function AdminUsers() {
                         <DropdownMenuItem 
                           className="text-red-600 focus:text-red-600"
                           onClick={() => setUserToDelete(user._id)}
+                          disabled={currentUser?._id === user._id}
                         >
                           <Trash2 className="mr-2 h-4 w-4" /> Delete User
                         </DropdownMenuItem>
