@@ -148,3 +148,22 @@ export const promoteCurrentUserToAdmin = mutation({
     await ctx.db.patch(user._id, { role: ROLES.ADMIN });
   },
 });
+
+export const deleteUser = mutation({
+  args: { id: v.id("users") },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const adminId = await getAuthUserId(ctx);
+    
+    await ctx.db.delete(args.id);
+
+    await ctx.db.insert("auditLogs", {
+      action: "delete_user",
+      entityId: args.id,
+      entityType: "user",
+      performedBy: adminId || "admin",
+      details: `Deleted user ${args.id}`,
+      timestamp: Date.now(),
+    });
+  },
+});

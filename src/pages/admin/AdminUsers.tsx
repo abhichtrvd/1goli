@@ -8,14 +8,33 @@ import { Id } from "@/convex/_generated/dataModel";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Loader2, Download } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Download, MoreHorizontal, Trash2, Eye, Shield } from "lucide-react";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Filter } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CheckSquare } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 
 export default function AdminUsers() {
   const [search, setSearch] = useState("");
@@ -32,11 +51,16 @@ export default function AdminUsers() {
   
   const updateRole = useMutation(api.users.updateUserRole);
   const bulkUpdateRole = useMutation(api.users.bulkUpdateUserRole);
+  const deleteUser = useMutation(api.users.deleteUser);
 
   // Bulk actions state
   const [selectedIds, setSelectedIds] = useState<Id<"users">[]>([]);
   const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
   const [bulkRole, setBulkRole] = useState<string>("");
+
+  // Single User Action State
+  const [userToDelete, setUserToDelete] = useState<Id<"users"> | null>(null);
+  const [userToView, setUserToView] = useState<any | null>(null);
 
   const handleRoleChange = async (userId: Id<"users">, newRole: "admin" | "user" | "member") => {
     try {
@@ -44,6 +68,17 @@ export default function AdminUsers() {
       toast.success("User role updated");
     } catch (error) {
       toast.error("Failed to update role");
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+    try {
+      await deleteUser({ id: userToDelete });
+      toast.success("User deleted successfully");
+      setUserToDelete(null);
+    } catch (error) {
+      toast.error("Failed to delete user");
     }
   };
 
@@ -197,6 +232,7 @@ export default function AdminUsers() {
                 <TableHead>Email / Phone</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Joined</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -238,11 +274,34 @@ export default function AdminUsers() {
                   <TableCell className="text-muted-foreground text-sm">
                     {new Date(user._creationTime).toLocaleDateString()}
                   </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Open menu</span>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => setUserToView(user)}>
+                          <Eye className="mr-2 h-4 w-4" /> View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          className="text-red-600 focus:text-red-600"
+                          onClick={() => setUserToDelete(user._id)}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" /> Delete User
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
                 </TableRow>
               ))}
               {users?.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                     No users found.
                   </TableCell>
                 </TableRow>
@@ -267,6 +326,82 @@ export default function AdminUsers() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the user account
+              and remove their data from our servers.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteUser} className="bg-red-600 hover:bg-red-700">
+              Delete User
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* View User Details Dialog */}
+      <Dialog open={!!userToView} onOpenChange={(open) => !open && setUserToView(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>User Details</DialogTitle>
+            <DialogDescription>
+              Detailed information for {userToView?.name || "Anonymous User"}
+            </DialogDescription>
+          </DialogHeader>
+          {userToView && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4 p-4 border rounded-lg bg-muted/50">
+                <Avatar className="h-16 w-16">
+                  <AvatarImage src={userToView.image} />
+                  <AvatarFallback className="text-lg">{userToView.name?.charAt(0) || "U"}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className="font-semibold text-lg">{userToView.name || "Anonymous"}</h3>
+                  <Badge variant={userToView.role === "admin" ? "default" : "secondary"}>
+                    {userToView.role || "user"}
+                  </Badge>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="grid grid-cols-3 gap-2 text-sm">
+                  <span className="text-muted-foreground font-medium">User ID</span>
+                  <span className="col-span-2 font-mono text-xs">{userToView._id}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-sm">
+                  <span className="text-muted-foreground font-medium">Email</span>
+                  <span className="col-span-2">{userToView.email || "N/A"}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-sm">
+                  <span className="text-muted-foreground font-medium">Phone</span>
+                  <span className="col-span-2">{userToView.phone || "N/A"}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-sm">
+                  <span className="text-muted-foreground font-medium">Address</span>
+                  <span className="col-span-2">{userToView.address || "N/A"}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-sm">
+                  <span className="text-muted-foreground font-medium">Joined</span>
+                  <span className="col-span-2">{new Date(userToView._creationTime).toLocaleString()}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-sm">
+                  <span className="text-muted-foreground font-medium">Verified</span>
+                  <span className="col-span-2">
+                    {userToView.emailVerificationTime ? "Email Verified" : "Not Verified"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
