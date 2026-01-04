@@ -40,7 +40,9 @@ export function OrderTimeline({ statusHistory }: OrderTimelineProps) {
                 if (timelineFilter === 'all') return true;
                 if (timelineFilter === 'status') return !h.note?.toLowerCase().includes('payment'); // Exclude payment logs for "Status Only"
                 if (timelineFilter === 'notes') return !!h.note;
-                if (timelineFilter === 'payment') return h.note?.toLowerCase().includes('payment');
+                if (timelineFilter === 'payment') {
+                  return h.note?.toLowerCase().includes('payment') || h.status === 'paid';
+                }
                 return true;
               })
               .map((history: any, idx: number) => (

@@ -27,6 +27,7 @@ export function OrderDetailsDialog({ order, open, onOpenChange }: OrderDetailsDi
     
     printWindow.document.write(html);
     printWindow.document.close();
+    printWindow.focus();
   };
 
   const getStatusColor = (status: string) => {
