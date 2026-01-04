@@ -4,8 +4,8 @@ import { useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Filter, Search, Loader2, Download, CheckSquare } from "lucide-react";
-import { useState } from "react";
+import { Filter, Search, Loader2, Download, CheckSquare, Upload, FileSpreadsheet } from "lucide-react";
+import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -24,6 +24,7 @@ export default function AdminOrders() {
   
   const updateStatus = useMutation(api.orders.updateOrderStatus);
   const bulkUpdateStatus = useMutation(api.orders.bulkUpdateOrderStatus);
+  const importOrders = useMutation(api.orders.importOrders);
   
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
@@ -39,6 +40,10 @@ export default function AdminOrders() {
   const [selectedIds, setSelectedIds] = useState<Id<"orders">[]>([]);
   const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
   const [bulkStatus, setBulkStatus] = useState<string>("");
+
+  // Import state
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isImporting, setIsImporting] = useState(false);
 
   const handleStatusUpdateSubmit = async () => {
     if (!orderToUpdate || !newStatus) return;
@@ -142,6 +147,143 @@ export default function AdminOrders() {
     document.body.removeChild(link);
   };
 
+  const handleDownloadTemplate = () => {
+    const headers = ["Email", "Shipping Address", "Payment Method", "Status", "Total", "Items (Name:Qty:Price;...)"];
+    const sampleRow = [
+      "customer@example.com",
+      "123 Main St, City, Country",
+      "Credit Card",
+      "pending",
+      "50.00",
+      "Vitamin C:1:20.00; Zinc:2:15.00"
+    ];
+    const csvContent = [
+      headers.join(","),
+      sampleRow.join(",")
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "orders_import_template.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("File size too large. Please upload a file smaller than 2MB.");
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    setIsImporting(true);
+    const reader = new FileReader();
+
+    reader.onload = async (e) => {
+      try {
+        const text = e.target?.result as string;
+        const lines = text.split('\n');
+        // Simple CSV parsing
+        const ordersToImport = [];
+        
+        // Skip header
+        for (let i = 1; i < lines.length; i++) {
+          if (!lines[i].trim()) continue;
+          
+          // Handle CSV parsing with quotes (simplified)
+          const row: string[] = [];
+          let inQuotes = false;
+          let currentValue = '';
+          
+          for (let char of lines[i]) {
+            if (char === '"') {
+              inQuotes = !inQuotes;
+            } else if (char === ',' && !inQuotes) {
+              row.push(currentValue.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+              currentValue = '';
+            } else {
+              currentValue += char;
+            }
+          }
+          row.push(currentValue.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+
+          // Expected columns: Email, Shipping Address, Payment Method, Status, Total, Items
+          if (row.length >= 6) {
+            const email = row[0];
+            const shippingAddress = row[1];
+            const paymentMethod = row[2];
+            const status = row[3];
+            const total = parseFloat(row[4]);
+            const itemsString = row[5];
+
+            // Parse items string: "Name:Qty:Price; Name2:Qty2:Price2"
+            const items = itemsString.split(';').map(itemStr => {
+              const parts = itemStr.split(':');
+              if (parts.length >= 3) {
+                return {
+                  productName: parts[0].trim(),
+                  quantity: parseInt(parts[1].trim()) || 1,
+                  price: parseFloat(parts[2].trim()) || 0
+                };
+              }
+              return null;
+            }).filter(item => item !== null);
+
+            if (email && items.length > 0) {
+              ordersToImport.push({
+                email,
+                shippingAddress,
+                paymentMethod,
+                status,
+                total,
+                items: items as any[],
+                date: new Date().toISOString() // Default to now, or could add column for date
+              });
+            }
+          }
+        }
+
+        if (ordersToImport.length === 0) {
+          toast.error("No valid orders found in CSV");
+          return;
+        }
+
+        const result = await importOrders({ orders: ordersToImport });
+        
+        if (result.failed > 0) {
+          toast.warning(`Import completed with issues: ${result.imported} imported, ${result.failed} failed.`);
+          result.errors.slice(0, 3).forEach(err => toast.error(err));
+          if (result.errors.length > 3) {
+            toast.error(`...and ${result.errors.length - 3} more errors.`);
+          }
+        } else {
+          toast.success(`Successfully imported ${result.imported} orders`);
+        }
+        
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      } catch (error) {
+        console.error(error);
+        toast.error("Failed to import orders. Check CSV format.");
+      } finally {
+        setIsImporting(false);
+      }
+    };
+
+    reader.readAsText(file);
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -150,6 +292,20 @@ export default function AdminOrders() {
           <p className="text-muted-foreground">Manage customer orders and shipments.</p>
         </div>
         <div className="flex items-center gap-2">
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            className="hidden" 
+            accept=".csv" 
+            onChange={handleFileUpload}
+          />
+          <Button variant="outline" onClick={handleDownloadTemplate} title="Download Template">
+            <FileSpreadsheet className="mr-2 h-4 w-4" /> Template
+          </Button>
+          <Button variant="outline" onClick={handleImportClick} disabled={isImporting}>
+            {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+            Import CSV
+          </Button>
           <Button variant="outline" onClick={handleExportCSV}>
             <Download className="mr-2 h-4 w-4" /> Export CSV
           </Button>

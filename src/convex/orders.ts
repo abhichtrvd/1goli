@@ -359,3 +359,100 @@ export const deleteOrderNote = mutation({
     });
   },
 });
+
+export const importOrders = mutation({
+  args: {
+    orders: v.array(
+      v.object({
+        email: v.string(),
+        shippingAddress: v.string(),
+        paymentMethod: v.string(),
+        status: v.string(),
+        total: v.number(),
+        items: v.array(
+          v.object({
+            productName: v.string(),
+            quantity: v.number(),
+            price: v.number(),
+          })
+        ),
+        date: v.optional(v.string()),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const results = { imported: 0, failed: 0, errors: [] as string[] };
+
+    for (const orderData of args.orders) {
+      try {
+        // 1. Find User by email
+        const user = await ctx.db
+          .query("users")
+          .withIndex("email", (q) => q.eq("email", orderData.email))
+          .first();
+
+        if (!user) {
+          throw new Error(`User not found for email: ${orderData.email}`);
+        }
+
+        // 2. Validate and build items
+        const orderItems = [];
+        for (const item of orderData.items) {
+          const product = await ctx.db
+            .query("products")
+            .withIndex("by_name", (q) => q.eq("name", item.productName))
+            .first();
+          
+          if (!product) {
+             throw new Error(`Product not found: ${item.productName}`);
+          }
+          
+          orderItems.push({
+            productId: product._id,
+            name: product.name,
+            potency: product.potencies[0] || "Standard", // Default to first or Standard
+            form: product.forms[0] || "Standard",       // Default to first or Standard
+            quantity: item.quantity,
+            price: item.price,
+          });
+        }
+
+        // 3. Create Order
+        await ctx.db.insert("orders", {
+          userId: user._id,
+          items: orderItems,
+          total: orderData.total,
+          status: orderData.status,
+          shippingAddress: orderData.shippingAddress,
+          paymentMethod: orderData.paymentMethod,
+          paymentStatus: ["delivered", "completed", "shipped"].includes(orderData.status) ? "paid" : "pending",
+          statusHistory: [
+            {
+              status: orderData.status,
+              timestamp: orderData.date ? new Date(orderData.date).getTime() : Date.now(),
+              note: "Imported via Admin",
+            },
+          ],
+        });
+        
+        results.imported++;
+      } catch (err: any) {
+        results.failed++;
+        results.errors.push(`Row for ${orderData.email}: ${err.message}`);
+      }
+    }
+
+    // Log the bulk action
+    const userId = await getAuthUserId(ctx);
+    await ctx.db.insert("auditLogs", {
+      action: "import_orders",
+      entityType: "order",
+      performedBy: userId || "admin",
+      details: `Imported ${results.imported} orders, ${results.failed} failed`,
+      timestamp: Date.now(),
+    });
+
+    return results;
+  },
+});
