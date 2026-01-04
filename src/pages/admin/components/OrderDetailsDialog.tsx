@@ -9,6 +9,7 @@ import { OrderCustomer } from "./order-details/OrderCustomer";
 import { OrderStatus } from "./order-details/OrderStatus";
 import { OrderTimeline } from "./order-details/OrderTimeline";
 import { generateInvoiceHtml } from "../utils/orderUtils";
+import { toast } from "sonner";
 
 interface OrderDetailsDialogProps {
   order: any;
@@ -20,14 +21,29 @@ export function OrderDetailsDialog({ order, open, onOpenChange }: OrderDetailsDi
   if (!order) return null;
 
   const handlePrintInvoice = () => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
+    try {
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        toast.error("Pop-up blocked. Please allow pop-ups for this site.");
+        return;
+      }
 
-    const html = generateInvoiceHtml(order);
-    
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.focus();
+      const html = generateInvoiceHtml(order);
+      
+      printWindow.document.write(html);
+      printWindow.document.close();
+      
+      // Wait for content to load before printing (especially images/fonts if any)
+      // For now, simple focus and print
+      setTimeout(() => {
+        printWindow.focus();
+        // printWindow.print(); // Auto-print is handled in the HTML script
+      }, 250);
+      
+    } catch (error) {
+      console.error("Print error:", error);
+      toast.error("Failed to generate invoice");
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -90,7 +106,7 @@ export function OrderDetailsDialog({ order, open, onOpenChange }: OrderDetailsDi
                 userContact={order.userContact} 
               />
               <OrderStatus order={order} />
-              <OrderTimeline statusHistory={order.statusHistory} />
+              <OrderTimeline statusHistory={order.statusHistory} orderId={order._id} />
             </div>
           </div>
         </div>

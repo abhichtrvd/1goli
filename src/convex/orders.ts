@@ -310,3 +310,50 @@ export const bulkUpdateOrderStatus = mutation({
     });
   },
 });
+
+export const updateOrderNote = mutation({
+  args: {
+    orderId: v.id("orders"),
+    timestamp: v.number(),
+    newNote: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const order = await ctx.db.get(args.orderId);
+    if (!order) throw new Error("Order not found");
+
+    const history = order.statusHistory || [];
+    const index = history.findIndex((h: any) => h.timestamp === args.timestamp);
+
+    if (index === -1) throw new Error("History entry not found");
+
+    history[index].note = args.newNote;
+
+    await ctx.db.patch(args.orderId, {
+      statusHistory: history,
+    });
+  },
+});
+
+export const deleteOrderNote = mutation({
+  args: {
+    orderId: v.id("orders"),
+    timestamp: v.number(),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const order = await ctx.db.get(args.orderId);
+    if (!order) throw new Error("Order not found");
+
+    const history = order.statusHistory || [];
+    const index = history.findIndex((h: any) => h.timestamp === args.timestamp);
+
+    if (index === -1) throw new Error("History entry not found");
+
+    delete history[index].note;
+
+    await ctx.db.patch(args.orderId, {
+      statusHistory: history,
+    });
+  },
+});
