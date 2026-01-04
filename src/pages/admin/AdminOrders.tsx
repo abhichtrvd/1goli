@@ -144,7 +144,7 @@ export default function AdminOrders() {
         `"${o.shippingAddress.replace(/"/g, '""')}"`,
         o.total,
         o.status,
-        `"${o.items?.map((i: any) => `${i.name} (${i.quantity})`).join("; ").replace(/"/g, '""') || ''}"`
+        `"${(o.items?.map((i: any) => `${i.name} (${i.quantity})`).join("; ") || '').replace(/"/g, '""')}"`
       ].join(","))
     ].join("\n");
 
