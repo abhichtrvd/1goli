@@ -108,11 +108,17 @@ export default function AdminUsers() {
     if (selectedIds.length === 0 || !bulkRole) return;
     
     try {
-      await bulkUpdateRole({
+      const result = await bulkUpdateRole({
         ids: selectedIds,
         role: bulkRole as any
       });
-      toast.success(`Updated ${selectedIds.length} users`);
+      
+      if (result && typeof result === 'object' && 'skipped' in result && result.skipped > 0) {
+        toast.success(`Updated ${result.updated} users. Skipped ${result.skipped} (cannot update yourself).`);
+      } else {
+        toast.success(`Updated ${selectedIds.length} users`);
+      }
+      
       setIsBulkDialogOpen(false);
       setSelectedIds([]);
       setBulkRole("");
@@ -290,6 +296,7 @@ export default function AdminUsers() {
                     <Select 
                       defaultValue={user.role || "user"} 
                       onValueChange={(val: any) => handleRoleChange(user._id, val)}
+                      disabled={currentUser?._id === user._id}
                     >
                       <SelectTrigger className="w-[120px] h-8">
                         <SelectValue />

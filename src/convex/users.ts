@@ -95,6 +95,11 @@ export const updateUserRole = mutation({
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
     const adminId = await getAuthUserId(ctx);
+
+    if (args.id === adminId) {
+      throw new Error("You cannot change your own role.");
+    }
+
     await ctx.db.patch(args.id, { role: args.role });
 
     await ctx.db.insert("auditLogs", {
@@ -117,7 +122,10 @@ export const bulkUpdateUserRole = mutation({
     await requireAdmin(ctx);
     const adminId = await getAuthUserId(ctx);
 
-    for (const id of args.ids) {
+    const idsToUpdate = args.ids.filter(id => id !== adminId);
+    const skippedCount = args.ids.length - idsToUpdate.length;
+
+    for (const id of idsToUpdate) {
       await ctx.db.patch(id, { role: args.role });
     }
 
@@ -125,9 +133,11 @@ export const bulkUpdateUserRole = mutation({
       action: "bulk_update_user_role",
       entityType: "user",
       performedBy: adminId || "admin",
-      details: `Updated ${args.ids.length} users to role ${args.role}`,
+      details: `Updated ${idsToUpdate.length} users to role ${args.role}${skippedCount > 0 ? ` (Skipped ${skippedCount} self-update attempts)` : ""}`,
       timestamp: Date.now(),
     });
+
+    return { updated: idsToUpdate.length, skipped: skippedCount };
   },
 });
 
