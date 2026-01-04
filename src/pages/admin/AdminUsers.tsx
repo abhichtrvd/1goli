@@ -205,6 +205,13 @@ export default function AdminUsers() {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // File size check (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("File size too large. Please upload a file smaller than 2MB.");
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
     setIsImporting(true);
     const reader = new FileReader();
 

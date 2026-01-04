@@ -26,6 +26,7 @@ import type * as products_admin from "../products_admin.js";
 import type * as products_internal from "../products_internal.js";
 import type * as reviews from "../reviews.js";
 import type * as settings from "../settings.js";
+import type * as test_import from "../test_import.js";
 import type * as test_integration from "../test_integration.js";
 import type * as users from "../users.js";
 import type * as utils from "../utils.js";
@@ -55,6 +56,7 @@ declare const fullApi: ApiFromModules<{
   products_internal: typeof products_internal;
   reviews: typeof reviews;
   settings: typeof settings;
+  test_import: typeof test_import;
   test_integration: typeof test_integration;
   users: typeof users;
   utils: typeof utils;

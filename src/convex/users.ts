@@ -236,10 +236,24 @@ export const importUsers = mutation({
         continue;
       }
 
+      // Contact Info Validation
+      if (!user.email && !user.phone) {
+        failed++;
+        errors.push(`Row ${index + 1}: Either Email or Phone is required`);
+        continue;
+      }
+
       // Email Validation
       if (user.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email)) {
         failed++;
         errors.push(`Row ${index + 1}: Invalid email format (${user.email})`);
+        continue;
+      }
+
+      // Phone Validation
+      if (user.phone && !/^\+?[\d\s-]{10,}$/.test(user.phone)) {
+        failed++;
+        errors.push(`Row ${index + 1}: Invalid phone format (${user.phone}) - must be at least 10 digits`);
         continue;
       }
 
@@ -287,7 +301,7 @@ export const importUsers = mutation({
       action: "import_users",
       entityType: "user",
       performedBy: adminId || "admin",
-      details: `Imported ${imported}, Updated ${updated}, Failed ${failed}`,
+      details: `Imported ${imported}, Updated ${updated}, Failed ${failed}. ${errors.length > 0 ? `Errors: ${errors.slice(0, 5).join("; ")}${errors.length > 5 ? "..." : ""}` : ""}`,
       timestamp: Date.now(),
     });
 
