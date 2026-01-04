@@ -22,9 +22,7 @@ export function OrderTable({
   onViewDetails,
   onQuickStatusUpdate
 }: OrderTableProps) {
-  // Ensure orders is an array to prevent crashes
-  const safeOrders = Array.isArray(orders) ? orders : [];
-  const allSelected = safeOrders.length > 0 && safeOrders.every(o => selectedIds.includes(o._id));
+  const allSelected = orders.length > 0 && orders.every(o => selectedIds.includes(o._id));
 
   return (
     <div className="rounded-md border bg-card">
@@ -47,14 +45,14 @@ export function OrderTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {safeOrders.length === 0 ? (
+          {orders.length === 0 ? (
             <TableRow>
               <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                 No orders found.
               </TableCell>
             </TableRow>
           ) : (
-            safeOrders.map((order) => (
+            orders.map((order) => (
               <OrderRow
                 key={order._id}
                 order={order}
@@ -86,9 +84,6 @@ function OrderRow({
   onViewDetails,
   onQuickStatusUpdate
 }: OrderRowProps) {
-  // Defensive check: if order is null/undefined, don't render
-  if (!order) return null;
-
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -116,15 +111,9 @@ function OrderRow({
           </Badge>
         );
       default:
-        return <Badge variant="secondary">{status || 'Unknown'}</Badge>;
+        return <Badge variant="secondary">{status}</Badge>;
     }
   };
-
-  // Safe access to properties
-  const items = Array.isArray(order.items) ? order.items : [];
-  const total = typeof order.total === 'number' ? order.total : 0;
-  const orderId = order._id ? order._id.slice(-6) : '???';
-  const date = order._creationTime ? new Date(order._creationTime).toLocaleDateString() : 'N/A';
 
   return (
     <TableRow>
@@ -134,23 +123,23 @@ function OrderRow({
           onCheckedChange={(checked) => onSelect(order._id, checked as boolean)}
         />
       </TableCell>
-      <TableCell className="font-mono text-xs">{orderId}</TableCell>
-      <TableCell>{date}</TableCell>
+      <TableCell className="font-mono text-xs">{order._id.slice(-6)}</TableCell>
+      <TableCell>{new Date(order._creationTime).toLocaleDateString()}</TableCell>
       <TableCell>
         <div className="flex flex-col">
-          <span className="text-sm font-medium">{order.userName || 'Unknown'}</span>
-          <span className="text-xs text-muted-foreground truncate max-w-[150px]">{order.userContact || ''}</span>
+          <span className="text-sm font-medium">{order.userName || "Unknown"}</span>
+          <span className="text-xs text-muted-foreground truncate max-w-[150px]">{order.userContact || "N/A"}</span>
         </div>
       </TableCell>
       <TableCell>
         <div className="text-sm">
-          {items.length} items
+          {order.items?.length || 0} items
           <div className="text-xs text-muted-foreground truncate max-w-[200px]">
-            {items.map((i: any) => i?.name || 'Item').join(", ")}
+            {order.items?.map((i: any) => i.name).join(", ") || "No items"}
           </div>
         </div>
       </TableCell>
-      <TableCell className="font-bold">₹{total.toFixed(2)}</TableCell>
+      <TableCell className="font-bold">₹{order.total?.toFixed(2) || "0.00"}</TableCell>
       <TableCell>
         <div className="flex items-center gap-2">
           {getStatusBadge(order.status)}
