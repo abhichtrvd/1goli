@@ -6,7 +6,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Package, Clock, CreditCard, MapPin, User, Phone, Calendar, Mail } from "lucide-react";
 import { useState } from "react";
@@ -61,7 +60,7 @@ export function OrderDetailsDialog({ order, open, onOpenChange }: OrderDetailsDi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] h-[95vh] flex flex-col p-0 gap-0 bg-muted/10 sm:max-w-[95vw]">
+      <DialogContent className="max-w-[95vw] h-[95vh] flex flex-col p-0 gap-0 bg-background sm:max-w-[95vw] overflow-hidden">
         <DialogHeader className="p-6 bg-background border-b shrink-0">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
@@ -82,7 +81,7 @@ export function OrderDetailsDialog({ order, open, onOpenChange }: OrderDetailsDi
           </div>
         </DialogHeader>
 
-        <ScrollArea className="flex-1">
+        <div className="flex-1 overflow-y-auto">
           <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
             
             {/* LEFT COLUMN - MAIN CONTENT */}
@@ -287,7 +286,7 @@ export function OrderDetailsDialog({ order, open, onOpenChange }: OrderDetailsDi
 
             </div>
           </div>
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );
