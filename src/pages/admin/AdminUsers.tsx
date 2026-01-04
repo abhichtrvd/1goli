@@ -8,7 +8,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Loader2, Download, MoreHorizontal, Trash2, Eye, Shield } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Download, Upload, MoreHorizontal, Trash2, Eye, Shield } from "lucide-react";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Filter } from "lucide-react";
@@ -35,6 +35,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import { useRef } from "react";
 
 export default function AdminUsers() {
   const [search, setSearch] = useState("");
@@ -55,6 +56,7 @@ export default function AdminUsers() {
   const bulkUpdateRole = useMutation(api.users.bulkUpdateUserRole);
   const deleteUser = useMutation(api.users.deleteUser);
   const bulkDeleteUsers = useMutation(api.users.bulkDeleteUsers);
+  const importUsers = useMutation(api.users.importUsers);
 
   // Bulk actions state
   const [selectedIds, setSelectedIds] = useState<Id<"users">[]>([]);
@@ -65,6 +67,10 @@ export default function AdminUsers() {
   // Single User Action State
   const [userToDelete, setUserToDelete] = useState<Id<"users"> | null>(null);
   const [userToView, setUserToView] = useState<any | null>(null);
+
+  // File Upload State
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isImporting, setIsImporting] = useState(false);
 
   const handleRoleChange = async (userId: Id<"users">, newRole: "admin" | "user" | "member") => {
     try {
@@ -150,7 +156,7 @@ export default function AdminUsers() {
       return;
     }
 
-    const headers = ["Name", "Email", "Phone", "Role", "Joined Date"];
+    const headers = ["Name", "Email", "Phone", "Role", "Address", "Joined Date"];
     const csvContent = [
       headers.join(","),
       ...users.map(u => [
@@ -158,6 +164,7 @@ export default function AdminUsers() {
         `"${(u.email || "").replace(/"/g, '""')}"`,
         `"${(u.phone || "").replace(/"/g, '""')}"`,
         u.role || "user",
+        `"${(u.address || "").replace(/"/g, '""')}"`,
         new Date(u._creationTime).toISOString().split('T')[0]
       ].join(","))
     ].join("\n");
@@ -172,6 +179,84 @@ export default function AdminUsers() {
     document.body.removeChild(link);
   };
 
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    const reader = new FileReader();
+
+    reader.onload = async (e) => {
+      try {
+        const text = e.target?.result as string;
+        const lines = text.split('\n');
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
+        
+        const usersToImport = [];
+        
+        for (let i = 1; i < lines.length; i++) {
+          if (!lines[i].trim()) continue;
+          
+          // Handle CSV parsing with quotes
+          const row: string[] = [];
+          let inQuotes = false;
+          let currentValue = '';
+          
+          for (let char of lines[i]) {
+            if (char === '"') {
+              inQuotes = !inQuotes;
+            } else if (char === ',' && !inQuotes) {
+              row.push(currentValue.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+              currentValue = '';
+            } else {
+              currentValue += char;
+            }
+          }
+          row.push(currentValue.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+
+          const user: any = {};
+          headers.forEach((header, index) => {
+            if (row[index]) {
+              if (header === 'name') user.name = row[index];
+              if (header === 'email') user.email = row[index];
+              if (header === 'phone') user.phone = row[index];
+              if (header === 'role') user.role = row[index];
+              if (header === 'address') user.address = row[index];
+            }
+          });
+
+          if (user.email || user.phone) {
+            usersToImport.push(user);
+          }
+        }
+
+        if (usersToImport.length === 0) {
+          toast.error("No valid users found in CSV");
+          return;
+        }
+
+        const result = await importUsers({ users: usersToImport });
+        toast.success(`Import complete: ${result.imported} imported, ${result.updated} updated`);
+        
+        // Reset file input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      } catch (error) {
+        console.error(error);
+        toast.error("Failed to import users. Check CSV format.");
+      } finally {
+        setIsImporting(false);
+      }
+    };
+
+    reader.readAsText(file);
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -180,6 +265,17 @@ export default function AdminUsers() {
           <p className="text-muted-foreground">Manage user roles and permissions.</p>
         </div>
         <div className="flex items-center gap-2">
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            className="hidden" 
+            accept=".csv" 
+            onChange={handleFileUpload}
+          />
+          <Button variant="outline" onClick={handleImportClick} disabled={isImporting}>
+            {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+            Import CSV
+          </Button>
           <Button variant="outline" onClick={handleExportCSV}>
             <Download className="mr-2 h-4 w-4" /> Export CSV
           </Button>

@@ -206,3 +206,70 @@ export const bulkDeleteUsers = mutation({
     return { deleted: idsToDelete.length, skipped: skippedCount };
   },
 });
+
+export const importUsers = mutation({
+  args: {
+    users: v.array(
+      v.object({
+        name: v.string(),
+        email: v.optional(v.string()),
+        phone: v.optional(v.string()),
+        role: v.optional(v.string()),
+        address: v.optional(v.string()),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const adminId = await getAuthUserId(ctx);
+    
+    let imported = 0;
+    let updated = 0;
+    
+    for (const user of args.users) {
+      // Validate role
+      let role = user.role;
+      if (role !== "admin" && role !== "member" && role !== "user") {
+        role = "user";
+      }
+
+      // Check existence
+      let existingUser = null;
+      if (user.email) {
+        existingUser = await ctx.db.query("users").withIndex("email", q => q.eq("email", user.email)).unique();
+      }
+      if (!existingUser && user.phone) {
+        existingUser = await ctx.db.query("users").withIndex("phone", q => q.eq("phone", user.phone)).unique();
+      }
+
+      if (existingUser) {
+        await ctx.db.patch(existingUser._id, {
+          name: user.name || existingUser.name,
+          role: role as any,
+          address: user.address || existingUser.address,
+        });
+        updated++;
+      } else {
+        await ctx.db.insert("users", {
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          role: role as any,
+          address: user.address,
+          isAnonymous: false,
+        });
+        imported++;
+      }
+    }
+
+    await ctx.db.insert("auditLogs", {
+      action: "import_users",
+      entityType: "user",
+      performedBy: adminId || "admin",
+      details: `Imported ${imported} users, updated ${updated} users`,
+      timestamp: Date.now(),
+    });
+
+    return { imported, updated };
+  },
+});
