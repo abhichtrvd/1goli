@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useMutation, usePaginatedQuery } from "convex/react";
+import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,35 @@ import { OrderStatusDialog } from "./components/OrderStatusDialog";
 import { GenericBulkUpdateDialog } from "./components/GenericBulkUpdateDialog";
 
 export default function AdminOrders() {
+  const currentUser = useQuery(api.users.currentUser);
+
+  if (currentUser === undefined) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!currentUser || currentUser.role !== "admin") {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Admin access required</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">
+            You need admin permissions to view orders. Please contact support if you believe this is a mistake.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return <OrdersContent />;
+}
+
+function OrdersContent() {
   const [search, setSearch] = useState("");
   const paginatedResult = usePaginatedQuery(
     api.orders.getPaginatedOrders,
