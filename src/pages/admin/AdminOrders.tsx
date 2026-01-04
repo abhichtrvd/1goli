@@ -17,6 +17,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { parseCSVLine, downloadCSV } from "./utils/csvHelpers";
 
 export default function AdminOrders() {
   const [search, setSearch] = useState("");
@@ -144,14 +145,7 @@ export default function AdminOrders() {
       ].join(","))
     ].join("\n");
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `orders_export_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadCSV(csvContent, `orders_export_${new Date().toISOString().split('T')[0]}.csv`);
   };
 
   const handleDownloadTemplate = () => {
@@ -170,44 +164,11 @@ export default function AdminOrders() {
       sampleRow.join(",")
     ].join("\n");
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", "orders_import_template.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadCSV(csvContent, "orders_import_template.csv");
   };
 
   const handleImportClick = () => {
     fileInputRef.current?.click();
-  };
-
-  const parseCSVLine = (line: string): string[] => {
-    const row: string[] = [];
-    let inQuotes = false;
-    let currentValue = '';
-    
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      if (char === '"') {
-        if (i + 1 < line.length && line[i + 1] === '"') {
-          // Handle escaped quotes
-          currentValue += '"';
-          i++;
-        } else {
-          inQuotes = !inQuotes;
-        }
-      } else if (char === ',' && !inQuotes) {
-        row.push(currentValue.trim());
-        currentValue = '';
-      } else {
-        currentValue += char;
-      }
-    }
-    row.push(currentValue.trim());
-    return row;
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -365,7 +326,7 @@ export default function AdminOrders() {
           <div className="relative w-64">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input 
-              placeholder="Search by address..." 
+              placeholder="Search orders..." 
               className="pl-8" 
               value={search}
               onChange={(e) => setSearch(e.target.value)}

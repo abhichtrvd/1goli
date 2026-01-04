@@ -1,29 +1,16 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Loader2, Download, Upload, MoreHorizontal, Trash2, Eye, Shield, FileSpreadsheet } from "lucide-react";
-import { Search } from "lucide-react";
+import { Loader2, Download, Upload, Trash2, CheckSquare, FileSpreadsheet, Search, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Filter } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
-import { CheckSquare } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,7 +22,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { useRef } from "react";
+import { UserTable } from "./components/UserTable";
+import { downloadCSV } from "./utils/csvHelpers";
 
 export default function AdminUsers() {
   const [search, setSearch] = useState("");
@@ -81,7 +69,11 @@ export default function AdminUsers() {
     }
   };
 
-  const handleDeleteUser = async () => {
+  const handleDeleteUser = async (userId: Id<"users">) => {
+    setUserToDelete(userId);
+  };
+
+  const confirmDeleteUser = async () => {
     if (!userToDelete) return;
     try {
       await deleteUser({ id: userToDelete });
@@ -169,14 +161,7 @@ export default function AdminUsers() {
       ].join(","))
     ].join("\n");
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `users_export_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadCSV(csvContent, `users_export_${new Date().toISOString().split('T')[0]}.csv`);
   };
 
   const handleDownloadTemplate = () => {
@@ -187,14 +172,7 @@ export default function AdminUsers() {
       sampleRow.join(",")
     ].join("\n");
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", "users_import_template.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadCSV(csvContent, "users_import_template.csv");
   };
 
   const handleImportClick = () => {
@@ -320,7 +298,7 @@ export default function AdminUsers() {
           <div className="relative w-64">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input 
-              placeholder="Search users by name..." 
+              placeholder="Search users..." 
               className="pl-8" 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -389,113 +367,19 @@ export default function AdminUsers() {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[50px]">
-                  <Checkbox 
-                    checked={users && users.length > 0 && users.every(u => selectedIds.includes(u._id))}
-                    onCheckedChange={(checked) => handleSelectAll(checked as boolean)}
-                  />
-                </TableHead>
-                <TableHead>User</TableHead>
-                <TableHead>Email / Phone</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Joined</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users?.map((user) => (
-                <TableRow key={user._id}>
-                  <TableCell>
-                    <Checkbox 
-                      checked={selectedIds.includes(user._id)}
-                      onCheckedChange={(checked) => handleSelect(user._id, checked as boolean)}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={user.image} />
-                        <AvatarFallback>{user.name?.charAt(0) || "U"}</AvatarFallback>
-                      </Avatar>
-                      <span className="font-medium">{user.name || "Anonymous"}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {user.email || user.phone || "N/A"}
-                  </TableCell>
-                  <TableCell>
-                    <Select 
-                      defaultValue={user.role || "user"} 
-                      onValueChange={(val: any) => handleRoleChange(user._id, val)}
-                      disabled={currentUser?._id === user._id}
-                    >
-                      <SelectTrigger className="w-[120px] h-8">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="user">User</SelectItem>
-                        <SelectItem value="member">Member</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {new Date(user._creationTime).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Open menu</span>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => setUserToView(user)}>
-                          <Eye className="mr-2 h-4 w-4" /> View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem 
-                          className="text-red-600 focus:text-red-600"
-                          onClick={() => setUserToDelete(user._id)}
-                          disabled={currentUser?._id === user._id}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" /> Delete User
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {users?.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                    No users found.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-
-          <div className="flex items-center justify-center py-4">
-            {status === "CanLoadMore" && (
-              <Button
-                variant="outline"
-                onClick={() => loadMore(10)}
-                disabled={isLoading}
-              >
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Load More
-              </Button>
-            )}
-            {status === "LoadingFirstPage" && (
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            )}
-          </div>
+          <UserTable 
+            users={users || []}
+            selectedIds={selectedIds}
+            currentUser={currentUser}
+            onSelect={handleSelect}
+            onSelectAll={handleSelectAll}
+            onRoleChange={handleRoleChange}
+            onViewDetails={setUserToView}
+            onDeleteUser={handleDeleteUser}
+            status={status}
+            loadMore={loadMore}
+            isLoading={isLoading}
+          />
         </CardContent>
       </Card>
 
@@ -511,7 +395,7 @@ export default function AdminUsers() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteUser} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction onClick={confirmDeleteUser} className="bg-red-600 hover:bg-red-700">
               Delete User
             </AlertDialogAction>
           </AlertDialogFooter>
