@@ -24,6 +24,66 @@ export function OrderTable({
 }: OrderTableProps) {
   const allSelected = orders.length > 0 && orders.every(o => selectedIds.includes(o._id));
 
+  return (
+    <div className="rounded-md border bg-card">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[50px]">
+              <Checkbox 
+                checked={allSelected}
+                onCheckedChange={(checked) => onSelectAll(checked as boolean)}
+              />
+            </TableHead>
+            <TableHead>Order ID</TableHead>
+            <TableHead>Date</TableHead>
+            <TableHead>Customer</TableHead>
+            <TableHead>Items</TableHead>
+            <TableHead>Total</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {orders.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                No orders found.
+              </TableCell>
+            </TableRow>
+          ) : (
+            orders.map((order) => (
+              <OrderRow
+                key={order._id}
+                order={order}
+                isSelected={selectedIds.includes(order._id)}
+                onSelect={onSelect}
+                onViewDetails={onViewDetails}
+                onQuickStatusUpdate={onQuickStatusUpdate}
+              />
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+interface OrderRowProps {
+  order: any;
+  isSelected: boolean;
+  onSelect: (id: Id<"orders">, checked: boolean) => void;
+  onViewDetails: (order: any) => void;
+  onQuickStatusUpdate: (order: any) => void;
+}
+
+function OrderRow({
+  order,
+  isSelected,
+  onSelect,
+  onViewDetails,
+  onQuickStatusUpdate
+}: OrderRowProps) {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -56,90 +116,57 @@ export function OrderTable({
   };
 
   return (
-    <div className="rounded-md border bg-card">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[50px]">
-              <Checkbox 
-                checked={allSelected}
-                onCheckedChange={(checked) => onSelectAll(checked as boolean)}
-              />
-            </TableHead>
-            <TableHead>Order ID</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead>Customer</TableHead>
-            <TableHead>Items</TableHead>
-            <TableHead>Total</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {orders.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
-                No orders found.
-              </TableCell>
-            </TableRow>
-          ) : (
-            orders.map((order) => (
-              <TableRow key={order._id}>
-                <TableCell>
-                  <Checkbox 
-                    checked={selectedIds.includes(order._id)}
-                    onCheckedChange={(checked) => onSelect(order._id, checked as boolean)}
-                  />
-                </TableCell>
-                <TableCell className="font-mono text-xs">{order._id.slice(-6)}</TableCell>
-                <TableCell>{new Date(order._creationTime).toLocaleDateString()}</TableCell>
-                <TableCell>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium">{order.userName}</span>
-                    <span className="text-xs text-muted-foreground truncate max-w-[150px]">{order.userContact}</span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="text-sm">
-                    {order.items.length} items
-                    <div className="text-xs text-muted-foreground truncate max-w-[200px]">
-                      {order.items.map((i: any) => i.name).join(", ")}
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell className="font-bold">₹{order.total.toFixed(2)}</TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    {getStatusBadge(order.status)}
-                  </div>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8"
-                      onClick={() => onQuickStatusUpdate(order)}
-                      title="Quick Status Update"
-                    >
-                      <Filter className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8"
-                      onClick={() => onViewDetails(order)}
-                      title="View Details"
-                    >
-                      <Eye className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </div>
+    <TableRow>
+      <TableCell>
+        <Checkbox 
+          checked={isSelected}
+          onCheckedChange={(checked) => onSelect(order._id, checked as boolean)}
+        />
+      </TableCell>
+      <TableCell className="font-mono text-xs">{order._id.slice(-6)}</TableCell>
+      <TableCell>{new Date(order._creationTime).toLocaleDateString()}</TableCell>
+      <TableCell>
+        <div className="flex flex-col">
+          <span className="text-sm font-medium">{order.userName}</span>
+          <span className="text-xs text-muted-foreground truncate max-w-[150px]">{order.userContact}</span>
+        </div>
+      </TableCell>
+      <TableCell>
+        <div className="text-sm">
+          {order.items.length} items
+          <div className="text-xs text-muted-foreground truncate max-w-[200px]">
+            {order.items.map((i: any) => i.name).join(", ")}
+          </div>
+        </div>
+      </TableCell>
+      <TableCell className="font-bold">₹{order.total.toFixed(2)}</TableCell>
+      <TableCell>
+        <div className="flex items-center gap-2">
+          {getStatusBadge(order.status)}
+        </div>
+      </TableCell>
+      <TableCell className="text-right">
+        <div className="flex justify-end gap-2">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8"
+            onClick={() => onQuickStatusUpdate(order)}
+            title="Quick Status Update"
+          >
+            <Filter className="h-4 w-4 text-muted-foreground" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8"
+            onClick={() => onViewDetails(order)}
+            title="View Details"
+          >
+            <Eye className="h-4 w-4 text-muted-foreground" />
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
   );
 }
