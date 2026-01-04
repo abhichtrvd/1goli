@@ -20,11 +20,13 @@ import { GenericBulkUpdateDialog } from "./components/GenericBulkUpdateDialog";
 
 export default function AdminOrders() {
   const [search, setSearch] = useState("");
-  const { results: orders, status, loadMore, isLoading } = usePaginatedQuery(
+  const { results, status, loadMore, isLoading } = usePaginatedQuery(
     api.orders.getPaginatedOrders,
     { search: search || undefined },
     { initialNumItems: 10 }
   );
+  
+  const orders = results || [];
   
   const updateStatus = useMutation(api.orders.updateOrderStatus);
   const bulkUpdateStatus = useMutation(api.orders.bulkUpdateOrderStatus);
@@ -101,9 +103,10 @@ export default function AdminOrders() {
     setIsDetailsOpen(true);
   };
 
-  const filteredOrders = orders?.filter(order => 
-    (statusFilter === "all" ? true : order.status === statusFilter) &&
-    order && order._id // Ensure order and ID exist to prevent crashes
+  const filteredOrders = orders.filter((order: any) => 
+    order && 
+    order._id && 
+    (statusFilter === "all" ? true : order.status === statusFilter)
   );
 
   const handleSelect = (id: Id<"orders">, checked: boolean) => {
@@ -125,7 +128,7 @@ export default function AdminOrders() {
   };
 
   const handleExportCSV = () => {
-    if (!filteredOrders || filteredOrders.length === 0) {
+    if (filteredOrders.length === 0) {
       toast.error("No data to export");
       return;
     }
@@ -133,7 +136,7 @@ export default function AdminOrders() {
     const headers = ["Order ID", "Date", "Customer Name", "Contact", "Shipping Address", "Total", "Status", "Items"];
     const csvContent = [
       headers.join(","),
-      ...filteredOrders.map(o => [
+      ...filteredOrders.map((o: any) => [
         o._id,
         new Date(o._creationTime).toISOString(),
         `"${o.userName.replace(/"/g, '""')}"`,
@@ -141,7 +144,7 @@ export default function AdminOrders() {
         `"${o.shippingAddress.replace(/"/g, '""')}"`,
         o.total,
         o.status,
-        `"${o.items.map((i: any) => `${i.name} (${i.quantity})`).join("; ").replace(/"/g, '""')}"`
+        `"${o.items?.map((i: any) => `${i.name} (${i.quantity})`).join("; ").replace(/"/g, '""') || ''}"`
       ].join(","))
     ].join("\n");
 
@@ -308,7 +311,7 @@ export default function AdminOrders() {
             </div>
           ) : (
             <OrderTable 
-              orders={filteredOrders || []}
+              orders={filteredOrders}
               selectedIds={selectedIds}
               onSelect={handleSelect}
               onSelectAll={handleSelectAll}
