@@ -8,7 +8,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Loader2, Download, Upload, MoreHorizontal, Trash2, Eye, Shield } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Download, Upload, MoreHorizontal, Trash2, Eye, Shield, FileSpreadsheet } from "lucide-react";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Filter } from "lucide-react";
@@ -179,6 +179,24 @@ export default function AdminUsers() {
     document.body.removeChild(link);
   };
 
+  const handleDownloadTemplate = () => {
+    const headers = ["Name", "Email", "Phone", "Role", "Address"];
+    const sampleRow = ["John Doe", "john@example.com", "+1234567890", "user", "123 Main St"];
+    const csvContent = [
+      headers.join(","),
+      sampleRow.join(",")
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "users_import_template.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleImportClick = () => {
     fileInputRef.current?.click();
   };
@@ -229,7 +247,7 @@ export default function AdminUsers() {
             }
           });
 
-          if (user.email || user.phone) {
+          if (user.name) { // Only add if name exists (basic check before sending)
             usersToImport.push(user);
           }
         }
@@ -240,7 +258,17 @@ export default function AdminUsers() {
         }
 
         const result = await importUsers({ users: usersToImport });
-        toast.success(`Import complete: ${result.imported} imported, ${result.updated} updated`);
+        
+        if (result.failed > 0) {
+          toast.warning(`Import completed with issues: ${result.imported} imported, ${result.updated} updated, ${result.failed} failed.`);
+          // Show first few errors
+          result.errors.slice(0, 3).forEach(err => toast.error(err));
+          if (result.errors.length > 3) {
+            toast.error(`...and ${result.errors.length - 3} more errors.`);
+          }
+        } else {
+          toast.success(`Import complete: ${result.imported} imported, ${result.updated} updated`);
+        }
         
         // Reset file input
         if (fileInputRef.current) {
@@ -272,6 +300,9 @@ export default function AdminUsers() {
             accept=".csv" 
             onChange={handleFileUpload}
           />
+          <Button variant="outline" onClick={handleDownloadTemplate} title="Download Template">
+            <FileSpreadsheet className="mr-2 h-4 w-4" /> Template
+          </Button>
           <Button variant="outline" onClick={handleImportClick} disabled={isImporting}>
             {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
             Import CSV

@@ -225,40 +225,61 @@ export const importUsers = mutation({
     
     let imported = 0;
     let updated = 0;
+    let failed = 0;
+    const errors: string[] = [];
     
-    for (const user of args.users) {
+    for (const [index, user] of args.users.entries()) {
+      // Basic Validation
+      if (!user.name || user.name.trim() === "") {
+        failed++;
+        errors.push(`Row ${index + 1}: Name is required`);
+        continue;
+      }
+
+      // Email Validation
+      if (user.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email)) {
+        failed++;
+        errors.push(`Row ${index + 1}: Invalid email format (${user.email})`);
+        continue;
+      }
+
       // Validate role
       let role = user.role;
       if (role !== "admin" && role !== "member" && role !== "user") {
         role = "user";
       }
 
-      // Check existence
-      let existingUser = null;
-      if (user.email) {
-        existingUser = await ctx.db.query("users").withIndex("email", q => q.eq("email", user.email)).unique();
-      }
-      if (!existingUser && user.phone) {
-        existingUser = await ctx.db.query("users").withIndex("phone", q => q.eq("phone", user.phone)).unique();
-      }
+      try {
+        // Check existence
+        let existingUser = null;
+        if (user.email) {
+          existingUser = await ctx.db.query("users").withIndex("email", q => q.eq("email", user.email)).unique();
+        }
+        if (!existingUser && user.phone) {
+          existingUser = await ctx.db.query("users").withIndex("phone", q => q.eq("phone", user.phone)).unique();
+        }
 
-      if (existingUser) {
-        await ctx.db.patch(existingUser._id, {
-          name: user.name || existingUser.name,
-          role: role as any,
-          address: user.address || existingUser.address,
-        });
-        updated++;
-      } else {
-        await ctx.db.insert("users", {
-          name: user.name,
-          email: user.email,
-          phone: user.phone,
-          role: role as any,
-          address: user.address,
-          isAnonymous: false,
-        });
-        imported++;
+        if (existingUser) {
+          await ctx.db.patch(existingUser._id, {
+            name: user.name || existingUser.name,
+            role: role as any,
+            address: user.address || existingUser.address,
+          });
+          updated++;
+        } else {
+          await ctx.db.insert("users", {
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+            role: role as any,
+            address: user.address,
+            isAnonymous: false,
+          });
+          imported++;
+        }
+      } catch (error) {
+        failed++;
+        errors.push(`Row ${index + 1}: Database error`);
       }
     }
 
@@ -266,10 +287,10 @@ export const importUsers = mutation({
       action: "import_users",
       entityType: "user",
       performedBy: adminId || "admin",
-      details: `Imported ${imported} users, updated ${updated} users`,
+      details: `Imported ${imported}, Updated ${updated}, Failed ${failed}`,
       timestamp: Date.now(),
     });
 
-    return { imported, updated };
+    return { imported, updated, failed, errors };
   },
 });
