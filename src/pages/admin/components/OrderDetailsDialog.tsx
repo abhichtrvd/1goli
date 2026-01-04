@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, Clock, CreditCard, MapPin, User, Phone, Calendar, Mail, Printer, FileText } from "lucide-react";
+import { Package, Clock, CreditCard, MapPin, User, Phone, Calendar, Mail, Printer, FileText, Filter } from "lucide-react";
 import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -24,6 +24,7 @@ export function OrderDetailsDialog({ order, open, onOpenChange }: OrderDetailsDi
   const [newStatus, setNewStatus] = useState<string>("");
   const [statusNote, setStatusNote] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [timelineFilter, setTimelineFilter] = useState("all");
 
   if (!order) return null;
 
@@ -61,93 +62,130 @@ export function OrderDetailsDialog({ order, open, onOpenChange }: OrderDetailsDi
         <head>
           <title>Invoice #${order._id.slice(-6)}</title>
           <style>
-            body { font-family: system-ui, -apple-system, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; color: #333; }
-            .header { display: flex; justify-content: space-between; margin-bottom: 40px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
-            .brand { font-size: 24px; font-weight: bold; color: #000; }
-            .invoice-title { font-size: 32px; font-weight: bold; color: #666; text-align: right; }
-            .meta { margin-top: 10px; text-align: right; color: #666; }
-            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 40px; }
-            .section-title { font-weight: bold; margin-bottom: 10px; text-transform: uppercase; font-size: 12px; color: #666; letter-spacing: 1px; }
-            table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-            th { text-align: left; padding: 12px; border-bottom: 2px solid #eee; font-size: 12px; text-transform: uppercase; color: #666; }
-            td { padding: 12px; border-bottom: 1px solid #eee; }
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+            body { font-family: 'Inter', system-ui, -apple-system, sans-serif; color: #1f2937; line-height: 1.5; padding: 0; margin: 0; background: #fff; }
+            .invoice-container { max-width: 800px; margin: 40px auto; padding: 40px; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border-radius: 8px; }
+            .header { display: flex; justify-content: space-between; margin-bottom: 48px; padding-bottom: 24px; border-bottom: 1px solid #e5e7eb; }
+            .brand-name { font-size: 24px; font-weight: 700; color: #111827; letter-spacing: -0.025em; }
+            .brand-subtitle { font-size: 14px; color: #6b7280; margin-top: 4px; }
+            .invoice-title { font-size: 30px; font-weight: 800; color: #111827; text-align: right; letter-spacing: -0.025em; }
+            .meta-group { margin-top: 8px; text-align: right; font-size: 14px; color: #4b5563; }
+            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; margin-bottom: 48px; }
+            .section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; color: #6b7280; letter-spacing: 0.05em; margin-bottom: 12px; }
+            .address-block { font-size: 14px; color: #374151; line-height: 1.6; }
+            .address-name { font-weight: 600; color: #111827; margin-bottom: 4px; display: block; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 32px; }
+            th { text-align: left; padding: 12px 16px; background: #f9fafb; font-size: 11px; font-weight: 600; text-transform: uppercase; color: #6b7280; letter-spacing: 0.05em; border-bottom: 1px solid #e5e7eb; }
+            td { padding: 16px; border-bottom: 1px solid #e5e7eb; font-size: 14px; color: #374151; }
+            tr:last-child td { border-bottom: none; }
+            .item-name { font-weight: 500; color: #111827; display: block; margin-bottom: 2px; }
+            .item-meta { font-size: 12px; color: #6b7280; }
             .text-right { text-align: right; }
-            .totals { margin-left: auto; width: 300px; }
-            .total-row { display: flex; justify-content: space-between; padding: 8px 0; }
-            .grand-total { font-weight: bold; font-size: 18px; border-top: 2px solid #eee; margin-top: 10px; padding-top: 10px; }
-            @media print { body { padding: 0; } button { display: none; } }
+            .text-center { text-align: center; }
+            .totals-wrapper { display: flex; justify-content: flex-end; }
+            .totals-table { width: 320px; }
+            .total-row { display: flex; justify-content: space-between; padding: 10px 0; font-size: 14px; color: #4b5563; }
+            .grand-total { font-weight: 700; font-size: 18px; color: #111827; border-top: 2px solid #e5e7eb; margin-top: 12px; padding-top: 16px; }
+            .footer { margin-top: 64px; padding-top: 24px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 13px; color: #6b7280; }
+            @media print { 
+              body { background: #fff; }
+              .invoice-container { margin: 0; border: none; box-shadow: none; padding: 20px; }
+            }
           </style>
         </head>
         <body>
-          <div class="header">
-            <div>
-              <div class="brand">1goli Pharmacy</div>
-              <div style="margin-top: 5px; color: #666;">Homeopathic Medicine & Consultations</div>
-            </div>
-            <div>
-              <div class="invoice-title">INVOICE</div>
-              <div class="meta">
-                <div>Order #${order._id.slice(-6)}</div>
-                <div>Date: ${new Date(order._creationTime).toLocaleDateString()}</div>
+          <div class="invoice-container">
+            <div class="header">
+              <div>
+                <div class="brand-name">1goli Pharmacy</div>
+                <div class="brand-subtitle">Homeopathic Medicine & Consultations</div>
+              </div>
+              <div>
+                <div class="invoice-title">INVOICE</div>
+                <div class="meta-group">
+                  <div>Order #${order._id.slice(-6)}</div>
+                  <div>Date: ${new Date(order._creationTime).toLocaleDateString()}</div>
+                </div>
               </div>
             </div>
-          </div>
-          
-          <div class="grid">
-            <div>
-              <div class="section-title">Bill To</div>
-              ${order.shippingDetails ? `
-                <strong>${order.shippingDetails.fullName}</strong><br/>
-                ${order.shippingDetails.addressLine1}<br/>
-                ${order.shippingDetails.addressLine2 ? order.shippingDetails.addressLine2 + '<br/>' : ''}
-                ${order.shippingDetails.city}, ${order.shippingDetails.state} ${order.shippingDetails.zipCode}<br/>
-                Phone: ${order.shippingDetails.phone}
-              ` : order.shippingAddress}
+            
+            <div class="grid">
+              <div>
+                <div class="section-label">Bill To</div>
+                <div class="address-block">
+                  ${order.shippingDetails ? `
+                    <span class="address-name">${order.shippingDetails.fullName}</span>
+                    ${order.shippingDetails.addressLine1}<br/>
+                    ${order.shippingDetails.addressLine2 ? order.shippingDetails.addressLine2 + '<br/>' : ''}
+                    ${order.shippingDetails.city}, ${order.shippingDetails.state} ${order.shippingDetails.zipCode}<br/>
+                    <div style="margin-top: 8px;">Phone: ${order.shippingDetails.phone}</div>
+                  ` : order.shippingAddress}
+                </div>
+              </div>
+              <div>
+                <div class="section-label">Payment Details</div>
+                <div class="address-block">
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                    <span style="color: #6b7280;">Method:</span>
+                    <span style="font-weight: 500; text-transform: capitalize;">${order.paymentMethod?.replace(/_/g, ' ') || 'N/A'}</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                    <span style="color: #6b7280;">Status:</span>
+                    <span style="font-weight: 500; text-transform: capitalize;">${order.paymentStatus || 'Pending'}</span>
+                  </div>
+                  ${order.paymentId ? `
+                  <div style="display: flex; justify-content: space-between;">
+                    <span style="color: #6b7280;">Transaction ID:</span>
+                    <span style="font-family: monospace;">${order.paymentId}</span>
+                  </div>` : ''}
+                </div>
+              </div>
             </div>
-            <div>
-              <div class="section-title">Payment Details</div>
-              <strong>Method:</strong> ${order.paymentMethod?.replace(/_/g, ' ') || 'N/A'}<br/>
-              <strong>Status:</strong> ${order.paymentStatus || 'Pending'}<br/>
-              ${order.paymentId ? `<strong>Transaction ID:</strong> ${order.paymentId}` : ''}
-            </div>
-          </div>
 
-          <table>
-            <thead>
-              <tr>
-                <th>Item</th>
-                <th class="text-right">Qty</th>
-                <th class="text-right">Price</th>
-                <th class="text-right">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${order.items.map((item: any) => `
+            <table>
+              <thead>
                 <tr>
-                  <td>
-                    <strong>${item.name}</strong><br/>
-                    <span style="font-size: 12px; color: #666;">${item.potency} • ${item.form}${item.packingSize ? ` • ${item.packingSize}` : ''}</span>
-                  </td>
-                  <td class="text-right">${item.quantity}</td>
-                  <td class="text-right">₹${item.price.toFixed(2)}</td>
-                  <td class="text-right">₹${(item.price * item.quantity).toFixed(2)}</td>
+                  <th style="width: 50%;">Item</th>
+                  <th class="text-center">Qty</th>
+                  <th class="text-right">Price</th>
+                  <th class="text-right">Total</th>
                 </tr>
-              `).join('')}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                ${order.items.map((item: any) => `
+                  <tr>
+                    <td>
+                      <span class="item-name">${item.name}</span>
+                      <span class="item-meta">${item.potency} • ${item.form}${item.packingSize ? ` • ${item.packingSize}` : ''}</span>
+                    </td>
+                    <td class="text-center">${item.quantity}</td>
+                    <td class="text-right">₹${item.price.toFixed(2)}</td>
+                    <td class="text-right">₹${(item.price * item.quantity).toFixed(2)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
 
-          <div class="totals">
-            <div class="total-row">
-              <span>Subtotal</span>
-              <span>₹${order.total.toFixed(2)}</span>
+            <div class="totals-wrapper">
+              <div class="totals-table">
+                <div class="total-row">
+                  <span>Subtotal</span>
+                  <span>₹${order.total.toFixed(2)}</span>
+                </div>
+                <div class="total-row">
+                  <span>Shipping</span>
+                  <span>₹0.00</span>
+                </div>
+                <div class="total-row grand-total">
+                  <span>Total</span>
+                  <span>₹${order.total.toFixed(2)}</span>
+                </div>
+              </div>
             </div>
-            <div class="total-row">
-              <span>Shipping</span>
-              <span>₹0.00</span>
-            </div>
-            <div class="total-row grand-total">
-              <span>Total</span>
-              <span>₹${order.total.toFixed(2)}</span>
+
+            <div class="footer">
+              <p>Thank you for your business!</p>
+              <p>For any questions, please contact support@1goli.com</p>
             </div>
           </div>
           
@@ -289,27 +327,42 @@ export function OrderDetailsDialog({ order, open, onOpenChange }: OrderDetailsDi
                       </Badge>
                     </div>
                     {order.paymentId && (
-                      <div className="flex justify-between items-center pt-1">
+                      <div className="flex justify-between items-center border-b pb-3 border-border/50">
                         <span className="text-sm text-muted-foreground">Transaction ID</span>
                         <span className="font-mono text-xs bg-muted px-2 py-1 rounded">{order.paymentId}</span>
                       </div>
                     )}
-                    {/* Payment History from Status Logs */}
-                    {order.statusHistory?.some((h: any) => h.note?.toLowerCase().includes('payment')) && (
-                      <div className="pt-2 mt-2 border-t border-border/50">
-                        <span className="text-xs font-medium text-muted-foreground mb-2 block">Payment History</span>
-                        <div className="space-y-2">
-                          {order.statusHistory
-                            .filter((h: any) => h.note?.toLowerCase().includes('payment'))
+                    {/* Full Payment Details */}
+                    <div className="pt-1">
+                      <span className="text-xs font-medium text-muted-foreground mb-2 block flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> Payment History
+                      </span>
+                      <div className="space-y-2 bg-muted/30 p-3 rounded-md">
+                        {order.statusHistory?.filter((h: any) => 
+                          h.note?.toLowerCase().includes('payment') || 
+                          h.status === 'processing' || 
+                          h.status === 'paid'
+                        ).length > 0 ? (
+                          order.statusHistory
+                            .filter((h: any) => 
+                              h.note?.toLowerCase().includes('payment') || 
+                              h.status === 'processing' || 
+                              h.status === 'paid'
+                            )
                             .map((h: any, i: number) => (
-                              <div key={i} className="text-xs flex justify-between text-muted-foreground">
-                                <span>{h.note}</span>
-                                <span>{new Date(h.timestamp).toLocaleDateString()}</span>
+                              <div key={i} className="text-xs flex flex-col gap-1 pb-2 border-b border-border/50 last:border-0 last:pb-0">
+                                <div className="flex justify-between font-medium">
+                                  <span className="capitalize">{h.status}</span>
+                                  <span className="text-muted-foreground">{new Date(h.timestamp).toLocaleDateString()}</span>
+                                </div>
+                                {h.note && <span className="text-muted-foreground">{h.note}</span>}
                               </div>
-                            ))}
-                        </div>
+                            ))
+                        ) : (
+                          <div className="text-xs text-muted-foreground text-center py-2">No payment history available</div>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </CardContent>
                 </Card>
               </div>
@@ -390,15 +443,38 @@ export function OrderDetailsDialog({ order, open, onOpenChange }: OrderDetailsDi
 
               {/* Timeline */}
               <Card className="shadow-sm border-border/60">
-                <CardHeader className="pb-3">
+                <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
                   <CardTitle className="text-base flex items-center gap-2">
                     <Clock className="w-4 h-4 text-primary" /> Timeline
                   </CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Filter className="w-3 h-3 text-muted-foreground" />
+                    <Select value={timelineFilter} onValueChange={setTimelineFilter}>
+                      <SelectTrigger className="h-7 text-xs w-[110px] bg-background">
+                        <SelectValue placeholder="Filter" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Activity</SelectItem>
+                        <SelectItem value="status">Status Only</SelectItem>
+                        <SelectItem value="notes">Notes Only</SelectItem>
+                        <SelectItem value="payment">Payment</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="relative pl-2 border-l-2 border-muted ml-2 space-y-6">
                     {order.statusHistory && order.statusHistory.length > 0 ? (
-                      [...order.statusHistory].reverse().map((history: any, idx: number) => (
+                      [...order.statusHistory]
+                        .reverse()
+                        .filter((h: any) => {
+                          if (timelineFilter === 'all') return true;
+                          if (timelineFilter === 'status') return true; 
+                          if (timelineFilter === 'notes') return !!h.note;
+                          if (timelineFilter === 'payment') return h.note?.toLowerCase().includes('payment');
+                          return true;
+                        })
+                        .map((history: any, idx: number) => (
                         <div key={idx} className="relative pl-6">
                           <div className={`absolute -left-[9px] top-1 h-4 w-4 rounded-full border-2 ${idx === 0 ? 'bg-primary border-primary' : 'bg-background border-muted-foreground'}`} />
                           <div className="flex flex-col">
@@ -417,6 +493,14 @@ export function OrderDetailsDialog({ order, open, onOpenChange }: OrderDetailsDi
                     ) : (
                       <p className="text-sm text-muted-foreground pl-4">No history available</p>
                     )}
+                    {order.statusHistory && order.statusHistory.length > 0 && 
+                     [...order.statusHistory].filter((h: any) => {
+                        if (timelineFilter === 'notes') return !!h.note;
+                        if (timelineFilter === 'payment') return h.note?.toLowerCase().includes('payment');
+                        return true;
+                     }).length === 0 && (
+                      <p className="text-sm text-muted-foreground pl-4">No matching history found</p>
+                     )}
                   </div>
                 </CardContent>
               </Card>
