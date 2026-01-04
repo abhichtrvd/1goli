@@ -7,12 +7,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Package, Truck, CheckCircle, Clock, CreditCard, MapPin, User, Phone, Calendar } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Package, Clock, CreditCard, MapPin, User, Phone, Calendar, Mail } from "lucide-react";
 import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
-import { Id } from "@/convex/_generated/dataModel";
 
 interface OrderDetailsDialogProps {
   order: any;
@@ -48,226 +48,243 @@ export function OrderDetailsDialog({ order, open, onOpenChange }: OrderDetailsDi
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending':
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200"><Clock className="w-3 h-3 mr-1" /> Pending</Badge>;
-      case 'processing':
-        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200"><Package className="w-3 h-3 mr-1" /> Processing</Badge>;
-      case 'shipped':
-        return <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200"><Truck className="w-3 h-3 mr-1" /> Shipped</Badge>;
-      case 'delivered':
-        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200"><CheckCircle className="w-3 h-3 mr-1" /> Delivered</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
+      case 'pending': return "bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-100";
+      case 'processing': return "bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-100";
+      case 'shipped': return "bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-100";
+      case 'delivered': return "bg-green-100 text-green-800 border-green-200 hover:bg-green-100";
+      case 'cancelled': return "bg-red-100 text-red-800 border-red-200 hover:bg-red-100";
+      default: return "bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-100";
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="p-6 pb-4 border-b">
+      <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0 gap-0 bg-muted/10">
+        <DialogHeader className="p-6 bg-background border-b shrink-0">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <DialogTitle className="text-2xl">Order #{order._id.slice(-6)}</DialogTitle>
+              <div className="flex items-center gap-3">
+                <DialogTitle className="text-2xl font-bold">Order #{order._id.slice(-6)}</DialogTitle>
+                <Badge variant="outline" className={getStatusColor(order.status)}>
+                  {order.status.toUpperCase()}
+                </Badge>
+              </div>
               <p className="text-sm text-muted-foreground flex items-center gap-2">
-                <Calendar className="w-3 h-3" />
+                <Calendar className="w-4 h-4" />
                 Placed on {new Date(order._creationTime).toLocaleString()}
               </p>
             </div>
             <div className="flex items-center gap-2">
-              {getStatusBadge(order.status)}
-              <Badge variant="outline" className="capitalize">
-                {order.paymentStatus || 'Payment Pending'}
-              </Badge>
+               {/* Future actions like Print Invoice can go here */}
             </div>
           </div>
         </DialogHeader>
 
         <ScrollArea className="flex-1">
-          <div className="p-6 space-y-8">
-            {/* Top Grid: Customer, Shipping, Payment */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Customer Info */}
-              <div className="space-y-3">
-                <h3 className="font-semibold flex items-center gap-2 text-primary">
-                  <User className="w-4 h-4" /> Customer Details
-                </h3>
-                <div className="bg-muted/30 p-4 rounded-lg space-y-2 text-sm border">
-                  <div className="grid grid-cols-[80px_1fr] gap-1">
-                    <span className="text-muted-foreground">Name:</span>
-                    <span className="font-medium">{order.userName}</span>
-                  </div>
-                  <div className="grid grid-cols-[80px_1fr] gap-1">
-                    <span className="text-muted-foreground">Contact:</span>
-                    <span className="font-medium">{order.userContact}</span>
-                  </div>
-                  <div className="grid grid-cols-[80px_1fr] gap-1">
-                    <span className="text-muted-foreground">User ID:</span>
-                    <span className="font-mono text-xs">{order.userId}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Shipping Info */}
-              <div className="space-y-3">
-                <h3 className="font-semibold flex items-center gap-2 text-primary">
-                  <MapPin className="w-4 h-4" /> Shipping Address
-                </h3>
-                <div className="bg-muted/30 p-4 rounded-lg space-y-2 text-sm border h-full">
-                  {order.shippingDetails ? (
-                    <>
-                      <p className="font-medium">{order.shippingDetails.fullName}</p>
-                      <p>{order.shippingDetails.addressLine1}</p>
-                      {order.shippingDetails.addressLine2 && <p>{order.shippingDetails.addressLine2}</p>}
-                      <p>{order.shippingDetails.city}, {order.shippingDetails.state} {order.shippingDetails.zipCode}</p>
-                      <p className="flex items-center gap-1 mt-2 text-muted-foreground">
-                        <Phone className="w-3 h-3" /> {order.shippingDetails.phone}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="whitespace-pre-wrap">{order.shippingAddress}</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Payment Info */}
-              <div className="space-y-3">
-                <h3 className="font-semibold flex items-center gap-2 text-primary">
-                  <CreditCard className="w-4 h-4" /> Payment Details
-                </h3>
-                <div className="bg-muted/30 p-4 rounded-lg space-y-2 text-sm border h-full">
-                  <div className="grid grid-cols-[100px_1fr] gap-1">
-                    <span className="text-muted-foreground">Method:</span>
-                    <span className="font-medium capitalize">{order.paymentMethod?.replace(/_/g, ' ') || 'N/A'}</span>
-                  </div>
-                  <div className="grid grid-cols-[100px_1fr] gap-1">
-                    <span className="text-muted-foreground">Status:</span>
-                    <span className={`font-medium capitalize ${order.paymentStatus === 'paid' ? 'text-green-600' : 'text-yellow-600'}`}>
-                      {order.paymentStatus || 'Pending'}
-                    </span>
-                  </div>
-                  {order.paymentId && (
-                    <div className="grid grid-cols-[100px_1fr] gap-1">
-                      <span className="text-muted-foreground">Transaction ID:</span>
-                      <span className="font-mono text-xs">{order.paymentId}</span>
-                    </div>
-                  )}
-                  <div className="grid grid-cols-[100px_1fr] gap-1 pt-2 mt-2 border-t border-border/50">
-                    <span className="text-muted-foreground font-medium">Total Amount:</span>
-                    <span className="font-bold text-lg">₹{order.total.toFixed(2)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Order Items */}
-            <div className="space-y-3">
-              <h3 className="font-semibold flex items-center gap-2 text-primary">
-                <Package className="w-4 h-4" /> Order Items ({order.items.length})
-              </h3>
-              <div className="border rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/50">
-                      <TableHead>Product</TableHead>
-                      <TableHead>Variant</TableHead>
-                      <TableHead className="text-center">Quantity</TableHead>
-                      <TableHead className="text-right">Unit Price</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {order.items.map((item: any, idx: number) => (
-                      <TableRow key={idx}>
-                        <TableCell className="font-medium">{item.name}</TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {item.potency} • {item.form}
-                          {item.packingSize && ` • ${item.packingSize}`}
-                        </TableCell>
-                        <TableCell className="text-center">{item.quantity}</TableCell>
-                        <TableCell className="text-right">₹{item.price.toFixed(2)}</TableCell>
-                        <TableCell className="text-right font-medium">₹{(item.price * item.quantity).toFixed(2)}</TableCell>
+          <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* LEFT COLUMN - MAIN CONTENT */}
+            <div className="lg:col-span-2 space-y-6">
+              
+              {/* Order Items */}
+              <Card className="shadow-sm border-border/60">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Package className="w-5 h-5 text-primary" /> Order Items
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="pl-6">Product</TableHead>
+                        <TableHead>Details</TableHead>
+                        <TableHead className="text-center">Qty</TableHead>
+                        <TableHead className="text-right">Price</TableHead>
+                        <TableHead className="text-right pr-6">Total</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {order.items.map((item: any, idx: number) => (
+                        <TableRow key={idx} className="hover:bg-muted/30">
+                          <TableCell className="pl-6 font-medium">{item.name}</TableCell>
+                          <TableCell className="text-muted-foreground text-sm">
+                            {item.potency} • {item.form}
+                            {item.packingSize && ` • ${item.packingSize}`}
+                          </TableCell>
+                          <TableCell className="text-center">{item.quantity}</TableCell>
+                          <TableCell className="text-right">₹{item.price.toFixed(2)}</TableCell>
+                          <TableCell className="text-right pr-6 font-medium">₹{(item.price * item.quantity).toFixed(2)}</TableCell>
+                        </TableRow>
+                      ))}
+                      <TableRow className="bg-muted/30 hover:bg-muted/30">
+                        <TableCell colSpan={4} className="text-right font-medium">Subtotal</TableCell>
+                        <TableCell className="text-right pr-6 font-bold">₹{order.total.toFixed(2)}</TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+
+              {/* Shipping & Payment Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="shadow-sm border-border/60">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-primary" /> Shipping Details
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm space-y-3">
+                    {order.shippingDetails ? (
+                      <>
+                        <div className="font-medium text-base">{order.shippingDetails.fullName}</div>
+                        <div className="text-muted-foreground leading-relaxed">
+                          {order.shippingDetails.addressLine1}<br />
+                          {order.shippingDetails.addressLine2 && <>{order.shippingDetails.addressLine2}<br /></>}
+                          {order.shippingDetails.city}, {order.shippingDetails.state} {order.shippingDetails.zipCode}
+                        </div>
+                        <div className="flex items-center gap-2 pt-2 text-muted-foreground border-t mt-2">
+                          <Phone className="w-3 h-3" /> {order.shippingDetails.phone}
+                        </div>
+                      </>
+                    ) : (
+                      <p className="whitespace-pre-wrap text-muted-foreground">{order.shippingAddress}</p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card className="shadow-sm border-border/60">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <CreditCard className="w-4 h-4 text-primary" /> Payment Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex justify-between items-center border-b pb-3 border-border/50">
+                      <span className="text-sm text-muted-foreground">Method</span>
+                      <span className="font-medium capitalize">{order.paymentMethod?.replace(/_/g, ' ') || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between items-center border-b pb-3 border-border/50">
+                      <span className="text-sm text-muted-foreground">Status</span>
+                      <Badge variant={order.paymentStatus === 'paid' ? 'default' : 'secondary'} className="capitalize">
+                        {order.paymentStatus || 'Pending'}
+                      </Badge>
+                    </div>
+                    {order.paymentId && (
+                      <div className="flex justify-between items-center pt-1">
+                        <span className="text-sm text-muted-foreground">Transaction ID</span>
+                        <span className="font-mono text-xs bg-muted px-2 py-1 rounded">{order.paymentId}</span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Status Management */}
-              <div className="space-y-4 border rounded-lg p-4 bg-muted/10">
-                <h3 className="font-semibold">Update Order Status</h3>
-                <div className="grid gap-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>New Status</Label>
-                      <Select value={newStatus} onValueChange={setNewStatus}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="processing">Processing</SelectItem>
-                          <SelectItem value="shipped">Shipped</SelectItem>
-                          <SelectItem value="delivered">Delivered</SelectItem>
-                          <SelectItem value="cancelled">Cancelled</SelectItem>
-                        </SelectContent>
-                      </Select>
+            {/* RIGHT COLUMN - SIDEBAR */}
+            <div className="space-y-6">
+              
+              {/* Customer Card */}
+              <Card className="shadow-sm border-border/60">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <User className="w-4 h-4 text-primary" /> Customer
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
+                      {order.userName.charAt(0).toUpperCase()}
                     </div>
-                    <div className="flex items-end">
-                      <Button 
-                        onClick={handleStatusUpdate} 
-                        disabled={!newStatus || isUpdating}
-                        className="w-full"
-                      >
-                        {isUpdating ? "Updating..." : "Update Status"}
-                      </Button>
+                    <div className="overflow-hidden">
+                      <div className="font-medium truncate" title={order.userName}>{order.userName}</div>
+                      <div className="text-xs text-muted-foreground">ID: {order.userId.slice(-6)}</div>
                     </div>
+                  </div>
+                  <Separator />
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground break-all">
+                      <Mail className="w-4 h-4 shrink-0" /> {order.userContact}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Status Actions */}
+              <Card className="border-primary/20 shadow-sm bg-primary/5">
+                <CardHeader className="pb-3 border-b border-primary/10">
+                  <CardTitle className="text-base">Update Status</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4 space-y-4">
+                  <div className="space-y-2">
+                    <Label>Change Status To</Label>
+                    <Select value={newStatus} onValueChange={setNewStatus}>
+                      <SelectTrigger className="bg-background">
+                        <SelectValue placeholder="Select status..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="processing">Processing</SelectItem>
+                        <SelectItem value="shipped">Shipped</SelectItem>
+                        <SelectItem value="delivered">Delivered</SelectItem>
+                        <SelectItem value="cancelled" className="text-red-600 focus:text-red-600">Cancelled</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Status Note (Optional)</Label>
+                    <Label>Note (Optional)</Label>
                     <Textarea 
-                      placeholder="Add a note about this status change..."
+                      placeholder="Reason for change..."
                       value={statusNote}
                       onChange={(e) => setStatusNote(e.target.value)}
-                      className="h-20"
+                      className="h-20 resize-none bg-background"
                     />
                   </div>
-                </div>
-              </div>
+                  <Button 
+                    onClick={handleStatusUpdate} 
+                    disabled={!newStatus || isUpdating}
+                    className="w-full"
+                  >
+                    {isUpdating ? "Updating..." : "Update Status"}
+                  </Button>
+                </CardContent>
+              </Card>
 
-              {/* Status History */}
-              <div className="space-y-4">
-                <h3 className="font-semibold">Order Timeline</h3>
-                <div className="relative pl-2 border-l-2 border-muted ml-2 space-y-6">
-                  {order.statusHistory && order.statusHistory.length > 0 ? (
-                    [...order.statusHistory].reverse().map((history: any, idx: number) => (
-                      <div key={idx} className="relative pl-6">
-                        <div className={`absolute -left-[9px] top-1 h-4 w-4 rounded-full border-2 ${idx === 0 ? 'bg-primary border-primary' : 'bg-background border-muted-foreground'}`} />
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium capitalize">{history.status}</span>
+              {/* Timeline */}
+              <Card className="shadow-sm border-border/60">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-primary" /> Timeline
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="relative pl-2 border-l-2 border-muted ml-2 space-y-6">
+                    {order.statusHistory && order.statusHistory.length > 0 ? (
+                      [...order.statusHistory].reverse().map((history: any, idx: number) => (
+                        <div key={idx} className="relative pl-6">
+                          <div className={`absolute -left-[9px] top-1 h-4 w-4 rounded-full border-2 ${idx === 0 ? 'bg-primary border-primary' : 'bg-background border-muted-foreground'}`} />
+                          <div className="flex flex-col">
+                            <span className="font-medium capitalize text-sm">{history.status}</span>
                             <span className="text-xs text-muted-foreground">
                               {new Date(history.timestamp).toLocaleString()}
                             </span>
+                            {history.note && (
+                              <p className="text-xs text-muted-foreground mt-1 bg-muted p-2 rounded-md">
+                                {history.note}
+                              </p>
+                            )}
                           </div>
-                          {history.note && (
-                            <p className="text-sm text-muted-foreground mt-1 bg-muted/50 p-2 rounded-md">
-                              {history.note}
-                            </p>
-                          )}
                         </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-muted-foreground pl-4">No history available</p>
-                  )}
-                </div>
-              </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground pl-4">No history available</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
             </div>
           </div>
         </ScrollArea>
