@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, Clock, CreditCard, MapPin, User, Phone, Calendar, Mail } from "lucide-react";
+import { Package, Clock, CreditCard, MapPin, User, Phone, Calendar, Mail, Printer, FileText } from "lucide-react";
 import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -27,6 +27,11 @@ export function OrderDetailsDialog({ order, open, onOpenChange }: OrderDetailsDi
 
   if (!order) return null;
 
+  // Initialize newStatus with current order status when dialog opens or order changes
+  if (open && !newStatus && order) {
+    setNewStatus(order.status);
+  }
+
   const handleStatusUpdate = async () => {
     if (!newStatus) return;
     
@@ -37,14 +42,124 @@ export function OrderDetailsDialog({ order, open, onOpenChange }: OrderDetailsDi
         status: newStatus,
         note: statusNote 
       });
-      toast.success("Order status updated");
-      setNewStatus("");
+      toast.success(newStatus === order.status ? "Note added" : "Order status updated");
       setStatusNote("");
+      // Don't reset newStatus, keep it as current
     } catch (error) {
       toast.error("Failed to update status");
     } finally {
       setIsUpdating(false);
     }
+  };
+
+  const handlePrintInvoice = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const html = `
+      <html>
+        <head>
+          <title>Invoice #${order._id.slice(-6)}</title>
+          <style>
+            body { font-family: system-ui, -apple-system, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; color: #333; }
+            .header { display: flex; justify-content: space-between; margin-bottom: 40px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
+            .brand { font-size: 24px; font-weight: bold; color: #000; }
+            .invoice-title { font-size: 32px; font-weight: bold; color: #666; text-align: right; }
+            .meta { margin-top: 10px; text-align: right; color: #666; }
+            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 40px; }
+            .section-title { font-weight: bold; margin-bottom: 10px; text-transform: uppercase; font-size: 12px; color: #666; letter-spacing: 1px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+            th { text-align: left; padding: 12px; border-bottom: 2px solid #eee; font-size: 12px; text-transform: uppercase; color: #666; }
+            td { padding: 12px; border-bottom: 1px solid #eee; }
+            .text-right { text-align: right; }
+            .totals { margin-left: auto; width: 300px; }
+            .total-row { display: flex; justify-content: space-between; padding: 8px 0; }
+            .grand-total { font-weight: bold; font-size: 18px; border-top: 2px solid #eee; margin-top: 10px; padding-top: 10px; }
+            @media print { body { padding: 0; } button { display: none; } }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div>
+              <div class="brand">1goli Pharmacy</div>
+              <div style="margin-top: 5px; color: #666;">Homeopathic Medicine & Consultations</div>
+            </div>
+            <div>
+              <div class="invoice-title">INVOICE</div>
+              <div class="meta">
+                <div>Order #${order._id.slice(-6)}</div>
+                <div>Date: ${new Date(order._creationTime).toLocaleDateString()}</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="grid">
+            <div>
+              <div class="section-title">Bill To</div>
+              ${order.shippingDetails ? `
+                <strong>${order.shippingDetails.fullName}</strong><br/>
+                ${order.shippingDetails.addressLine1}<br/>
+                ${order.shippingDetails.addressLine2 ? order.shippingDetails.addressLine2 + '<br/>' : ''}
+                ${order.shippingDetails.city}, ${order.shippingDetails.state} ${order.shippingDetails.zipCode}<br/>
+                Phone: ${order.shippingDetails.phone}
+              ` : order.shippingAddress}
+            </div>
+            <div>
+              <div class="section-title">Payment Details</div>
+              <strong>Method:</strong> ${order.paymentMethod?.replace(/_/g, ' ') || 'N/A'}<br/>
+              <strong>Status:</strong> ${order.paymentStatus || 'Pending'}<br/>
+              ${order.paymentId ? `<strong>Transaction ID:</strong> ${order.paymentId}` : ''}
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th class="text-right">Qty</th>
+                <th class="text-right">Price</th>
+                <th class="text-right">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${order.items.map((item: any) => `
+                <tr>
+                  <td>
+                    <strong>${item.name}</strong><br/>
+                    <span style="font-size: 12px; color: #666;">${item.potency} • ${item.form}${item.packingSize ? ` • ${item.packingSize}` : ''}</span>
+                  </td>
+                  <td class="text-right">${item.quantity}</td>
+                  <td class="text-right">₹${item.price.toFixed(2)}</td>
+                  <td class="text-right">₹${(item.price * item.quantity).toFixed(2)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+
+          <div class="totals">
+            <div class="total-row">
+              <span>Subtotal</span>
+              <span>₹${order.total.toFixed(2)}</span>
+            </div>
+            <div class="total-row">
+              <span>Shipping</span>
+              <span>₹0.00</span>
+            </div>
+            <div class="total-row grand-total">
+              <span>Total</span>
+              <span>₹${order.total.toFixed(2)}</span>
+            </div>
+          </div>
+          
+          <script>
+            window.onload = () => { window.print(); }
+          </script>
+        </body>
+      </html>
+    `;
+    
+    printWindow.document.write(html);
+    printWindow.document.close();
   };
 
   const getStatusColor = (status: string) => {
@@ -76,7 +191,9 @@ export function OrderDetailsDialog({ order, open, onOpenChange }: OrderDetailsDi
               </p>
             </div>
             <div className="flex items-center gap-2">
-               {/* Future actions like Print Invoice can go here */}
+               <Button variant="outline" onClick={handlePrintInvoice}>
+                 <Printer className="w-4 h-4 mr-2" /> Print Invoice
+               </Button>
             </div>
           </div>
         </DialogHeader>
@@ -177,6 +294,22 @@ export function OrderDetailsDialog({ order, open, onOpenChange }: OrderDetailsDi
                         <span className="font-mono text-xs bg-muted px-2 py-1 rounded">{order.paymentId}</span>
                       </div>
                     )}
+                    {/* Payment History from Status Logs */}
+                    {order.statusHistory?.some((h: any) => h.note?.toLowerCase().includes('payment')) && (
+                      <div className="pt-2 mt-2 border-t border-border/50">
+                        <span className="text-xs font-medium text-muted-foreground mb-2 block">Payment History</span>
+                        <div className="space-y-2">
+                          {order.statusHistory
+                            .filter((h: any) => h.note?.toLowerCase().includes('payment'))
+                            .map((h: any, i: number) => (
+                              <div key={i} className="text-xs flex justify-between text-muted-foreground">
+                                <span>{h.note}</span>
+                                <span>{new Date(h.timestamp).toLocaleDateString()}</span>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -214,11 +347,14 @@ export function OrderDetailsDialog({ order, open, onOpenChange }: OrderDetailsDi
               {/* Status Actions */}
               <Card className="border-primary/20 shadow-sm bg-primary/5">
                 <CardHeader className="pb-3 border-b border-primary/10">
-                  <CardTitle className="text-base">Update Status</CardTitle>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-primary" /> 
+                    {newStatus === order.status ? "Add Note" : "Update Status"}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-4 space-y-4">
                   <div className="space-y-2">
-                    <Label>Change Status To</Label>
+                    <Label>Status</Label>
                     <Select value={newStatus} onValueChange={setNewStatus}>
                       <SelectTrigger className="bg-background">
                         <SelectValue placeholder="Select status..." />
@@ -233,9 +369,9 @@ export function OrderDetailsDialog({ order, open, onOpenChange }: OrderDetailsDi
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Note (Optional)</Label>
+                    <Label>Note {newStatus === order.status ? "(Required)" : "(Optional)"}</Label>
                     <Textarea 
-                      placeholder="Reason for change..."
+                      placeholder={newStatus === order.status ? "Add a note to the order history..." : "Reason for status change..."}
                       value={statusNote}
                       onChange={(e) => setStatusNote(e.target.value)}
                       className="h-20 resize-none bg-background"
@@ -243,10 +379,11 @@ export function OrderDetailsDialog({ order, open, onOpenChange }: OrderDetailsDi
                   </div>
                   <Button 
                     onClick={handleStatusUpdate} 
-                    disabled={!newStatus || isUpdating}
+                    disabled={!newStatus || isUpdating || (newStatus === order.status && !statusNote)}
                     className="w-full"
+                    variant={newStatus === order.status ? "secondary" : "default"}
                   >
-                    {isUpdating ? "Updating..." : "Update Status"}
+                    {isUpdating ? "Updating..." : (newStatus === order.status ? "Add Note" : "Update Status")}
                   </Button>
                 </CardContent>
               </Card>
