@@ -6,6 +6,23 @@ import { mutation } from "./_generated/server";
 import { roleValidator } from "./schema";
 import { paginationOptsValidator } from "convex/server";
 
+// Helper to generate search text
+export function generateUserSearchText(user: { 
+  name?: string; 
+  email?: string; 
+  phone?: string; 
+  address?: string; 
+  role?: string 
+}): string {
+  return [
+    user.name, 
+    user.email, 
+    user.phone, 
+    user.address, 
+    user.role
+  ].filter(Boolean).join(" ").toLowerCase();
+}
+
 /**
  * Get the current signed in user. Returns null if the user is not signed in.
  * Usage: const signedInUser = await ctx.runQuery(api.authHelpers.currentUser);
@@ -65,8 +82,8 @@ export const searchUsers = query({
     if (args.search) {
       return await ctx.db
         .query("users")
-        .withSearchIndex("search_name", (q) => {
-          let search = q.search("name", args.search);
+        .withSearchIndex("search_all", (q) => {
+          let search = q.search("searchText", args.search);
           if (args.role) {
             search = search.eq("role", args.role as any);
           }
@@ -100,7 +117,12 @@ export const updateUserRole = mutation({
       throw new Error("You cannot change your own role.");
     }
 
-    await ctx.db.patch(args.id, { role: args.role });
+    const user = await ctx.db.get(args.id);
+    if (!user) throw new Error("User not found");
+
+    const searchText = generateUserSearchText({ ...user, role: args.role });
+
+    await ctx.db.patch(args.id, { role: args.role, searchText });
 
     await ctx.db.insert("auditLogs", {
       action: "update_user_role",
@@ -126,7 +148,11 @@ export const bulkUpdateUserRole = mutation({
     const skippedCount = args.ids.length - idsToUpdate.length;
 
     for (const id of idsToUpdate) {
-      await ctx.db.patch(id, { role: args.role });
+      const user = await ctx.db.get(id);
+      if (user) {
+        const searchText = generateUserSearchText({ ...user, role: args.role });
+        await ctx.db.patch(id, { role: args.role, searchText });
+      }
     }
 
     await ctx.db.insert("auditLogs", {
@@ -146,7 +172,10 @@ export const updateCurrentUser = mutation({
   handler: async (ctx, args) => {
     const user = await getCurrentUser(ctx);
     if (!user) throw new Error("Not authenticated");
-    await ctx.db.patch(user._id, { name: args.name, address: args.address });
+    
+    const searchText = generateUserSearchText({ ...user, name: args.name, address: args.address });
+    
+    await ctx.db.patch(user._id, { name: args.name, address: args.address, searchText });
   },
 });
 
@@ -274,13 +303,30 @@ export const importUsers = mutation({
         }
 
         if (existingUser) {
+          const searchText = generateUserSearchText({
+            name: user.name || existingUser.name,
+            email: existingUser.email,
+            phone: existingUser.phone,
+            address: user.address || existingUser.address,
+            role: role as any
+          });
+
           await ctx.db.patch(existingUser._id, {
             name: user.name || existingUser.name,
             role: role as any,
             address: user.address || existingUser.address,
+            searchText,
           });
           updated++;
         } else {
+          const searchText = generateUserSearchText({
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+            address: user.address,
+            role: role as any
+          });
+
           await ctx.db.insert("users", {
             name: user.name,
             email: user.email,
@@ -288,6 +334,7 @@ export const importUsers = mutation({
             role: role as any,
             address: user.address,
             isAnonymous: false,
+            searchText,
           });
           imported++;
         }
@@ -306,5 +353,18 @@ export const importUsers = mutation({
     });
 
     return { imported, updated, failed, errors };
+  },
+});
+
+export const backfillUserSearchText = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const users = await ctx.db.query("users").collect();
+    for (const user of users) {
+      const searchText = generateUserSearchText(user);
+      await ctx.db.patch(user._id, { searchText });
+    }
+    return `Backfilled ${users.length} users`;
   },
 });

@@ -31,6 +31,7 @@ const schema = defineSchema(
       phoneVerificationTime: v.optional(v.number()), // phone verification time
       isAnonymous: v.optional(v.boolean()), // is the user anonymous. do not remove
       address: v.optional(v.string()), // Added address field
+      searchText: v.optional(v.string()), // Added for comprehensive search
 
       role: v.optional(roleValidator), // role of the user. do not remove
     })
@@ -39,6 +40,10 @@ const schema = defineSchema(
       .index("by_role", ["role"])
       .searchIndex("search_name", {
         searchField: "name",
+        filterFields: ["role"],
+      })
+      .searchIndex("search_all", {
+        searchField: "searchText",
         filterFields: ["role"],
       }),
 
@@ -133,6 +138,7 @@ const schema = defineSchema(
       paymentMethod: v.optional(v.string()),
       paymentStatus: v.optional(v.string()),
       paymentId: v.optional(v.string()),
+      searchText: v.optional(v.string()), // Added for comprehensive search
       statusHistory: v.optional(
         v.array(
           v.object({
@@ -147,6 +153,10 @@ const schema = defineSchema(
       .index("by_external_id", ["externalId"])
       .searchIndex("search_shipping", {
         searchField: "shippingAddress",
+      })
+      .searchIndex("search_all", {
+        searchField: "searchText",
+        filterFields: ["status"],
       }),
 
     reviews: defineTable({

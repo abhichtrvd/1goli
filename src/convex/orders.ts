@@ -5,6 +5,29 @@ import { requireAdmin } from "./users";
 import { Id } from "./_generated/dataModel";
 import { paginationOptsValidator } from "convex/server";
 
+// Helper to generate search text
+export function generateOrderSearchText(order: { 
+  externalId?: string; 
+  status: string; 
+  shippingAddress: string; 
+  shippingDetails?: any; 
+  paymentMethod?: string; 
+  items: any[];
+}): string {
+  const itemsText = order.items.map(i => `${i.name} ${i.potency} ${i.form}`).join(" ");
+  const shippingDetailsText = order.shippingDetails ? 
+    `${order.shippingDetails.fullName} ${order.shippingDetails.city} ${order.shippingDetails.state} ${order.shippingDetails.phone}` : "";
+  
+  return [
+    order.externalId, 
+    order.status, 
+    order.shippingAddress, 
+    shippingDetailsText, 
+    order.paymentMethod, 
+    itemsText
+  ].filter(Boolean).join(" ").toLowerCase();
+}
+
 export const createOrder = mutation({
   args: {
     shippingAddress: v.string(),
@@ -47,6 +70,14 @@ export const createOrder = mutation({
       });
     }
 
+    const searchText = generateOrderSearchText({
+      status: "pending",
+      shippingAddress: args.shippingAddress,
+      shippingDetails: args.shippingDetails,
+      paymentMethod: args.paymentMethod,
+      items: args.items,
+    });
+
     const orderId = await ctx.db.insert("orders", {
       userId,
       items: args.items,
@@ -57,6 +88,7 @@ export const createOrder = mutation({
       paymentMethod: args.paymentMethod,
       paymentStatus: "pending", // Always pending initially
       paymentId: undefined,
+      searchText,
       statusHistory: [
         {
           status: "pending",
@@ -173,7 +205,7 @@ export const getPaginatedOrders = query({
     if (args.search) {
         result = await ctx.db
             .query("orders")
-            .withSearchIndex("search_shipping", (q) => q.search("shippingAddress", args.search!))
+            .withSearchIndex("search_all", (q) => q.search("searchText", args.search!))
             .paginate(args.paginationOpts);
     } else {
         result = await ctx.db
@@ -237,9 +269,12 @@ export const updateOrderStatus = mutation({
       note: args.note
     });
 
+    const searchText = generateOrderSearchText({ ...order, status: args.status });
+
     await ctx.db.patch(args.orderId, { 
       status: args.status,
-      statusHistory: history
+      statusHistory: history,
+      searchText
     });
 
     await ctx.db.insert("auditLogs", {
@@ -294,9 +329,12 @@ export const bulkUpdateOrderStatus = mutation({
           note: args.note || "Bulk update"
         });
 
+        const searchText = generateOrderSearchText({ ...order, status: args.status });
+
         await ctx.db.patch(orderId, {
           status: args.status,
-          statusHistory: history
+          statusHistory: history,
+          searchText
         });
       }
     }
@@ -450,6 +488,14 @@ export const importOrders = mutation({
 
         // 3. Create Order (if not dry run)
         if (!args.dryRun) {
+          const searchText = generateOrderSearchText({
+            externalId: orderData.externalId,
+            status: orderData.status,
+            shippingAddress: orderData.shippingAddress,
+            paymentMethod: orderData.paymentMethod,
+            items: orderItems,
+          });
+
           await ctx.db.insert("orders", {
             userId: user._id,
             externalId: orderData.externalId,
@@ -459,6 +505,7 @@ export const importOrders = mutation({
             shippingAddress: orderData.shippingAddress,
             paymentMethod: orderData.paymentMethod,
             paymentStatus: ["delivered", "completed", "shipped"].includes(orderData.status) ? "paid" : "pending",
+            searchText,
             statusHistory: [
               {
                 status: orderData.status,
@@ -487,5 +534,18 @@ export const importOrders = mutation({
     });
 
     return results;
+  },
+});
+
+export const backfillOrderSearchText = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const orders = await ctx.db.query("orders").collect();
+    for (const order of orders) {
+      const searchText = generateOrderSearchText(order);
+      await ctx.db.patch(order._id, { searchText });
+    }
+    return `Backfilled ${orders.length} orders`;
   },
 });
