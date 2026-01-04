@@ -230,7 +230,7 @@ export const updateOrderStatus = mutation({
       }
     }
 
-    const history = order.statusHistory || [];
+    const history = [...(order.statusHistory || [])];
     history.push({
       status: args.status,
       timestamp: Date.now(),
@@ -287,7 +287,7 @@ export const bulkUpdateOrderStatus = mutation({
           }
         }
 
-        const history = order.statusHistory || [];
+        const history = [...(order.statusHistory || [])];
         history.push({
           status: args.status,
           timestamp: Date.now(),
@@ -322,12 +322,12 @@ export const updateOrderNote = mutation({
     const order = await ctx.db.get(args.orderId);
     if (!order) throw new Error("Order not found");
 
-    const history = order.statusHistory || [];
+    const history = [...(order.statusHistory || [])];
     const index = history.findIndex((h: any) => h.timestamp === args.timestamp);
 
     if (index === -1) throw new Error("History entry not found");
 
-    history[index].note = args.newNote;
+    history[index] = { ...history[index], note: args.newNote };
 
     await ctx.db.patch(args.orderId, {
       statusHistory: history,
@@ -345,12 +345,14 @@ export const deleteOrderNote = mutation({
     const order = await ctx.db.get(args.orderId);
     if (!order) throw new Error("Order not found");
 
-    const history = order.statusHistory || [];
+    const history = [...(order.statusHistory || [])];
     const index = history.findIndex((h: any) => h.timestamp === args.timestamp);
 
     if (index === -1) throw new Error("History entry not found");
 
-    delete history[index].note;
+    const entry = { ...history[index] };
+    delete entry.note;
+    history[index] = entry;
 
     await ctx.db.patch(args.orderId, {
       statusHistory: history,

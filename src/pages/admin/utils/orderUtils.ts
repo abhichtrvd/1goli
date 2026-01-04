@@ -1,4 +1,6 @@
 export const generateInvoiceHtml = (order: any) => {
+  const logoUrl = window.location.origin + '/logo.png';
+  
   return `
     <html>
       <head>
@@ -8,6 +10,7 @@ export const generateInvoiceHtml = (order: any) => {
           body { font-family: 'Inter', system-ui, -apple-system, sans-serif; color: #1f2937; line-height: 1.5; padding: 0; margin: 0; background: #fff; }
           .invoice-container { max-width: 800px; margin: 40px auto; padding: 48px; border: 1px solid #e5e7eb; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); border-radius: 12px; }
           .header { display: flex; justify-content: space-between; margin-bottom: 48px; padding-bottom: 24px; border-bottom: 2px solid #f3f4f6; }
+          .brand-logo { height: 40px; margin-bottom: 12px; }
           .brand-name { font-size: 28px; font-weight: 800; color: #111827; letter-spacing: -0.025em; }
           .brand-subtitle { font-size: 14px; color: #6b7280; margin-top: 4px; font-weight: 500; }
           .invoice-title { font-size: 36px; font-weight: 800; color: #e5e7eb; text-align: right; letter-spacing: -0.025em; line-height: 1; }
@@ -48,6 +51,7 @@ export const generateInvoiceHtml = (order: any) => {
         <div class="invoice-container">
           <div class="header">
             <div>
+              <img src="${logoUrl}" class="brand-logo" alt="1goli" onerror="this.style.display='none'" />
               <div class="brand-name">1goli Pharmacy</div>
               <div class="brand-subtitle">Homeopathic Medicine & Consultations</div>
             </div>
