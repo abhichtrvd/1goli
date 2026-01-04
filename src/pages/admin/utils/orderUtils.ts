@@ -1,3 +1,82 @@
+import { parseCSVLine } from "./csvHelpers";
+
+export const parseOrderCSV = (text: string) => {
+  const lines = text.split(/\r\n|\n/); // Handle both line endings
+  const ordersToImport = [];
+  
+  // Skip header
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    
+    const row = parseCSVLine(lines[i]);
+
+    // Support both new format (7 cols) and old format (6 cols)
+    // New: External ID, Email, Address, Payment, Status, Total, Items
+    // Old: Email, Address, Payment, Status, Total, Items
+    
+    let externalId, email, shippingAddress, paymentMethod, status, total, itemsString;
+
+    if (row.length >= 7) {
+       externalId = row[0];
+       email = row[1];
+       shippingAddress = row[2];
+       paymentMethod = row[3];
+       status = row[4];
+       total = parseFloat(row[5]);
+       itemsString = row[6];
+    } else if (row.length >= 6) {
+       externalId = undefined;
+       email = row[0];
+       shippingAddress = row[1];
+       paymentMethod = row[2];
+       status = row[3];
+       total = parseFloat(row[4]);
+       itemsString = row[5];
+    } else {
+      continue;
+    }
+
+    // Parse items string: "Name:SKU:Qty:Price; Name2:SKU2:Qty2:Price2"
+    // Backward compatibility: "Name:Qty:Price" (3 parts) vs "Name:SKU:Qty:Price" (4 parts)
+    const items = itemsString.split(';').map(itemStr => {
+      const parts = itemStr.split(':').map(p => p.trim());
+      
+      if (parts.length === 4) {
+        // New format with SKU
+        return {
+          productName: parts[0],
+          sku: parts[1] || undefined,
+          quantity: parseInt(parts[2]) || 1,
+          price: parseFloat(parts[3]) || 0
+        };
+      } else if (parts.length === 3) {
+        // Old format without SKU
+        return {
+          productName: parts[0],
+          sku: undefined,
+          quantity: parseInt(parts[1]) || 1,
+          price: parseFloat(parts[2]) || 0
+        };
+      }
+      return null;
+    }).filter(item => item !== null);
+
+    if (email && items.length > 0) {
+      ordersToImport.push({
+        externalId: externalId || undefined,
+        email,
+        shippingAddress,
+        paymentMethod,
+        status,
+        total,
+        items: items as any[],
+        date: new Date().toISOString()
+      });
+    }
+  }
+  return ordersToImport;
+};
+
 export const generateInvoiceHtml = (order: any) => {
   const logoUrl = window.location.origin + '/logo.png';
   

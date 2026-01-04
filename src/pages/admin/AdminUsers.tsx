@@ -4,13 +4,10 @@ import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Loader2, Download, Upload, Trash2, CheckSquare, FileSpreadsheet, Search, Filter } from "lucide-react";
+import { Loader2, Download, Upload, Trash2, FileSpreadsheet, Search, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,9 +18,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { UserTable } from "./components/UserTable";
 import { downloadCSV } from "./utils/csvHelpers";
+import { UserDetailsDialog } from "./components/UserDetailsDialog";
+import { UserBulkUpdateDialog } from "./components/UserBulkUpdateDialog";
 
 export default function AdminUsers() {
   const [search, setSearch] = useState("");
@@ -298,7 +296,7 @@ export default function AdminUsers() {
           <div className="relative w-64">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input 
-              placeholder="Search users..." 
+              placeholder="Search by name, email, phone..." 
               className="pl-8" 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -332,36 +330,14 @@ export default function AdminUsers() {
                 >
                   <Trash2 className="mr-2 h-4 w-4" /> Delete Selected ({selectedIds.length})
                 </Button>
-                <Dialog open={isBulkDialogOpen} onOpenChange={setIsBulkDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="secondary" size="sm">
-                      <CheckSquare className="mr-2 h-4 w-4" /> Update Selected ({selectedIds.length})
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Bulk Update Role</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <Label>New Role</Label>
-                        <Select value={bulkRole} onValueChange={setBulkRole}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select role" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="user">User</SelectItem>
-                            <SelectItem value="member">Member</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <Button onClick={handleBulkUpdate} className="w-full">
-                        Update {selectedIds.length} Users
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                <UserBulkUpdateDialog 
+                  open={isBulkDialogOpen}
+                  onOpenChange={setIsBulkDialogOpen}
+                  selectedCount={selectedIds.length}
+                  role={bulkRole}
+                  onRoleChange={setBulkRole}
+                  onSubmit={handleBulkUpdate}
+                />
               </div>
             )}
           </div>
@@ -383,7 +359,6 @@ export default function AdminUsers() {
         </CardContent>
       </Card>
 
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -402,7 +377,6 @@ export default function AdminUsers() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Bulk Delete Confirmation Dialog */}
       <AlertDialog open={isBulkDeleteAlertOpen} onOpenChange={setIsBulkDeleteAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -421,62 +395,11 @@ export default function AdminUsers() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* View User Details Dialog */}
-      <Dialog open={!!userToView} onOpenChange={(open) => !open && setUserToView(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>User Details</DialogTitle>
-            <DialogDescription>
-              Detailed information for {userToView?.name || "Anonymous User"}
-            </DialogDescription>
-          </DialogHeader>
-          {userToView && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-4 p-4 border rounded-lg bg-muted/50">
-                <Avatar className="h-16 w-16">
-                  <AvatarImage src={userToView.image} />
-                  <AvatarFallback className="text-lg">{userToView.name?.charAt(0) || "U"}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="font-semibold text-lg">{userToView.name || "Anonymous"}</h3>
-                  <Badge variant={userToView.role === "admin" ? "default" : "secondary"}>
-                    {userToView.role || "user"}
-                  </Badge>
-                </div>
-              </div>
-              
-              <div className="space-y-3">
-                <div className="grid grid-cols-3 gap-2 text-sm">
-                  <span className="text-muted-foreground font-medium">User ID</span>
-                  <span className="col-span-2 font-mono text-xs">{userToView._id}</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-sm">
-                  <span className="text-muted-foreground font-medium">Email</span>
-                  <span className="col-span-2">{userToView.email || "N/A"}</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-sm">
-                  <span className="text-muted-foreground font-medium">Phone</span>
-                  <span className="col-span-2">{userToView.phone || "N/A"}</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-sm">
-                  <span className="text-muted-foreground font-medium">Address</span>
-                  <span className="col-span-2">{userToView.address || "N/A"}</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-sm">
-                  <span className="text-muted-foreground font-medium">Joined</span>
-                  <span className="col-span-2">{new Date(userToView._creationTime).toLocaleString()}</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-sm">
-                  <span className="text-muted-foreground font-medium">Verified</span>
-                  <span className="col-span-2">
-                    {userToView.emailVerificationTime ? "Email Verified" : "Not Verified"}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <UserDetailsDialog 
+        user={userToView}
+        open={!!userToView}
+        onOpenChange={(open) => !open && setUserToView(null)}
+      />
     </div>
   );
 }

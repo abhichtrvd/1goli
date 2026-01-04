@@ -4,20 +4,19 @@ import { useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Filter, Search, Loader2, Download, CheckSquare, Upload, FileSpreadsheet } from "lucide-react";
+import { Filter, Search, Loader2, Download, Upload, FileSpreadsheet } from "lucide-react";
 import { useState, useRef } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Id } from "@/convex/_generated/dataModel";
 import { OrderTable } from "./components/OrderTable";
 import { OrderDetailsDialog } from "./components/OrderDetailsDialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { parseCSVLine, downloadCSV } from "./utils/csvHelpers";
+import { downloadCSV } from "./utils/csvHelpers";
+import { parseOrderCSV } from "./utils/orderUtils";
+import { ImportResultsDialog } from "./components/ImportResultsDialog";
+import { OrderStatusDialog } from "./components/OrderStatusDialog";
+import { OrderBulkUpdateDialog } from "./components/OrderBulkUpdateDialog";
 
 export default function AdminOrders() {
   const [search, setSearch] = useState("");
@@ -187,79 +186,7 @@ export default function AdminOrders() {
     reader.onload = async (e) => {
       try {
         const text = e.target?.result as string;
-        const lines = text.split(/\r\n|\n/); // Handle both line endings
-        const ordersToImport = [];
-        
-        // Skip header
-        for (let i = 1; i < lines.length; i++) {
-          if (!lines[i].trim()) continue;
-          
-          const row = parseCSVLine(lines[i]);
-
-          // Support both new format (7 cols) and old format (6 cols)
-          // New: External ID, Email, Address, Payment, Status, Total, Items
-          // Old: Email, Address, Payment, Status, Total, Items
-          
-          let externalId, email, shippingAddress, paymentMethod, status, total, itemsString;
-
-          if (row.length >= 7) {
-             externalId = row[0];
-             email = row[1];
-             shippingAddress = row[2];
-             paymentMethod = row[3];
-             status = row[4];
-             total = parseFloat(row[5]);
-             itemsString = row[6];
-          } else if (row.length >= 6) {
-             externalId = undefined;
-             email = row[0];
-             shippingAddress = row[1];
-             paymentMethod = row[2];
-             status = row[3];
-             total = parseFloat(row[4]);
-             itemsString = row[5];
-          } else {
-            continue;
-          }
-
-          // Parse items string: "Name:SKU:Qty:Price; Name2:SKU2:Qty2:Price2"
-          // Backward compatibility: "Name:Qty:Price" (3 parts) vs "Name:SKU:Qty:Price" (4 parts)
-          const items = itemsString.split(';').map(itemStr => {
-            const parts = itemStr.split(':').map(p => p.trim());
-            
-            if (parts.length === 4) {
-              // New format with SKU
-              return {
-                productName: parts[0],
-                sku: parts[1] || undefined,
-                quantity: parseInt(parts[2]) || 1,
-                price: parseFloat(parts[3]) || 0
-              };
-            } else if (parts.length === 3) {
-              // Old format without SKU
-              return {
-                productName: parts[0],
-                sku: undefined,
-                quantity: parseInt(parts[1]) || 1,
-                price: parseFloat(parts[2]) || 0
-              };
-            }
-            return null;
-          }).filter(item => item !== null);
-
-          if (email && items.length > 0) {
-            ordersToImport.push({
-              externalId: externalId || undefined,
-              email,
-              shippingAddress,
-              paymentMethod,
-              status,
-              total,
-              items: items as any[],
-              date: new Date().toISOString()
-            });
-          }
-        }
+        const ordersToImport = parseOrderCSV(text);
 
         if (ordersToImport.length === 0) {
           toast.error("No valid orders found in CSV");
@@ -326,7 +253,7 @@ export default function AdminOrders() {
           <div className="relative w-64">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input 
-              placeholder="Search orders..." 
+              placeholder="Search by ID, name, email..." 
               className="pl-8" 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -353,37 +280,14 @@ export default function AdminOrders() {
           <div className="flex items-center justify-between">
             <CardTitle>Recent Orders</CardTitle>
             {selectedIds.length > 0 && (
-              <Dialog open={isBulkDialogOpen} onOpenChange={setIsBulkDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="secondary" size="sm">
-                    <CheckSquare className="mr-2 h-4 w-4" /> Update Selected ({selectedIds.length})
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Bulk Update Status</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label>New Status</Label>
-                      <Select value={bulkStatus} onValueChange={setBulkStatus}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="processing">Processing</SelectItem>
-                          <SelectItem value="shipped">Shipped</SelectItem>
-                          <SelectItem value="delivered">Delivered</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <Button onClick={handleBulkUpdateSubmit} className="w-full">
-                      Update {selectedIds.length} Orders
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+              <OrderBulkUpdateDialog 
+                open={isBulkDialogOpen}
+                onOpenChange={setIsBulkDialogOpen}
+                selectedCount={selectedIds.length}
+                status={bulkStatus}
+                onStatusChange={setBulkStatus}
+                onSubmit={handleBulkUpdateSubmit}
+              />
             )}
           </div>
         </CardHeader>
@@ -415,105 +319,28 @@ export default function AdminOrders() {
         </CardContent>
       </Card>
 
-      {/* Import Results Dialog */}
-      <Dialog open={isResultDialogOpen} onOpenChange={setIsResultDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{isDryRun ? 'Dry Run Results' : 'Import Results'}</DialogTitle>
-            <DialogDescription>
-              Summary of the {isDryRun ? 'simulated ' : ''}order import operation.
-            </DialogDescription>
-          </DialogHeader>
-          
-          {importResults && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col items-center justify-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-100 dark:border-green-900/50">
-                  <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400 mb-2" />
-                  <span className="text-2xl font-bold text-green-700 dark:text-green-300">{importResults.imported}</span>
-                  <span className="text-sm text-green-600 dark:text-green-400">{isDryRun ? 'Valid Rows' : 'Imported'}</span>
-                </div>
-                <div className="flex flex-col items-center justify-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100 dark:border-red-900/50">
-                  <AlertCircle className="h-8 w-8 text-red-600 dark:text-red-400 mb-2" />
-                  <span className="text-2xl font-bold text-red-700 dark:text-red-300">{importResults.failed}</span>
-                  <span className="text-sm text-red-600 dark:text-red-400">Failed</span>
-                </div>
-              </div>
+      <ImportResultsDialog 
+        open={isResultDialogOpen}
+        onOpenChange={setIsResultDialogOpen}
+        results={importResults}
+        isDryRun={isDryRun}
+      />
 
-              {importResults.errors.length > 0 && (
-                <div className="space-y-2">
-                  <Label>Error Log</Label>
-                  <ScrollArea className="h-[300px] w-full rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-[80px]">Row #</TableHead>
-                          <TableHead>Error Details</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {importResults.errors.map((error, index) => (
-                          <TableRow key={index}>
-                            <TableCell className="font-medium">{error.row}</TableCell>
-                            <TableCell className="text-destructive">{error.error}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </ScrollArea>
-                </div>
-              )}
-            </div>
-          )}
-          
-          <DialogFooter>
-            <Button onClick={() => setIsResultDialogOpen(false)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Detailed Order View Dialog */}
       <OrderDetailsDialog 
         order={selectedOrder}
         open={isDetailsOpen}
         onOpenChange={setIsDetailsOpen}
       />
 
-      {/* Quick Status Update Dialog */}
-      <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Update Order Status</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <Select value={newStatus} onValueChange={setNewStatus}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="processing">Processing</SelectItem>
-                  <SelectItem value="shipped">Shipped</SelectItem>
-                  <SelectItem value="delivered">Delivered</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Note (Optional)</Label>
-              <Textarea 
-                placeholder="Add a note about this status change..."
-                value={statusNote}
-                onChange={(e) => setStatusNote(e.target.value)}
-              />
-            </div>
-            <Button onClick={handleStatusUpdateSubmit} className="w-full">
-              Update Status
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <OrderStatusDialog 
+        open={isStatusDialogOpen}
+        onOpenChange={setIsStatusDialogOpen}
+        status={newStatus}
+        onStatusChange={setNewStatus}
+        note={statusNote}
+        onNoteChange={setStatusNote}
+        onSubmit={handleStatusUpdateSubmit}
+      />
     </div>
   );
 }
