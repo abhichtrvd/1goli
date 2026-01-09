@@ -11,12 +11,12 @@ import { Input } from "@/components/ui/input";
 import { Id } from "@/convex/_generated/dataModel";
 import { OrderTable } from "./components/OrderTable";
 import { OrderDetailsDialog } from "./components/OrderDetailsDialog";
-import { Switch } from "@/components/ui/switch";
 import { downloadCSV } from "./utils/csvHelpers";
 import { parseOrderCSV } from "./utils/orderUtils";
 import { ImportResultsDialog } from "./components/ImportResultsDialog";
 import { OrderStatusDialog } from "./components/OrderStatusDialog";
 import { GenericBulkUpdateDialog } from "./components/GenericBulkUpdateDialog";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function AdminOrders() {
   const currentUser = useQuery(api.users.currentUser);
@@ -273,10 +273,10 @@ function OrdersContent() {
             onChange={handleFileUpload}
           />
           <div className="flex items-center space-x-2 mr-2">
-            <Switch 
-              id="dry-run-mode" 
+            <Checkbox
+              id="dry-run-mode"
               checked={isDryRun}
-              onCheckedChange={setIsDryRun}
+              onCheckedChange={(checked) => setIsDryRun(checked === true)}
             />
             <Label htmlFor="dry-run-mode">Dry Run</Label>
           </div>
