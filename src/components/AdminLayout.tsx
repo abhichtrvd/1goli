@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router";
-import { LayoutDashboard, Package, ShoppingCart, LogOut, Home, Loader2, Users, Stethoscope, FileText, Settings, ShieldAlert, MessageSquare } from "lucide-react";
+import { LayoutDashboard, Package, ShoppingCart, LogOut, Home, Loader2, Users, Stethoscope, FileText, Settings, ShieldAlert, MessageSquare, Shield, UserCog, Database, Zap, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useEffect } from "react";
@@ -113,8 +113,8 @@ export default function AdminLayout() {
           </Link>
 
           <Link to="/admin/reviews">
-            <Button 
-              variant={isActive("/admin/reviews") ? "secondary" : "ghost"} 
+            <Button
+              variant={isActive("/admin/reviews") ? "secondary" : "ghost"}
               className="w-full justify-start"
             >
               <MessageSquare className="mr-2 h-4 w-4" />
@@ -122,9 +122,95 @@ export default function AdminLayout() {
             </Button>
           </Link>
 
+          <div className="border-t border-border/50 my-2"></div>
+
+          <Link to="/admin/roles">
+            <Button
+              variant={isActive("/admin/roles") ? "secondary" : "ghost"}
+              className="w-full justify-start"
+            >
+              <Shield className="mr-2 h-4 w-4" />
+              Roles & Permissions
+            </Button>
+          </Link>
+
+          <Link to="/admin/team">
+            <Button
+              variant={isActive("/admin/team") ? "secondary" : "ghost"}
+              className="w-full justify-start"
+            >
+              <UserCog className="mr-2 h-4 w-4" />
+              Team Management
+            </Button>
+          </Link>
+
+          <div className="border-t border-border/50 my-2"></div>
+
+          <Link to="/admin/backup">
+            <Button
+              variant={isActive("/admin/backup") ? "secondary" : "ghost"}
+              className="w-full justify-start"
+            >
+              <Database className="mr-2 h-4 w-4" />
+              Backup & Restore
+            </Button>
+          </Link>
+
+          <Link to="/admin/optimization">
+            <Button
+              variant={isActive("/admin/optimization") ? "secondary" : "ghost"}
+              className="w-full justify-start"
+            >
+              <Zap className="mr-2 h-4 w-4" />
+              Optimization
+            </Button>
+          </Link>
+
+          <Link to="/admin/reports">
+            <Button
+              variant={isActive("/admin/reports") ? "secondary" : "ghost"}
+              className="w-full justify-start"
+            >
+              <BarChart3 className="mr-2 h-4 w-4" />
+              Reports
+            </Button>
+          </Link>
+
+          <Link to="/admin/workflows">
+            <Button
+              variant={isActive("/admin/workflows") ? "secondary" : "ghost"}
+              className="w-full justify-start"
+            >
+              <Zap className="mr-2 h-4 w-4" />
+              Workflows
+            </Button>
+          </Link>
+
+          <Link to="/admin/rules">
+            <Button
+              variant={isActive("/admin/rules") ? "secondary" : "ghost"}
+              className="w-full justify-start"
+            >
+              <Shield className="mr-2 h-4 w-4" />
+              Rules
+            </Button>
+          </Link>
+
+          <Link to="/admin/integrations">
+            <Button
+              variant={isActive("/admin/integrations") ? "secondary" : "ghost"}
+              className="w-full justify-start"
+            >
+              <Zap className="mr-2 h-4 w-4" />
+              Integrations
+            </Button>
+          </Link>
+
+          <div className="border-t border-border/50 my-2"></div>
+
           <Link to="/admin/settings">
-            <Button 
-              variant={isActive("/admin/settings") ? "secondary" : "ghost"} 
+            <Button
+              variant={isActive("/admin/settings") ? "secondary" : "ghost"}
               className="w-full justify-start"
             >
               <Settings className="mr-2 h-4 w-4" />
@@ -132,8 +218,8 @@ export default function AdminLayout() {
             </Button>
           </Link>
           <Link to="/admin/audit-logs">
-            <Button 
-              variant={isActive("/admin/audit-logs") ? "secondary" : "ghost"} 
+            <Button
+              variant={isActive("/admin/audit-logs") ? "secondary" : "ghost"}
               className="w-full justify-start"
             >
               <ShieldAlert className="mr-2 h-4 w-4" />

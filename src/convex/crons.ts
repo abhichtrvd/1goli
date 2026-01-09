@@ -10,4 +10,11 @@ crons.hourly(
   internal.scheduledPrices.applyScheduledPrices
 );
 
+// Execute scheduled reports daily at midnight UTC
+crons.daily(
+  "execute scheduled reports",
+  { hourUTC: 0, minuteUTC: 0 },
+  internal.reports.executeScheduledReports
+);
+
 export default crons;

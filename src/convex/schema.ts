@@ -34,6 +34,7 @@ const schema = defineSchema(
       searchText: v.optional(v.string()), // Added for comprehensive search
 
       role: v.optional(roleValidator), // role of the user. do not remove
+      roleId: v.optional(v.id("roles")), // Link to roles table for RBAC
 
       // Email Verification
       emailVerified: v.optional(v.boolean()),
@@ -614,6 +615,670 @@ const schema = defineSchema(
       .index("by_type", ["goalType"])
       .index("by_active", ["isActive"])
       .index("by_period", ["period"]),
+
+    // Role-Based Access Control (RBAC)
+    roles: defineTable({
+      name: v.string(), // e.g., "Super Admin", "Manager", "Staff"
+      description: v.string(),
+      permissions: v.array(v.string()), // array of permission IDs or keys
+      isSystem: v.boolean(), // System roles cannot be deleted
+      createdBy: v.string(),
+      createdAt: v.number(),
+      updatedAt: v.optional(v.number()),
+    })
+      .index("by_name", ["name"])
+      .index("by_system", ["isSystem"]),
+
+    permissions: defineTable({
+      resource: v.string(), // e.g., "users", "orders", "products"
+      action: v.string(), // e.g., "create", "read", "update", "delete"
+      description: v.string(),
+      category: v.string(), // e.g., "Users", "Orders", "Products"
+      key: v.string(), // unique key like "users.create"
+    })
+      .index("by_resource", ["resource"])
+      .index("by_category", ["category"])
+      .index("by_key", ["key"]),
+
+    // Team Member Invitations
+    teamInvitations: defineTable({
+      email: v.string(),
+      roleId: v.id("roles"),
+      roleName: v.string(), // Cached for display
+      invitedBy: v.string(),
+      invitedAt: v.number(),
+      status: v.union(
+        v.literal("pending"),
+        v.literal("accepted"),
+        v.literal("expired"),
+        v.literal("cancelled")
+      ),
+      expiresAt: v.number(),
+      acceptedAt: v.optional(v.number()),
+      token: v.string(), // Invitation token
+    })
+      .index("by_email", ["email"])
+      .index("by_status", ["status"])
+      .index("by_token", ["token"]),
+
+    // Backup Records
+    backups: defineTable({
+      name: v.string(),
+      description: v.optional(v.string()),
+      size: v.number(), // Size in bytes
+      tablesIncluded: v.array(v.string()), // List of table names
+      recordCount: v.number(), // Total number of records
+      createdBy: v.string(),
+      createdAt: v.number(),
+      storageId: v.optional(v.id("_storage")), // Reference to stored backup file
+      type: v.union(v.literal("manual"), v.literal("scheduled")),
+      status: v.union(
+        v.literal("in_progress"),
+        v.literal("completed"),
+        v.literal("failed")
+      ),
+    })
+      .index("by_created_at", ["createdAt"])
+      .index("by_status", ["status"])
+      .index("by_type", ["type"]),
+
+    // Custom Report Builder
+    reports: defineTable({
+      name: v.string(),
+      description: v.optional(v.string()),
+      type: v.union(
+        v.literal("sales"),
+        v.literal("inventory"),
+        v.literal("user"),
+        v.literal("order"),
+        v.literal("doctor"),
+        v.literal("prescription")
+      ),
+      dataSource: v.string(), // Table name
+      filters: v.optional(v.array(v.object({
+        field: v.string(),
+        operator: v.union(
+          v.literal("equals"),
+          v.literal("not_equals"),
+          v.literal("contains"),
+          v.literal("not_contains"),
+          v.literal("gt"),
+          v.literal("gte"),
+          v.literal("lt"),
+          v.literal("lte"),
+          v.literal("between"),
+          v.literal("in"),
+          v.literal("not_in")
+        ),
+        value: v.any(),
+        value2: v.optional(v.any()), // For "between" operator
+      }))),
+      groupBy: v.optional(v.string()), // Field to group by
+      aggregations: v.optional(v.array(v.object({
+        field: v.string(),
+        function: v.union(
+          v.literal("sum"),
+          v.literal("avg"),
+          v.literal("count"),
+          v.literal("min"),
+          v.literal("max")
+        ),
+        label: v.optional(v.string()),
+      }))),
+      columns: v.array(v.string()), // Array of fields to display
+      sortBy: v.optional(v.string()),
+      sortOrder: v.optional(v.union(v.literal("asc"), v.literal("desc"))),
+      chartType: v.union(
+        v.literal("line"),
+        v.literal("bar"),
+        v.literal("pie"),
+        v.literal("table")
+      ),
+      createdBy: v.string(),
+      isPublic: v.boolean(), // Whether other admins can view
+      lastRun: v.optional(v.number()),
+      createdAt: v.number(),
+      updatedAt: v.optional(v.number()),
+    })
+      .index("by_type", ["type"])
+      .index("by_creator", ["createdBy"])
+      .index("by_public", ["isPublic"])
+      .index("by_last_run", ["lastRun"]),
+
+    // Report Schedules
+    reportSchedules: defineTable({
+      reportId: v.id("reports"),
+      reportName: v.string(), // Cached for display
+      frequency: v.union(
+        v.literal("daily"),
+        v.literal("weekly"),
+        v.literal("monthly")
+      ),
+      dayOfWeek: v.optional(v.number()), // 0-6 for weekly (0=Sunday)
+      dayOfMonth: v.optional(v.number()), // 1-31 for monthly
+      timeOfDay: v.string(), // HH:MM format (24-hour)
+      recipients: v.array(v.string()), // Email addresses
+      exportFormat: v.union(
+        v.literal("csv"),
+        v.literal("excel"),
+        v.literal("pdf"),
+        v.literal("json")
+      ),
+      enabled: v.boolean(),
+      lastRun: v.optional(v.number()),
+      nextRun: v.optional(v.number()),
+      lastStatus: v.optional(v.union(
+        v.literal("success"),
+        v.literal("failed"),
+        v.literal("pending")
+      )),
+      lastError: v.optional(v.string()),
+      createdBy: v.string(),
+      createdAt: v.number(),
+      updatedAt: v.optional(v.number()),
+    })
+      .index("by_report", ["reportId"])
+      .index("by_enabled", ["enabled"])
+      .index("by_next_run", ["nextRun"])
+      .index("by_creator", ["createdBy"]),
+
+    // Report Execution History
+    reportExecutions: defineTable({
+      reportId: v.id("reports"),
+      reportName: v.string(),
+      scheduleId: v.optional(v.id("reportSchedules")), // If executed by schedule
+      executedBy: v.string(), // User ID
+      status: v.union(
+        v.literal("success"),
+        v.literal("failed"),
+        v.literal("running")
+      ),
+      recordCount: v.optional(v.number()),
+      executionTime: v.optional(v.number()), // Duration in ms
+      exportFormat: v.optional(v.string()),
+      storageId: v.optional(v.id("_storage")), // If exported to storage
+      error: v.optional(v.string()),
+      executedAt: v.number(),
+    })
+      .index("by_report", ["reportId"])
+      .index("by_schedule", ["scheduleId"])
+      .index("by_status", ["status"])
+      .index("by_executed_at", ["executedAt"]),
+
+    // Workflow Automation
+    workflows: defineTable({
+      name: v.string(),
+      description: v.optional(v.string()),
+      trigger: v.string(), // Event name like "order.created", "user.registered", etc.
+      triggerConditions: v.optional(v.array(v.object({
+        field: v.string(),
+        operator: v.string(), // equals, not_equals, gt, gte, lt, lte, contains, not_contains, in, not_in
+        value: v.any(),
+        logicalOperator: v.optional(v.union(v.literal("AND"), v.literal("OR"))),
+      }))),
+      actions: v.array(v.object({
+        type: v.union(
+          v.literal("send_email"),
+          v.literal("send_sms"),
+          v.literal("update_field"),
+          v.literal("create_task"),
+          v.literal("call_webhook"),
+          v.literal("add_tag"),
+          v.literal("suspend_user"),
+          v.literal("send_notification")
+        ),
+        config: v.any(), // Action-specific configuration (template, recipient, field, value, etc.)
+        order: v.optional(v.number()), // Order of execution
+      })),
+      enabled: v.boolean(),
+      priority: v.optional(v.number()), // Higher priority workflows execute first
+      createdBy: v.string(),
+      lastRun: v.optional(v.number()),
+      runCount: v.optional(v.number()),
+      createdAt: v.number(),
+      updatedAt: v.optional(v.number()),
+    })
+      .index("by_enabled", ["enabled"])
+      .index("by_trigger", ["trigger"])
+      .index("by_priority", ["priority"]),
+
+    // Workflow Execution Logs
+    workflowExecutions: defineTable({
+      workflowId: v.id("workflows"),
+      workflowName: v.string(), // Cached for display
+      triggeredBy: v.string(), // Event identifier (e.g., "order:12345")
+      triggerEvent: v.string(), // Event name that triggered the workflow
+      status: v.union(v.literal("success"), v.literal("failed"), v.literal("partial")),
+      executedActions: v.array(v.object({
+        actionType: v.string(),
+        status: v.union(v.literal("success"), v.literal("failed"), v.literal("skipped")),
+        error: v.optional(v.string()),
+        output: v.optional(v.any()),
+      })),
+      logs: v.optional(v.array(v.string())), // Detailed execution logs
+      error: v.optional(v.string()), // Overall error message if failed
+      executedAt: v.number(),
+      duration: v.optional(v.number()), // Execution time in ms
+    })
+      .index("by_workflow", ["workflowId"])
+      .index("by_status", ["status"])
+      .index("by_executed_at", ["executedAt"])
+      .index("by_trigger_event", ["triggerEvent"]),
+
+    // Business Rules Engine
+    rules: defineTable({
+      name: v.string(),
+      description: v.optional(v.string()),
+      ruleType: v.union(
+        v.literal("validation"), // Validate before processing
+        v.literal("pricing"), // Dynamic pricing rules
+        v.literal("routing"), // Order routing rules
+        v.literal("automation") // Auto-apply actions
+      ),
+      conditions: v.array(v.object({
+        field: v.string(),
+        operator: v.string(), // equals, not_equals, gt, gte, lt, lte, contains, not_contains, in, not_in, between
+        value: v.any(),
+        value2: v.optional(v.any()), // For "between" operator
+        logicalOperator: v.optional(v.union(v.literal("AND"), v.literal("OR"))),
+      })),
+      actions: v.array(v.object({
+        type: v.string(), // apply_discount, block_order, route_to_warehouse, assign_user, etc.
+        config: v.any(), // Action-specific configuration
+      })),
+      priority: v.number(), // Higher priority rules execute first
+      enabled: v.boolean(),
+      validFrom: v.optional(v.number()),
+      validUntil: v.optional(v.number()),
+      executionCount: v.optional(v.number()),
+      lastExecuted: v.optional(v.number()),
+      createdBy: v.string(),
+      createdAt: v.number(),
+      updatedAt: v.optional(v.number()),
+    })
+      .index("by_type", ["ruleType"])
+      .index("by_enabled", ["enabled"])
+      .index("by_priority", ["priority"])
+      .index("by_type_enabled", ["ruleType", "enabled"]),
+
+    // Integration Marketplace
+    integrations: defineTable({
+      name: v.string(),
+      description: v.string(),
+      category: v.union(
+        v.literal("payment"),
+        v.literal("shipping"),
+        v.literal("email"),
+        v.literal("sms"),
+        v.literal("analytics"),
+        v.literal("crm"),
+        v.literal("accounting")
+      ),
+      provider: v.string(), // stripe, razorpay, paypal, fedex, ups, dhl, sendgrid, twilio, google_analytics, salesforce, quickbooks, etc.
+      logoUrl: v.optional(v.string()),
+      websiteUrl: v.optional(v.string()),
+      status: v.union(
+        v.literal("available"),
+        v.literal("installed"),
+        v.literal("active"),
+        v.literal("inactive")
+      ),
+      config: v.optional(v.object({
+        apiKey: v.optional(v.string()),
+        apiSecret: v.optional(v.string()),
+        webhookUrl: v.optional(v.string()),
+        settings: v.optional(v.any()),
+      })),
+      installedAt: v.optional(v.number()),
+      installedBy: v.optional(v.string()),
+      version: v.optional(v.string()),
+      supportedFeatures: v.optional(v.array(v.string())),
+      isPopular: v.optional(v.boolean()), // Popular badge
+      usageCount: v.optional(v.number()), // Track usage
+      lastUsedAt: v.optional(v.number()),
+    })
+      .index("by_category", ["category"])
+      .index("by_status", ["status"])
+      .index("by_provider", ["provider"])
+      .index("by_popular", ["isPopular"]),
+
+    // Communication Features
+    campaigns: defineTable({
+      name: v.string(),
+      description: v.optional(v.string()),
+      subject: v.optional(v.string()),
+      content: v.string(),
+      previewText: v.optional(v.string()),
+      type: v.union(v.literal("email"), v.literal("sms"), v.literal("push")),
+      templateId: v.optional(v.id("notificationTemplates")),
+      segment: v.union(
+        v.literal("all"),
+        v.literal("vip"),
+        v.literal("new_users"),
+        v.literal("inactive"),
+        v.literal("custom")
+      ),
+      customRecipients: v.optional(v.array(v.string())),
+      audienceFilter: v.optional(v.object({
+        tags: v.optional(v.array(v.string())),
+        role: v.optional(v.string()),
+        minOrders: v.optional(v.number()),
+        lastActiveDate: v.optional(v.number()),
+      })),
+      status: v.union(
+        v.literal("draft"),
+        v.literal("scheduled"),
+        v.literal("sending"),
+        v.literal("sent"),
+        v.literal("completed"),
+        v.literal("failed")
+      ),
+      scheduledAt: v.optional(v.number()),
+      sentAt: v.optional(v.number()),
+      deliveryRate: v.optional(v.number()),
+      openRate: v.optional(v.number()),
+      clickRate: v.optional(v.number()),
+      totalRecipients: v.optional(v.number()),
+      successCount: v.optional(v.number()),
+      failedCount: v.optional(v.number()),
+      abTestEnabled: v.optional(v.boolean()),
+      abTestVariantB: v.optional(v.object({
+        subject: v.optional(v.string()),
+        content: v.string(),
+        previewText: v.optional(v.string()),
+      })),
+      abTestSplitPercent: v.optional(v.number()),
+      recipientCount: v.optional(v.number()),
+      deliveredCount: v.optional(v.number()),
+      openedCount: v.optional(v.number()),
+      clickedCount: v.optional(v.number()),
+      createdBy: v.string(),
+      createdAt: v.number(),
+      updatedAt: v.optional(v.number()),
+    })
+      .index("by_status", ["status"])
+      .index("by_type", ["type"])
+      .index("by_created_at", ["createdAt"])
+      .index("by_creator", ["createdBy"]),
+
+    campaignDeliveries: defineTable({
+      campaignId: v.id("campaigns"),
+      userId: v.id("users"),
+      status: v.union(
+        v.literal("pending"),
+        v.literal("sent"),
+        v.literal("delivered"),
+        v.literal("failed"),
+        v.literal("bounced")
+      ),
+      sentAt: v.optional(v.number()),
+      deliveredAt: v.optional(v.number()),
+      openedAt: v.optional(v.number()),
+      clickedAt: v.optional(v.number()),
+      error: v.optional(v.string()),
+      variant: v.optional(v.union(v.literal("A"), v.literal("B"))), // For A/B testing
+    })
+      .index("by_campaign", ["campaignId"])
+      .index("by_user", ["userId"])
+      .index("by_status", ["status"])
+      .index("by_campaign_user", ["campaignId", "userId"]),
+
+    notificationTemplates: defineTable({
+      name: v.string(),
+      description: v.optional(v.string()),
+      category: v.union(
+        v.literal("order"),
+        v.literal("user"),
+        v.literal("product"),
+        v.literal("system")
+      ),
+      channels: v.array(v.union(v.literal("email"), v.literal("sms"), v.literal("push"))),
+      subject: v.optional(v.string()),
+      content: v.string(),
+      variables: v.optional(v.array(v.string())), // e.g., ["name", "order_id", "amount"]
+      isActive: v.boolean(),
+      version: v.optional(v.number()),
+      parentTemplateId: v.optional(v.id("notificationTemplates")), // For version history
+      createdBy: v.string(),
+      createdAt: v.number(),
+      updatedAt: v.optional(v.number()),
+    })
+      .index("by_category", ["category"])
+      .index("by_active", ["isActive"])
+      .index("by_parent", ["parentTemplateId"]),
+
+    messages: defineTable({
+      conversationId: v.string(), // Unique ID per conversation
+      userId: v.id("users"),
+      senderId: v.optional(v.string()), // Admin ID or system
+      senderType: v.union(v.literal("admin"), v.literal("user"), v.literal("system")),
+      content: v.string(),
+      attachments: v.optional(v.array(v.object({
+        name: v.string(),
+        url: v.string(),
+        storageId: v.optional(v.id("_storage")),
+        type: v.string(), // mime type
+        size: v.number(),
+      }))),
+      isRead: v.boolean(),
+      readAt: v.optional(v.number()),
+      sentAt: v.number(),
+    })
+      .index("by_conversation", ["conversationId"])
+      .index("by_user", ["userId"])
+      .index("by_sent_at", ["sentAt"])
+      .index("by_conversation_sent", ["conversationId", "sentAt"]),
+
+    conversations: defineTable({
+      userId: v.id("users"),
+      subject: v.optional(v.string()),
+      status: v.union(
+        v.literal("open"),
+        v.literal("closed"),
+        v.literal("archived")
+      ),
+      priority: v.optional(v.union(
+        v.literal("low"),
+        v.literal("medium"),
+        v.literal("high"),
+        v.literal("urgent")
+      )),
+      lastMessageAt: v.number(),
+      unreadCount: v.optional(v.number()),
+      assignedTo: v.optional(v.string()), // Admin ID
+      tags: v.optional(v.array(v.string())),
+      createdAt: v.number(),
+    })
+      .index("by_user", ["userId"])
+      .index("by_status", ["status"])
+      .index("by_assigned", ["assignedTo"])
+      .index("by_priority", ["priority"])
+      .index("by_last_message", ["lastMessageAt"]),
+
+    activityFeed: defineTable({
+      entityType: v.union(
+        v.literal("order"),
+        v.literal("user"),
+        v.literal("product"),
+        v.literal("prescription"),
+        v.literal("review"),
+        v.literal("campaign"),
+        v.literal("system")
+      ),
+      entityId: v.optional(v.string()),
+      action: v.string(), // created, updated, deleted, status_changed, etc.
+      description: v.string(),
+      performedBy: v.string(), // User ID or "system"
+      performedByName: v.optional(v.string()), // Cached for display
+      metadata: v.optional(v.any()), // Additional context
+      timestamp: v.number(),
+    })
+      .index("by_entity_type", ["entityType"])
+      .index("by_entity_id", ["entityId"])
+      .index("by_performer", ["performedBy"])
+      .index("by_timestamp", ["timestamp"])
+      .index("by_entity_type_timestamp", ["entityType", "timestamp"]),
+
+    // Analytics Features
+    clickEvents: defineTable({
+      userId: v.optional(v.id("users")),
+      sessionId: v.string(),
+      page: v.string(),
+      elementId: v.optional(v.string()),
+      elementClass: v.optional(v.string()),
+      x: v.number(),
+      y: v.number(),
+      timestamp: v.number(),
+      userAgent: v.optional(v.string()),
+      ipAddress: v.optional(v.string()),
+    })
+      .index("by_page", ["page"])
+      .index("by_timestamp", ["timestamp"])
+      .index("by_session", ["sessionId"]),
+
+    scrollEvents: defineTable({
+      userId: v.optional(v.id("users")),
+      sessionId: v.string(),
+      page: v.string(),
+      maxDepth: v.number(), // % of page scrolled
+      timestamp: v.number(),
+    })
+      .index("by_page", ["page"])
+      .index("by_timestamp", ["timestamp"]),
+
+    abTests: defineTable({
+      name: v.string(),
+      description: v.optional(v.string()),
+      type: v.union(
+        v.literal("pricing"),
+        v.literal("layout"),
+        v.literal("messaging"),
+        v.literal("feature")
+      ),
+      status: v.union(
+        v.literal("draft"),
+        v.literal("running"),
+        v.literal("completed"),
+        v.literal("archived")
+      ),
+      variantA: v.object({
+        name: v.string(),
+        config: v.any(),
+      }),
+      variantB: v.object({
+        name: v.string(),
+        config: v.any(),
+      }),
+      trafficSplit: v.number(), // % for variant A (0-100)
+      goalMetric: v.union(
+        v.literal("conversion"),
+        v.literal("revenue"),
+        v.literal("engagement"),
+        v.literal("retention")
+      ),
+      startDate: v.number(),
+      endDate: v.optional(v.number()),
+      winner: v.optional(v.union(v.literal("A"), v.literal("B"), v.literal("none"))),
+      createdBy: v.string(),
+      createdAt: v.number(),
+    })
+      .index("by_status", ["status"])
+      .index("by_type", ["type"]),
+
+    abTestAssignments: defineTable({
+      testId: v.id("abTests"),
+      userId: v.id("users"),
+      variant: v.union(v.literal("A"), v.literal("B")),
+      assignedAt: v.number(),
+    })
+      .index("by_test", ["testId"])
+      .index("by_user", ["userId"])
+      .index("by_test_user", ["testId", "userId"]),
+
+    abTestConversions: defineTable({
+      testId: v.id("abTests"),
+      userId: v.id("users"),
+      variant: v.union(v.literal("A"), v.literal("B")),
+      value: v.optional(v.number()), // e.g., revenue amount
+      convertedAt: v.number(),
+    })
+      .index("by_test", ["testId"])
+      .index("by_variant", ["testId", "variant"]),
+
+    cohorts: defineTable({
+      name: v.string(),
+      description: v.optional(v.string()),
+      definitionType: v.union(
+        v.literal("signup_date"),
+        v.literal("first_purchase"),
+        v.literal("location"),
+        v.literal("custom")
+      ),
+      startDate: v.number(),
+      endDate: v.number(),
+      userIds: v.optional(v.array(v.id("users"))),
+      userCount: v.optional(v.number()),
+      createdBy: v.string(),
+      createdAt: v.number(),
+    })
+      .index("by_definition", ["definitionType"])
+      .index("by_created_at", ["createdAt"]),
+
+    funnels: defineTable({
+      name: v.string(),
+      description: v.optional(v.string()),
+      steps: v.array(v.object({
+        name: v.string(),
+        eventType: v.string(), // e.g., "page_view", "add_to_cart", "checkout"
+        order: v.number(),
+      })),
+      isActive: v.boolean(),
+      createdBy: v.string(),
+      createdAt: v.number(),
+    })
+      .index("by_active", ["isActive"]),
+
+    funnelEvents: defineTable({
+      funnelId: v.id("funnels"),
+      userId: v.optional(v.id("users")),
+      sessionId: v.string(),
+      stepIndex: v.number(),
+      stepName: v.string(),
+      timestamp: v.number(),
+    })
+      .index("by_funnel", ["funnelId"])
+      .index("by_session", ["sessionId"])
+      .index("by_funnel_step", ["funnelId", "stepIndex"]),
+
+    customDashboards: defineTable({
+      name: v.string(),
+      description: v.optional(v.string()),
+      layout: v.array(v.object({
+        widgetId: v.string(),
+        type: v.union(
+          v.literal("metric_card"),
+          v.literal("line_chart"),
+          v.literal("bar_chart"),
+          v.literal("pie_chart"),
+          v.literal("table"),
+          v.literal("heatmap")
+        ),
+        dataSource: v.string(), // table or query name
+        config: v.any(), // Widget-specific configuration
+        position: v.object({
+          x: v.number(),
+          y: v.number(),
+          w: v.number(),
+          h: v.number(),
+        }),
+      })),
+      isPublic: v.boolean(),
+      createdBy: v.string(),
+      createdAt: v.number(),
+      updatedAt: v.optional(v.number()),
+    })
+      .index("by_creator", ["createdBy"])
+      .index("by_public", ["isPublic"]),
   },
   {
     schemaValidation: false,
