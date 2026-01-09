@@ -34,15 +34,32 @@ export const listDoctors = query({
 });
 
 export const getPaginatedDoctors = query({
-  args: { 
+  args: {
     paginationOpts: paginationOptsValidator,
     search: v.optional(v.string()),
     specialization: v.optional(v.string()),
     city: v.optional(v.string()),
+    experienceRange: v.optional(v.string()), // "0-5", "5-10", "10+"
   },
   handler: async (ctx, args) => {
+    // Parse experience range
+    let minExp = 0;
+    let maxExp = Infinity;
+    if (args.experienceRange) {
+      if (args.experienceRange === "0-5") {
+        minExp = 0;
+        maxExp = 5;
+      } else if (args.experienceRange === "5-10") {
+        minExp = 5;
+        maxExp = 10;
+      } else if (args.experienceRange === "10+") {
+        minExp = 10;
+        maxExp = Infinity;
+      }
+    }
+
     if (args.search) {
-      return await ctx.db
+      const results = await ctx.db
         .query("consultationDoctors")
         .withSearchIndex("search_name", (q) => {
           let search = q.search("name", args.search!);
@@ -55,10 +72,20 @@ export const getPaginatedDoctors = query({
           return search;
         })
         .paginate(args.paginationOpts);
+
+      // Filter by experience range if specified
+      if (args.experienceRange) {
+        const filteredPage = results.page.filter(
+          (doc) => doc.experienceYears >= minExp && doc.experienceYears < maxExp
+        );
+        return { ...results, page: filteredPage };
+      }
+
+      return results;
     }
 
     let query;
-    
+
     if (args.specialization) {
       query = ctx.db
         .query("consultationDoctors")
@@ -71,7 +98,17 @@ export const getPaginatedDoctors = query({
       query = ctx.db.query("consultationDoctors").order("desc");
     }
 
-    return await query.paginate(args.paginationOpts);
+    const results = await query.paginate(args.paginationOpts);
+
+    // Filter by experience range if specified
+    if (args.experienceRange) {
+      const filteredPage = results.page.filter(
+        (doc) => doc.experienceYears >= minExp && doc.experienceYears < maxExp
+      );
+      return { ...results, page: filteredPage };
+    }
+
+    return results;
   },
 });
 
@@ -222,6 +259,7 @@ export const createDoctor = mutation({
     clinicCity: v.string(),
     clinicPhone: v.string(),
     imageUrl: v.optional(v.string()),
+    imageStorageId: v.optional(v.id("_storage")),
     availability: v.array(v.string()),
     languages: v.array(v.string()),
     services: v.array(v.string()),
@@ -233,10 +271,18 @@ export const createDoctor = mutation({
     })),
   },
   handler: async (ctx, args) => {
-    const { imageUrl, ...rest } = args;
+    const { imageUrl, imageStorageId, ...rest } = args;
+
+    // If imageStorageId is provided, get URL from storage
+    let finalImageUrl = imageUrl ?? "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=500&auto=format&fit=crop";
+    if (imageStorageId) {
+      finalImageUrl = await ctx.storage.getUrl(imageStorageId) ?? finalImageUrl;
+    }
+
     await ctx.db.insert("consultationDoctors", {
         ...rest,
-        imageUrl: imageUrl ?? "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=500&auto=format&fit=crop",
+        imageUrl: finalImageUrl,
+        imageStorageId: imageStorageId,
         rating: 0,
         totalConsultations: 0,
     });
@@ -255,6 +301,7 @@ export const updateDoctor = mutation({
         clinicCity: v.optional(v.string()),
         clinicPhone: v.optional(v.string()),
         imageUrl: v.optional(v.string()),
+        imageStorageId: v.optional(v.id("_storage")),
         availability: v.optional(v.array(v.string())),
         languages: v.optional(v.array(v.string())),
         services: v.optional(v.array(v.string())),
@@ -266,9 +313,10 @@ export const updateDoctor = mutation({
         }))),
     },
     handler: async (ctx, args) => {
-        const { id, ...fields } = args;
-        // Filter out undefined fields to avoid overwriting with undefined if that's an issue, 
-        // though Convex usually handles partial updates fine. 
+        const { id, imageStorageId, ...fields } = args;
+
+        // Filter out undefined fields to avoid overwriting with undefined if that's an issue,
+        // though Convex usually handles partial updates fine.
         // Explicitly handling it ensures safety.
         const updates: any = {};
         for (const [key, value] of Object.entries(fields)) {
@@ -276,6 +324,18 @@ export const updateDoctor = mutation({
                 updates[key] = value;
             }
         }
+
+        // If imageStorageId is provided, get URL from storage and update both
+        if (imageStorageId !== undefined) {
+            updates.imageStorageId = imageStorageId;
+            if (imageStorageId) {
+                const storageUrl = await ctx.storage.getUrl(imageStorageId);
+                if (storageUrl) {
+                    updates.imageUrl = storageUrl;
+                }
+            }
+        }
+
         await ctx.db.patch(id, updates);
     }
 });
@@ -386,5 +446,122 @@ export const importDoctors = mutation({
     }
 
     return results;
+  },
+});
+
+export const getSpecializations = query({
+  args: {},
+  handler: async (ctx) => {
+    const doctors = await ctx.db.query("consultationDoctors").collect();
+    const specializations = [...new Set(doctors.map((doc) => doc.specialization))];
+    return specializations.sort();
+  },
+});
+
+export const getCities = query({
+  args: {},
+  handler: async (ctx) => {
+    const doctors = await ctx.db.query("consultationDoctors").collect();
+    const cities = [...new Set(doctors.map((doc) => doc.clinicCity))];
+    return cities.sort();
+  },
+});
+
+export const generateUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+export const deleteDoctorImage = mutation({
+  args: {
+    storageId: v.id("_storage"),
+  },
+  handler: async (ctx, args) => {
+    await ctx.storage.delete(args.storageId);
+  },
+});
+
+// Appointment queries for calendar view
+export const getDoctorAppointments = query({
+  args: {
+    doctorId: v.id("consultationDoctors"),
+    startDate: v.optional(v.string()),
+    endDate: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    let query = ctx.db
+      .query("consultationBookings")
+      .withIndex("by_doctor", (q) => q.eq("doctorId", args.doctorId));
+
+    const appointments = await query.collect();
+
+    // Filter by date range if provided
+    let filtered = appointments;
+    if (args.startDate || args.endDate) {
+      filtered = appointments.filter((apt) => {
+        const aptDate = apt.preferredDate;
+        if (args.startDate && aptDate < args.startDate) return false;
+        if (args.endDate && aptDate > args.endDate) return false;
+        return true;
+      });
+    }
+
+    // Fetch user details for each appointment
+    const appointmentsWithUsers = await Promise.all(
+      filtered.map(async (apt) => {
+        let user = null;
+        if (apt.userId) {
+          user = await ctx.db.get(apt.userId);
+        }
+        return { ...apt, user };
+      })
+    );
+
+    return appointmentsWithUsers;
+  },
+});
+
+export const updateAppointmentStatus = mutation({
+  args: {
+    appointmentId: v.id("consultationBookings"),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("confirmed"),
+      v.literal("completed"),
+      v.literal("cancelled")
+    ),
+    notes: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { appointmentId, status, notes } = args;
+    const updates: any = { status };
+    if (notes !== undefined) {
+      updates.notes = notes;
+    }
+    await ctx.db.patch(appointmentId, updates);
+  },
+});
+
+export const getDoctorAppointmentStats = query({
+  args: {
+    doctorId: v.id("consultationDoctors"),
+  },
+  handler: async (ctx, args) => {
+    const appointments = await ctx.db
+      .query("consultationBookings")
+      .withIndex("by_doctor", (q) => q.eq("doctorId", args.doctorId))
+      .collect();
+
+    const stats = {
+      total: appointments.length,
+      pending: appointments.filter((a) => a.status === "pending").length,
+      confirmed: appointments.filter((a) => a.status === "confirmed").length,
+      completed: appointments.filter((a) => a.status === "completed").length,
+      cancelled: appointments.filter((a) => a.status === "cancelled").length,
+    };
+
+    return stats;
   },
 });

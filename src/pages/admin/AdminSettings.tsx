@@ -9,8 +9,13 @@ import { SettingsQuickActionsSection } from "./components/SettingsQuickActionsSe
 import { SettingsHealthConcernsSection } from "./components/SettingsHealthConcernsSection";
 import { SettingsFeatureCardsSection } from "./components/SettingsFeatureCardsSection";
 import { cn } from "@/lib/utils";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, Upload, X, Eye, EyeOff, Plus, Send, Trash2, Key } from "lucide-react";
 import { useAdminSettings } from "./hooks/useAdminSettings";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { useState, useRef } from "react";
+import { uploadFile, validateImageFile } from "@/lib/fileUpload";
+import { toast } from "sonner";
 
 export default function AdminSettings() {
   const {
@@ -27,6 +32,120 @@ export default function AdminSettings() {
     clearUrlError,
     handleSubmit,
   } = useAdminSettings();
+
+  const generateUploadUrl = useMutation(api.settings.generateUploadUrl);
+  const sendTestEmail = useMutation(api.settings.sendTestEmail);
+  const testWebhook = useMutation(api.settings.testWebhook);
+
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [showPasswords, setShowPasswords] = useState({
+    smtp: false,
+    razorpay: false,
+    stripe: false,
+  });
+  const [newApiKey, setNewApiKey] = useState({ label: "", key: "" });
+  const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
+  const [testingWebhook, setTestingWebhook] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!validateImageFile(file)) return;
+
+    setIsUploadingLogo(true);
+    try {
+      const result = await uploadFile(file, generateUploadUrl);
+      if (result) {
+        setFormData({
+          ...formData,
+          logoUrl: result.url,
+          logoStorageId: result.storageId,
+        });
+        toast.success("Logo uploaded successfully");
+      }
+    } catch (error) {
+      console.error("Logo upload error:", error);
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
+
+  const handleRemoveLogo = () => {
+    setFormData({
+      ...formData,
+      logoUrl: undefined,
+      logoStorageId: undefined,
+    });
+  };
+
+  const handleAddApiKey = () => {
+    if (!newApiKey.label.trim() || !newApiKey.key.trim()) {
+      toast.error("Both label and key are required");
+      return;
+    }
+
+    const apiKeys = formData.apiKeys || [];
+    apiKeys.push({
+      label: newApiKey.label,
+      key: newApiKey.key,
+      createdAt: Date.now(),
+    });
+
+    setFormData({ ...formData, apiKeys });
+    setNewApiKey({ label: "", key: "" });
+    toast.success("API key added");
+  };
+
+  const handleRemoveApiKey = (index: number) => {
+    const apiKeys = [...(formData.apiKeys || [])];
+    apiKeys.splice(index, 1);
+    setFormData({ ...formData, apiKeys });
+    toast.success("API key removed");
+  };
+
+  const handleSendTestEmail = async () => {
+    if (!formData.smtpHost || !formData.smtpPort || !formData.smtpUsername || !formData.smtpPassword || !formData.smtpFromAddress) {
+      toast.error("Please fill in all SMTP configuration fields");
+      return;
+    }
+
+    setIsSendingTestEmail(true);
+    try {
+      const result = await sendTestEmail({
+        to: formData.supportEmail,
+        smtpHost: formData.smtpHost,
+        smtpPort: formData.smtpPort,
+        smtpUsername: formData.smtpUsername,
+        smtpPassword: formData.smtpPassword,
+        smtpFromAddress: formData.smtpFromAddress,
+        smtpFromName: formData.smtpFromName,
+      });
+      toast.success(result.message);
+    } catch (error) {
+      toast.error("Failed to send test email");
+    } finally {
+      setIsSendingTestEmail(false);
+    }
+  };
+
+  const handleTestWebhook = async (event: string, url: string) => {
+    if (!url.trim()) {
+      toast.error("Please enter a webhook URL");
+      return;
+    }
+
+    setTestingWebhook(event);
+    try {
+      const result = await testWebhook({ url, event });
+      toast.success(result.message);
+    } catch (error) {
+      toast.error("Failed to test webhook");
+    } finally {
+      setTestingWebhook(null);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -91,6 +210,374 @@ export default function AdminSettings() {
                     value={formData.address} 
                     onChange={handleChange} 
                   />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Logo & Branding</CardTitle>
+              <CardDescription>Upload and manage your site logo.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Site Logo</Label>
+                {formData.logoUrl ? (
+                  <div className="flex items-center gap-4">
+                    <img src={formData.logoUrl} alt="Site Logo" className="h-20 w-20 object-contain border rounded" />
+                    <Button type="button" variant="outline" size="sm" onClick={handleRemoveLogo}>
+                      <X className="h-4 w-4 mr-2" />
+                      Remove Logo
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-4">
+                    <Input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoUpload}
+                      className="max-w-xs"
+                    />
+                    {isUploadingLogo && <Loader2 className="h-4 w-4 animate-spin" />}
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">Recommended: PNG or SVG, max 5MB</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Email Server Configuration</CardTitle>
+              <CardDescription>Configure SMTP settings for sending emails.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="smtpHost">SMTP Host</Label>
+                  <Input
+                    id="smtpHost"
+                    name="smtpHost"
+                    value={formData.smtpHost || ""}
+                    onChange={handleChange}
+                    placeholder="smtp.gmail.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="smtpPort">SMTP Port</Label>
+                  <Input
+                    id="smtpPort"
+                    name="smtpPort"
+                    type="number"
+                    value={formData.smtpPort || ""}
+                    onChange={handleChange}
+                    placeholder="587"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="smtpUsername">SMTP Username</Label>
+                  <Input
+                    id="smtpUsername"
+                    name="smtpUsername"
+                    value={formData.smtpUsername || ""}
+                    onChange={handleChange}
+                    placeholder="your-email@gmail.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="smtpPassword">SMTP Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="smtpPassword"
+                      name="smtpPassword"
+                      type={showPasswords.smtp ? "text" : "password"}
+                      value={formData.smtpPassword || ""}
+                      onChange={handleChange}
+                      placeholder="••••••••"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3"
+                      onClick={() => setShowPasswords({ ...showPasswords, smtp: !showPasswords.smtp })}
+                    >
+                      {showPasswords.smtp ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="smtpFromAddress">From Email Address</Label>
+                  <Input
+                    id="smtpFromAddress"
+                    name="smtpFromAddress"
+                    type="email"
+                    value={formData.smtpFromAddress || ""}
+                    onChange={handleChange}
+                    placeholder="noreply@1goli.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="smtpFromName">From Name</Label>
+                  <Input
+                    id="smtpFromName"
+                    name="smtpFromName"
+                    value={formData.smtpFromName || ""}
+                    onChange={handleChange}
+                    placeholder="1goli Support"
+                  />
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleSendTestEmail}
+                disabled={isSendingTestEmail}
+              >
+                {isSendingTestEmail ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    Send Test Email
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>API Key Management</CardTitle>
+              <CardDescription>Manage API keys for third-party integrations.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-4">
+                {formData.apiKeys && formData.apiKeys.length > 0 ? (
+                  <div className="space-y-2">
+                    {formData.apiKeys.map((apiKey, index) => (
+                      <div key={index} className="flex items-center gap-2 p-3 border rounded-lg">
+                        <Key className="h-4 w-4 text-muted-foreground" />
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">{apiKey.label}</p>
+                          <p className="text-xs text-muted-foreground font-mono">
+                            {apiKey.key.substring(0, 20)}...
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveApiKey(index)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No API keys configured yet.</p>
+                )}
+
+                <div className="border-t pt-4 space-y-3">
+                  <p className="text-sm font-medium">Add New API Key</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <Input
+                      placeholder="Label (e.g., Stripe API)"
+                      value={newApiKey.label}
+                      onChange={(e) => setNewApiKey({ ...newApiKey, label: e.target.value })}
+                    />
+                    <Input
+                      placeholder="API Key"
+                      value={newApiKey.key}
+                      onChange={(e) => setNewApiKey({ ...newApiKey, key: e.target.value })}
+                    />
+                  </div>
+                  <Button type="button" variant="outline" size="sm" onClick={handleAddApiKey}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add API Key
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Webhook Configuration</CardTitle>
+              <CardDescription>Configure webhook URLs for different events.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="webhookOrderCreated">Order Created</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="webhookOrderCreated"
+                      value={formData.webhooks?.orderCreated || ""}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        webhooks: { ...formData.webhooks, orderCreated: e.target.value }
+                      })}
+                      placeholder="https://your-domain.com/webhooks/order-created"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleTestWebhook("orderCreated", formData.webhooks?.orderCreated || "")}
+                      disabled={testingWebhook === "orderCreated"}
+                    >
+                      {testingWebhook === "orderCreated" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Test"}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="webhookOrderShipped">Order Shipped</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="webhookOrderShipped"
+                      value={formData.webhooks?.orderShipped || ""}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        webhooks: { ...formData.webhooks, orderShipped: e.target.value }
+                      })}
+                      placeholder="https://your-domain.com/webhooks/order-shipped"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleTestWebhook("orderShipped", formData.webhooks?.orderShipped || "")}
+                      disabled={testingWebhook === "orderShipped"}
+                    >
+                      {testingWebhook === "orderShipped" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Test"}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="webhookOrderDelivered">Order Delivered</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="webhookOrderDelivered"
+                      value={formData.webhooks?.orderDelivered || ""}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        webhooks: { ...formData.webhooks, orderDelivered: e.target.value }
+                      })}
+                      placeholder="https://your-domain.com/webhooks/order-delivered"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleTestWebhook("orderDelivered", formData.webhooks?.orderDelivered || "")}
+                      disabled={testingWebhook === "orderDelivered"}
+                    >
+                      {testingWebhook === "orderDelivered" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Test"}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="webhookUserRegistered">User Registered</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="webhookUserRegistered"
+                      value={formData.webhooks?.userRegistered || ""}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        webhooks: { ...formData.webhooks, userRegistered: e.target.value }
+                      })}
+                      placeholder="https://your-domain.com/webhooks/user-registered"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleTestWebhook("userRegistered", formData.webhooks?.userRegistered || "")}
+                      disabled={testingWebhook === "userRegistered"}
+                    >
+                      {testingWebhook === "userRegistered" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Test"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Security Settings</CardTitle>
+              <CardDescription>Configure security options for your admin panel.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <Label className="text-base">Two-Factor Authentication (2FA)</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Require 2FA for admin accounts
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.enable2FA || false}
+                  onCheckedChange={(checked) => setFormData({ ...formData, enable2FA: checked })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="ipWhitelist">IP Whitelist</Label>
+                <Textarea
+                  id="ipWhitelist"
+                  value={formData.ipWhitelist?.join("\n") || ""}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    ipWhitelist: e.target.value.split("\n").filter(ip => ip.trim())
+                  })}
+                  placeholder="Enter one IP address per line&#10;192.168.1.1&#10;10.0.0.1"
+                  rows={4}
+                />
+                <p className="text-xs text-muted-foreground">
+                  One IP address per line. Leave empty to allow all IPs.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="sessionTimeout">Session Timeout (minutes)</Label>
+                  <Input
+                    id="sessionTimeout"
+                    name="sessionTimeout"
+                    type="number"
+                    min="5"
+                    max="1440"
+                    value={formData.sessionTimeout || ""}
+                    onChange={handleChange}
+                    placeholder="30"
+                  />
+                  <p className="text-xs text-muted-foreground">Default: 30 minutes</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="passwordChangeInterval">Password Change Interval (days)</Label>
+                  <Input
+                    id="passwordChangeInterval"
+                    name="passwordChangeInterval"
+                    type="number"
+                    min="0"
+                    max="365"
+                    value={formData.passwordChangeInterval || ""}
+                    onChange={handleChange}
+                    placeholder="90"
+                  />
+                  <p className="text-xs text-muted-foreground">0 = never expire</p>
                 </div>
               </div>
             </CardContent>

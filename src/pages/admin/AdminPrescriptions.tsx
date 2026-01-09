@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { usePaginatedQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Loader2, Search, ArrowUpDown, Calendar as CalendarIcon, CheckSquare, Download } from "lucide-react";
+import { Loader2, Search, ArrowUpDown, Calendar as CalendarIcon, CheckSquare, Download, Plus, Upload, FileDown } from "lucide-react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -32,11 +32,24 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { PrescriptionTable } from "./components/PrescriptionTable";
 import { PrescriptionReviewDialog } from "./components/PrescriptionReviewDialog";
+import { CreatePrescriptionDialog } from "./components/CreatePrescriptionDialog";
+import { parsePrescriptionCSV, generatePrescriptionCSVTemplate } from "./utils/prescriptionUtils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function AdminPrescriptions() {
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [expiryFilter, setExpiryFilter] = useState<"all" | "active" | "expired">("all");
   const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
     from: undefined,
     to: undefined,
@@ -58,9 +71,15 @@ export default function AdminPrescriptions() {
 
   const updateStatus = useMutation(api.prescriptions.updatePrescriptionStatus);
   const bulkUpdateStatus = useMutation(api.prescriptions.bulkUpdatePrescriptionStatus);
-  
+  const deletePrescription = useMutation(api.prescriptions.deletePrescription);
+  const importPrescriptions = useMutation(api.prescriptions.importPrescriptions);
+
   const [selectedPrescription, setSelectedPrescription] = useState<any>(null);
   const [isReviewOpen, setIsReviewOpen] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [deleteId, setDeleteId] = useState<Id<"prescriptions"> | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Bulk actions state
   const [selectedIds, setSelectedIds] = useState<Id<"prescriptions">[]>([]);
@@ -153,11 +172,144 @@ export default function AdminPrescriptions() {
     setIsReviewOpen(true);
   };
 
+  // Filter results by expiry status
+  const filteredResults = results?.filter(prescription => {
+    if (expiryFilter === "all") return true;
+    if (!prescription.expiryDate) return expiryFilter === "active"; // Treat no expiry as active
+
+    const isExpired = Date.now() > prescription.expiryDate;
+    return expiryFilter === "expired" ? isExpired : !isExpired;
+  }) || [];
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+
+    try {
+      await deletePrescription({ id: deleteId });
+      toast.success("Prescription deleted successfully");
+      setDeleteId(null);
+    } catch (error) {
+      toast.error("Failed to delete prescription");
+    }
+  };
+
+  const handleDownloadTemplate = () => {
+    const template = generatePrescriptionCSVTemplate();
+    const blob = new Blob([template], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "prescription_import_template.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Template downloaded");
+  };
+
+  const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    try {
+      const text = await file.text();
+      const { data, errors } = parsePrescriptionCSV(text);
+
+      if (errors.length > 0 && data.length === 0) {
+        toast.error(`CSV parsing failed: ${errors[0]}`);
+        return;
+      }
+
+      if (data.length === 0) {
+        toast.error("No valid data found in CSV");
+        return;
+      }
+
+      const result = await importPrescriptions({ prescriptions: data });
+
+      if (result.errors.length > 0) {
+        toast.warning(
+          `Imported ${result.imported} prescriptions with ${result.errors.length} errors. Check console for details.`
+        );
+        console.error("Import errors:", result.errors);
+      } else {
+        toast.success(`Successfully imported ${result.imported} prescriptions`);
+      }
+    } catch (error) {
+      toast.error("Failed to import prescriptions");
+      console.error(error);
+    } finally {
+      setIsImporting(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h1 className="text-3xl font-bold tracking-tight">Prescriptions</h1>
         <div className="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto">
+          <Button onClick={() => setIsCreateOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" /> Create Prescription
+          </Button>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline">
+                <Upload className="mr-2 h-4 w-4" /> Import CSV
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <h4 className="font-medium leading-none">Import Prescriptions</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Upload a CSV file to bulk import prescriptions
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv"
+                    onChange={handleFileImport}
+                    disabled={isImporting}
+                    className="hidden"
+                    id="csv-upload"
+                  />
+                  <Button
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isImporting}
+                    className="w-full"
+                  >
+                    {isImporting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Importing...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Choose CSV File
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={handleDownloadTemplate}
+                    className="w-full"
+                  >
+                    <FileDown className="mr-2 h-4 w-4" />
+                    Download Template
+                  </Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+
           <Button variant="outline" onClick={handleExportCSV}>
             <Download className="mr-2 h-4 w-4" /> Export CSV
           </Button>
@@ -246,18 +398,47 @@ export default function AdminPrescriptions() {
         >
           Processed
         </Button>
-        <Button 
-          variant={statusFilter === "rejected" ? "default" : "outline"} 
+        <Button
+          variant={statusFilter === "rejected" ? "default" : "outline"}
           onClick={() => setStatusFilter("rejected")}
           size="sm"
           className={statusFilter === "rejected" ? "bg-red-600 hover:bg-red-700" : ""}
         >
           Rejected
         </Button>
+
+        {/* Expiry Filter */}
+        <div className="flex items-center gap-2 ml-4 pl-4 border-l">
+          <span className="text-sm text-muted-foreground">Expiry:</span>
+          <Button
+            variant={expiryFilter === "all" ? "default" : "outline"}
+            onClick={() => setExpiryFilter("all")}
+            size="sm"
+          >
+            All
+          </Button>
+          <Button
+            variant={expiryFilter === "active" ? "default" : "outline"}
+            onClick={() => setExpiryFilter("active")}
+            size="sm"
+            className={expiryFilter === "active" ? "bg-green-600 hover:bg-green-700" : ""}
+          >
+            Active
+          </Button>
+          <Button
+            variant={expiryFilter === "expired" ? "default" : "outline"}
+            onClick={() => setExpiryFilter("expired")}
+            size="sm"
+            className={expiryFilter === "expired" ? "bg-red-600 hover:bg-red-700" : ""}
+          >
+            Expired
+          </Button>
+        </div>
+
         {(dateRange.from || dateRange.to) && (
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setDateRange({ from: undefined, to: undefined })}
             className="ml-auto text-muted-foreground"
           >
@@ -308,13 +489,14 @@ export default function AdminPrescriptions() {
         )}
       </div>
 
-      <PrescriptionTable 
-        results={results || []}
+      <PrescriptionTable
+        results={filteredResults}
         selectedIds={selectedIds}
         onSelect={handleSelect}
         onSelectAll={handleSelectAll}
         onViewImage={(url) => window.open(url, '_blank')}
         onReview={openReviewDialog}
+        onDelete={(id) => setDeleteId(id)}
       />
 
       {status === "CanLoadMore" && (
@@ -326,12 +508,34 @@ export default function AdminPrescriptions() {
         </div>
       )}
 
-      <PrescriptionReviewDialog 
+      <PrescriptionReviewDialog
         open={isReviewOpen}
         onOpenChange={setIsReviewOpen}
         prescription={selectedPrescription}
         onStatusUpdate={handleStatusUpdate}
       />
+
+      <CreatePrescriptionDialog
+        open={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+      />
+
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Prescription</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this prescription? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

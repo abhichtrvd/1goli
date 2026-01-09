@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Plus, Search, Download, Trash2, Upload, RefreshCw, FileSpreadsheet } from "lucide-react";
+import { Plus, Search, Download, Trash2, Upload, RefreshCw, FileSpreadsheet, Edit2 } from "lucide-react";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
@@ -22,6 +22,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ProductForm } from "./components/ProductForm";
 import { ProductTable } from "./components/ProductTable";
 import { ProductViewDialog } from "./components/ProductViewDialog";
+import { BatchEditDialog } from "./components/BatchEditDialog";
+import { StockHistoryDialog } from "./components/StockHistoryDialog";
 
 // Robust CSV Parser
 function parseCSV(text: string) {
@@ -68,25 +70,30 @@ export default function AdminProducts() {
   const deleteProduct = useMutation(api.products_admin.deleteProduct);
   const bulkDeleteProducts = useMutation(api.products_admin.bulkDeleteProducts);
   const bulkCreateProducts = useMutation(api.products_admin.bulkCreateProducts);
+  const duplicateProduct = useMutation(api.products_admin.duplicateProduct);
   const bulkSyncImages = useAction(api.productActions.bulkSyncImages);
-  
+
   const [search, setSearch] = useState("");
   const [formFilter, setFormFilter] = useState<string>("all");
   const [potencyFilter, setPotencyFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [availabilityFilter, setAvailabilityFilter] = useState<string>("all");
   const [tagFilter, setTagFilter] = useState<string>("all");
+  const [stockFilter, setStockFilter] = useState<string>("all");
   const [minPrice, setMinPrice] = useState<string>("");
   const [maxPrice, setMaxPrice] = useState<string>("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isBatchEditOpen, setIsBatchEditOpen] = useState(false);
+  const [isStockHistoryOpen, setIsStockHistoryOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [viewingProduct, setViewingProduct] = useState<any>(null);
+  const [stockHistoryProduct, setStockHistoryProduct] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Id<"products">[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   // Delete Confirmation State
   const [productToDelete, setProductToDelete] = useState<Id<"products"> | null>(null);
   const [showBulkDeleteAlert, setShowBulkDeleteAlert] = useState(false);
@@ -111,13 +118,21 @@ export default function AdminProducts() {
     const matchesCategory = categoryFilter === "all" || (p.category && p.category.toLowerCase() === categoryFilter.toLowerCase());
     const matchesAvailability = availabilityFilter === "all" || p.availability === availabilityFilter;
     const matchesTag = tagFilter === "all" || p.symptomsTags.some(t => t.toLowerCase() === tagFilter.toLowerCase());
-    
+
+    // Stock filter
+    const minStockThreshold = p.minStock || 10;
+    const matchesStock =
+      stockFilter === "all" ? true :
+      stockFilter === "low" ? p.stock <= minStockThreshold :
+      stockFilter === "out" ? p.stock === 0 :
+      true;
+
     const price = p.basePrice;
     const min = minPrice ? parseFloat(minPrice) : 0;
     const max = maxPrice ? parseFloat(maxPrice) : Infinity;
     const matchesPrice = price >= min && price <= max;
-    
-    return matchesSearch && matchesForm && matchesPotency && matchesCategory && matchesPrice && matchesAvailability && matchesTag;
+
+    return matchesSearch && matchesForm && matchesPotency && matchesCategory && matchesPrice && matchesAvailability && matchesTag && matchesStock;
   });
 
   // Pagination
@@ -370,6 +385,37 @@ export default function AdminProducts() {
     }
   };
 
+  const handleDuplicate = async (id: Id<"products">) => {
+    try {
+      const newId = await duplicateProduct({ id });
+      toast.success("Product duplicated successfully");
+      // Open the edit dialog for the new product
+      const newProduct = products?.find(p => p._id === newId);
+      if (newProduct) {
+        openEditDialog(newProduct);
+      }
+    } catch (error) {
+      toast.error("Failed to duplicate product");
+    }
+  };
+
+  const handleViewStockHistory = (product: any) => {
+    setStockHistoryProduct(product);
+    setIsStockHistoryOpen(true);
+  };
+
+  const handleBatchEdit = () => {
+    if (selectedIds.length === 0) {
+      toast.error("Please select products to edit");
+      return;
+    }
+    setIsBatchEditOpen(true);
+  };
+
+  const handleBatchEditSuccess = () => {
+    setSelectedIds([]);
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -422,12 +468,26 @@ export default function AdminProducts() {
           </Dialog>
         </div>
 
-        <ProductViewDialog 
-          product={viewingProduct} 
-          open={isViewDialogOpen} 
-          onOpenChange={setIsViewDialogOpen} 
+        <ProductViewDialog
+          product={viewingProduct}
+          open={isViewDialogOpen}
+          onOpenChange={setIsViewDialogOpen}
         />
-        
+
+        <BatchEditDialog
+          open={isBatchEditOpen}
+          onOpenChange={setIsBatchEditOpen}
+          selectedIds={selectedIds}
+          onSuccess={handleBatchEditSuccess}
+        />
+
+        <StockHistoryDialog
+          open={isStockHistoryOpen}
+          onOpenChange={setIsStockHistoryOpen}
+          productId={stockHistoryProduct?._id || null}
+          productName={stockHistoryProduct?.name || ""}
+        />
+
         {/* Delete Confirmation Dialog */}
         <AlertDialog open={!!productToDelete} onOpenChange={(open) => !open && setProductToDelete(null)}>
           <AlertDialogContent>
@@ -471,9 +531,14 @@ export default function AdminProducts() {
             <div className="flex items-center justify-between">
               <CardTitle>All Products</CardTitle>
               {selectedIds.length > 0 && (
-                <Button variant="destructive" size="sm" onClick={handleBulkDeleteClick}>
-                  <Trash2 className="mr-2 h-4 w-4" /> Delete Selected ({selectedIds.length})
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={handleBatchEdit}>
+                    <Edit2 className="mr-2 h-4 w-4" /> Batch Edit ({selectedIds.length})
+                  </Button>
+                  <Button variant="destructive" size="sm" onClick={handleBulkDeleteClick}>
+                    <Trash2 className="mr-2 h-4 w-4" /> Delete Selected ({selectedIds.length})
+                  </Button>
+                </div>
               )}
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -498,6 +563,17 @@ export default function AdminProducts() {
                   <SelectItem value="in_stock">In Stock</SelectItem>
                   <SelectItem value="out_of_stock">Out of Stock</SelectItem>
                   <SelectItem value="discontinued">Discontinued</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={stockFilter} onValueChange={setStockFilter}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Stock Level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Stock Levels</SelectItem>
+                  <SelectItem value="low">Low Stock</SelectItem>
+                  <SelectItem value="out">Out of Stock</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -568,7 +644,7 @@ export default function AdminProducts() {
           </div>
         </CardHeader>
         <CardContent>
-          <ProductTable 
+          <ProductTable
             products={paginatedProducts || []}
             currentPage={currentPage}
             totalPages={totalPages}
@@ -576,6 +652,8 @@ export default function AdminProducts() {
             onView={openViewDialog}
             onEdit={openEditDialog}
             onDelete={handleDeleteClick}
+            onDuplicate={handleDuplicate}
+            onViewStockHistory={handleViewStockHistory}
             selectedIds={selectedIds}
             onSelect={handleSelect}
             onSelectAll={handleSelectAll}

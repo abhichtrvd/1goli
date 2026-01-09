@@ -5,39 +5,119 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useMutation, usePaginatedQuery } from "convex/react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Plus, Trash2, Edit, Loader2, Search, Download, Upload, FileSpreadsheet } from "lucide-react";
+import { Plus, Trash2, Edit, Loader2, Search, Download, Upload, FileSpreadsheet, ImageIcon, X, Calendar } from "lucide-react";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { parseDoctorCSV } from "./utils/doctorUtils";
 import { ImportResultsDialog } from "./components/ImportResultsDialog";
+import { AppointmentCalendarDialog } from "./components/AppointmentCalendarDialog";
 
 export default function AdminDoctors() {
   const [search, setSearch] = useState("");
+  const [specializationFilter, setSpecializationFilter] = useState<string>("");
+  const [cityFilter, setCityFilter] = useState<string>("");
+  const [experienceFilter, setExperienceFilter] = useState<string>("");
+
   const { results: doctors, status, loadMore, isLoading } = usePaginatedQuery(
     api.consultations.getPaginatedDoctors,
-    { search: search || undefined },
+    {
+      search: search || undefined,
+      specialization: specializationFilter || undefined,
+      city: cityFilter || undefined,
+      experienceRange: experienceFilter || undefined,
+    },
     { initialNumItems: 10 }
   );
+
+  const specializations = useQuery(api.consultations.getSpecializations);
+  const cities = useQuery(api.consultations.getCities);
 
   const createDoctor = useMutation(api.consultations.createDoctor);
   const updateDoctor = useMutation(api.consultations.updateDoctor);
   const deleteDoctor = useMutation(api.consultations.deleteDoctor);
   const bulkDeleteDoctors = useMutation(api.consultations.bulkDeleteDoctors);
   const importDoctors = useMutation(api.consultations.importDoctors);
+  const generateUploadUrl = useMutation(api.consultations.generateUploadUrl);
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingDoctor, setEditingDoctor] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Id<"consultationDoctors">[]>([]);
 
+  // Image upload state
+  const [uploadedImageId, setUploadedImageId] = useState<Id<"_storage"> | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
   // Import state
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [importResults, setImportResults] = useState<{ imported: number; updated: number; failed: number; errors: { row: number; error: string }[] } | null>(null);
   const [isResultDialogOpen, setIsResultDialogOpen] = useState(false);
+
+  // Appointment calendar state
+  const [appointmentCalendarOpen, setAppointmentCalendarOpen] = useState(false);
+  const [selectedDoctorForCalendar, setSelectedDoctorForCalendar] = useState<{ id: Id<"consultationDoctors">; name: string } | null>(null);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error("Please upload an image file");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image size must be less than 5MB");
+      return;
+    }
+
+    try {
+      // Generate upload URL
+      const uploadUrl = await generateUploadUrl();
+
+      // Upload the file
+      const result = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+
+      if (!result.ok) {
+        throw new Error("Upload failed");
+      }
+
+      const { storageId } = await result.json();
+      setUploadedImageId(storageId);
+
+      // Set preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      toast.success("Image uploaded successfully");
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to upload image");
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setUploadedImageId(null);
+    setImagePreview(null);
+    if (imageInputRef.current) {
+      imageInputRef.current.value = '';
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -64,7 +144,7 @@ export default function AdminDoctors() {
     const videoPrice = Number(formData.get("videoPrice")) || 500;
     const clinicPrice = Number(formData.get("clinicPrice")) || 800;
 
-    const doctorData = {
+    const doctorData: any = {
       name: formData.get("name") as string,
       specialization: formData.get("specialization") as string,
       clinicCity: formData.get("clinicCity") as string,
@@ -80,8 +160,16 @@ export default function AdminDoctors() {
           { mode: "Video", price: videoPrice, durationMinutes: 20, description: "Online Video Consultation" },
           { mode: "Clinic", price: clinicPrice, durationMinutes: 30, description: "In-person Visit" }
       ],
-      imageUrl: (formData.get("imageUrl") as string) || "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=500&auto=format&fit=crop"
     };
+
+    // Add image data
+    if (uploadedImageId) {
+      doctorData.imageStorageId = uploadedImageId;
+    } else if (formData.get("imageUrl")) {
+      doctorData.imageUrl = formData.get("imageUrl") as string;
+    } else if (!editingDoctor) {
+      doctorData.imageUrl = "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=500&auto=format&fit=crop";
+    }
 
     try {
       if (editingDoctor) {
@@ -96,6 +184,8 @@ export default function AdminDoctors() {
       }
       setIsDialogOpen(false);
       setEditingDoctor(null);
+      setUploadedImageId(null);
+      setImagePreview(null);
     } catch (error) {
       toast.error("Failed to save doctor");
       console.error(error);
@@ -284,9 +374,20 @@ export default function AdminDoctors() {
           <Button variant="outline" onClick={handleExportCSV}>
             <Download className="mr-2 h-4 w-4" /> Export CSV
           </Button>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Dialog open={isDialogOpen} onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) {
+              setEditingDoctor(null);
+              setUploadedImageId(null);
+              setImagePreview(null);
+            }
+          }}>
             <DialogTrigger asChild>
-              <Button onClick={() => setEditingDoctor(null)}>
+              <Button onClick={() => {
+                setEditingDoctor(null);
+                setUploadedImageId(null);
+                setImagePreview(null);
+              }}>
                 <Plus className="mr-2 h-4 w-4" /> Add Doctor
               </Button>
             </DialogTrigger>
@@ -386,6 +487,60 @@ export default function AdminDoctors() {
                 </div>
 
                 <div className="space-y-2">
+                  <Label>Doctor Image</Label>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        ref={imageInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="hidden"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => imageInputRef.current?.click()}
+                        className="w-full"
+                      >
+                        <ImageIcon className="mr-2 h-4 w-4" />
+                        {uploadedImageId ? "Change Image" : "Upload Image"}
+                      </Button>
+                    </div>
+                    {imagePreview && (
+                      <div className="relative w-32 h-32 border rounded-lg overflow-hidden">
+                        <img
+                          src={imagePreview}
+                          alt="Preview"
+                          className="w-full h-full object-cover"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-1 right-1 h-6 w-6"
+                          onClick={handleRemoveImage}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                    {editingDoctor?.imageUrl && !imagePreview && (
+                      <div className="relative w-32 h-32 border rounded-lg overflow-hidden">
+                        <img
+                          src={editingDoctor.imageUrl}
+                          alt="Current"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                    <p className="text-sm text-muted-foreground">
+                      Upload a profile image or use the URL field below
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
                     <Label htmlFor="imageUrl">Image URL (Optional)</Label>
                     <Input
                       id="imageUrl"
@@ -405,16 +560,69 @@ export default function AdminDoctors() {
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <div className="relative w-64">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input 
-            placeholder="Search doctors..." 
-            className="pl-8" 
+          <Input
+            placeholder="Search doctors..."
+            className="pl-8"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
+
+        <Select value={specializationFilter} onValueChange={setSpecializationFilter}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="All Specializations" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">All Specializations</SelectItem>
+            {specializations?.map((spec) => (
+              <SelectItem key={spec} value={spec}>
+                {spec}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={cityFilter} onValueChange={setCityFilter}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="All Cities" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">All Cities</SelectItem>
+            {cities?.map((city) => (
+              <SelectItem key={city} value={city}>
+                {city}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={experienceFilter} onValueChange={setExperienceFilter}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="All Experience" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">All Experience</SelectItem>
+            <SelectItem value="0-5">Less than 5 years</SelectItem>
+            <SelectItem value="5-10">5-10 years</SelectItem>
+            <SelectItem value="10+">More than 10 years</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {(specializationFilter || cityFilter || experienceFilter) && (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setSpecializationFilter("");
+              setCityFilter("");
+              setExperienceFilter("");
+            }}
+          >
+            Clear Filters
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -460,6 +668,17 @@ export default function AdminDoctors() {
                   <TableCell>{doctor.experienceYears} Years</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setSelectedDoctorForCalendar({ id: doctor._id, name: doctor.name });
+                          setAppointmentCalendarOpen(true);
+                        }}
+                        title="View Appointments"
+                      >
+                        <Calendar className="h-4 w-4 text-blue-600" />
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => {
                         setEditingDoctor(doctor);
                         setIsDialogOpen(true);
@@ -507,6 +726,15 @@ export default function AdminDoctors() {
         results={importResults}
         isDryRun={false}
       />
+
+      {selectedDoctorForCalendar && (
+        <AppointmentCalendarDialog
+          open={appointmentCalendarOpen}
+          onOpenChange={setAppointmentCalendarOpen}
+          doctorId={selectedDoctorForCalendar.id}
+          doctorName={selectedDoctorForCalendar.name}
+        />
+      )}
     </div>
   );
 }

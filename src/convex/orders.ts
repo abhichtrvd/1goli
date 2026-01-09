@@ -196,7 +196,8 @@ export const getAllOrders = query({
 
 export const getPaginatedOrders = query({
   args: {
-    search: v.optional(v.string())
+    search: v.optional(v.string()),
+    includeDeleted: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     // Check admin access - return empty array instead of throwing
@@ -223,6 +224,11 @@ export const getPaginatedOrders = query({
             .query("orders")
             .order("desc")
             .take(100);
+    }
+
+    // Filter out deleted orders unless includeDeleted is true
+    if (!args.includeDeleted) {
+      orders = orders.filter(o => !o.isDeleted);
     }
 
     const ordersWithUsers = await Promise.all(
@@ -618,5 +624,290 @@ export const adminCreateOrder = mutation({
     });
 
     return orderId;
+  },
+});
+
+export const deleteOrder = mutation({
+  args: { orderId: v.id("orders") },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const adminId = await getAuthUserId(ctx);
+    const order = await ctx.db.get(args.orderId);
+
+    if (!order) throw new Error("Order not found");
+
+    // Restock items if order was active
+    if (order.status !== "cancelled" && !order.isDeleted) {
+      for (const item of order.items) {
+        const product = await ctx.db.get(item.productId);
+        if (product) {
+          await ctx.db.patch(item.productId, { stock: product.stock + item.quantity });
+        }
+      }
+    }
+
+    // Soft delete
+    await ctx.db.patch(args.orderId, {
+      isDeleted: true,
+      deletedAt: Date.now(),
+      deletedBy: adminId || "admin",
+    });
+
+    await ctx.db.insert("auditLogs", {
+      action: "delete_order",
+      entityId: args.orderId,
+      entityType: "order",
+      performedBy: adminId || "admin",
+      details: `Deleted order ${args.orderId}`,
+      timestamp: Date.now(),
+    });
+  },
+});
+
+export const requestRefund = mutation({
+  args: {
+    orderId: v.id("orders"),
+    refundAmount: v.number(),
+    refundReason: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const adminId = await getAuthUserId(ctx);
+    const order = await ctx.db.get(args.orderId);
+
+    if (!order) throw new Error("Order not found");
+    if (order.refundStatus === "processed") throw new Error("Order already refunded");
+
+    await ctx.db.patch(args.orderId, {
+      refundStatus: "requested",
+      refundAmount: args.refundAmount,
+      refundReason: args.refundReason,
+      refundRequestedAt: Date.now(),
+    });
+
+    await ctx.db.insert("auditLogs", {
+      action: "request_refund",
+      entityId: args.orderId,
+      entityType: "order",
+      performedBy: adminId || "admin",
+      details: `Refund requested: ${args.refundAmount}`,
+      timestamp: Date.now(),
+    });
+  },
+});
+
+export const processRefund = mutation({
+  args: {
+    orderId: v.id("orders"),
+    refundId: v.string(),
+    status: v.union(v.literal("approved"), v.literal("processed"), v.literal("rejected")),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const adminId = await getAuthUserId(ctx);
+    const order = await ctx.db.get(args.orderId);
+
+    if (!order) throw new Error("Order not found");
+
+    const updates: any = {
+      refundStatus: args.status,
+      refundId: args.refundId,
+    };
+
+    if (args.status === "processed") {
+      updates.refundProcessedAt = Date.now();
+      // Restock items when refund is processed
+      for (const item of order.items) {
+        const product = await ctx.db.get(item.productId);
+        if (product) {
+          await ctx.db.patch(item.productId, { stock: product.stock + item.quantity });
+        }
+      }
+    }
+
+    await ctx.db.patch(args.orderId, updates);
+
+    await ctx.db.insert("auditLogs", {
+      action: "process_refund",
+      entityId: args.orderId,
+      entityType: "order",
+      performedBy: adminId || "admin",
+      details: `Refund ${args.status}: ${args.refundId}`,
+      timestamp: Date.now(),
+    });
+  },
+});
+
+export const updateShipment = mutation({
+  args: {
+    orderId: v.id("orders"),
+    trackingNumber: v.optional(v.string()),
+    trackingUrl: v.optional(v.string()),
+    carrier: v.optional(v.string()),
+    estimatedDelivery: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const adminId = await getAuthUserId(ctx);
+    const order = await ctx.db.get(args.orderId);
+
+    if (!order) throw new Error("Order not found");
+
+    const updates: any = {};
+    if (args.trackingNumber !== undefined) updates.trackingNumber = args.trackingNumber;
+    if (args.trackingUrl !== undefined) updates.trackingUrl = args.trackingUrl;
+    if (args.carrier !== undefined) updates.carrier = args.carrier;
+    if (args.estimatedDelivery !== undefined) updates.estimatedDelivery = args.estimatedDelivery;
+
+    // If adding tracking for first time, set shippedAt
+    if (args.trackingNumber && !order.shippedAt) {
+      updates.shippedAt = Date.now();
+      updates.status = "shipped";
+
+      const history = [...(order.statusHistory || [])];
+      history.push({
+        status: "shipped",
+        timestamp: Date.now(),
+        note: `Shipped with ${args.carrier || 'carrier'}: ${args.trackingNumber}`,
+      });
+      updates.statusHistory = history;
+    }
+
+    await ctx.db.patch(args.orderId, updates);
+
+    await ctx.db.insert("auditLogs", {
+      action: "update_shipment",
+      entityId: args.orderId,
+      entityType: "order",
+      performedBy: adminId || "admin",
+      details: `Updated shipment tracking: ${args.trackingNumber}`,
+      timestamp: Date.now(),
+    });
+  },
+});
+
+export const markDelivered = mutation({
+  args: {
+    orderId: v.id("orders"),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const adminId = await getAuthUserId(ctx);
+    const order = await ctx.db.get(args.orderId);
+
+    if (!order) throw new Error("Order not found");
+
+    const history = [...(order.statusHistory || [])];
+    history.push({
+      status: "delivered",
+      timestamp: Date.now(),
+      note: "Order delivered",
+    });
+
+    await ctx.db.patch(args.orderId, {
+      status: "delivered",
+      deliveredAt: Date.now(),
+      statusHistory: history,
+    });
+
+    await ctx.db.insert("auditLogs", {
+      action: "mark_delivered",
+      entityId: args.orderId,
+      entityType: "order",
+      performedBy: adminId || "admin",
+      details: "Order marked as delivered",
+      timestamp: Date.now(),
+    });
+  },
+});
+
+export const processReturn = mutation({
+  args: {
+    orderId: v.id("orders"),
+    returnReason: v.string(),
+    exchangeRequested: v.optional(v.boolean()),
+    status: v.union(
+      v.literal("requested"),
+      v.literal("approved"),
+      v.literal("received"),
+      v.literal("processed"),
+      v.literal("rejected")
+    ),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const adminId = await getAuthUserId(ctx);
+    const order = await ctx.db.get(args.orderId);
+
+    if (!order) throw new Error("Order not found");
+
+    const updates: any = {
+      returnStatus: args.status,
+      returnReason: args.returnReason,
+    };
+
+    if (args.exchangeRequested !== undefined) {
+      updates.exchangeRequested = args.exchangeRequested;
+    }
+
+    if (args.status === "requested" && !order.returnRequestedAt) {
+      updates.returnRequestedAt = Date.now();
+    }
+
+    // Restock if return is processed (and not exchange)
+    if (args.status === "processed" && !args.exchangeRequested) {
+      for (const item of order.items) {
+        const product = await ctx.db.get(item.productId);
+        if (product) {
+          await ctx.db.patch(item.productId, { stock: product.stock + item.quantity });
+        }
+      }
+    }
+
+    await ctx.db.patch(args.orderId, updates);
+
+    await ctx.db.insert("auditLogs", {
+      action: "process_return",
+      entityId: args.orderId,
+      entityType: "order",
+      performedBy: adminId || "admin",
+      details: `Return ${args.status}: ${args.returnReason}`,
+      timestamp: Date.now(),
+    });
+  },
+});
+
+export const generateInvoice = mutation({
+  args: {
+    orderId: v.id("orders"),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const adminId = await getAuthUserId(ctx);
+    const order = await ctx.db.get(args.orderId);
+
+    if (!order) throw new Error("Order not found");
+
+    // Generate invoice number (format: INV-YYYYMMDD-XXXXX)
+    const date = new Date();
+    const dateStr = date.toISOString().split('T')[0].replace(/-/g, '');
+    const random = Math.floor(Math.random() * 100000).toString().padStart(5, '0');
+    const invoiceNumber = `INV-${dateStr}-${random}`;
+
+    await ctx.db.patch(args.orderId, {
+      invoiceNumber,
+      invoiceGeneratedAt: Date.now(),
+    });
+
+    await ctx.db.insert("auditLogs", {
+      action: "generate_invoice",
+      entityId: args.orderId,
+      entityType: "order",
+      performedBy: adminId || "admin",
+      details: `Generated invoice: ${invoiceNumber}`,
+      timestamp: Date.now(),
+    });
+
+    return invoiceNumber;
   },
 });

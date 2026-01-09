@@ -408,3 +408,243 @@ export const backfillSearchText = mutation({
     }
   },
 });
+
+// ============================================
+// BATCH EDIT FUNCTIONALITY
+// ============================================
+
+export const batchUpdateProducts = mutation({
+  args: {
+    ids: v.array(v.id("products")),
+    updates: v.object({
+      basePrice: v.optional(v.number()),
+      stock: v.optional(v.number()),
+      discount: v.optional(v.number()),
+      availability: v.optional(v.string()),
+      reorderPoint: v.optional(v.number()),
+      minStock: v.optional(v.number()),
+    }),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const userId = await getAuthUserId(ctx);
+
+    for (const id of args.ids) {
+      const product = await ctx.db.get(id);
+      if (!product) continue;
+
+      const updateData: any = {};
+
+      if (args.updates.basePrice !== undefined) {
+        updateData.basePrice = args.updates.basePrice;
+      }
+
+      if (args.updates.stock !== undefined) {
+        // Track stock change
+        const previousStock = product.stock;
+        updateData.stock = args.updates.stock;
+
+        await ctx.db.insert("productStockHistory", {
+          productId: id,
+          productName: product.name,
+          changeType: "manual_adjustment",
+          previousStock,
+          newStock: args.updates.stock,
+          quantity: args.updates.stock - previousStock,
+          reason: "Batch update",
+          performedBy: userId || "admin",
+          timestamp: Date.now(),
+        });
+      }
+
+      if (args.updates.discount !== undefined) {
+        updateData.discount = args.updates.discount;
+      }
+
+      if (args.updates.availability !== undefined) {
+        updateData.availability = args.updates.availability;
+      }
+
+      if (args.updates.reorderPoint !== undefined) {
+        updateData.reorderPoint = args.updates.reorderPoint;
+      }
+
+      if (args.updates.minStock !== undefined) {
+        updateData.minStock = args.updates.minStock;
+      }
+
+      await ctx.db.patch(id, updateData);
+    }
+
+    await ctx.db.insert("auditLogs", {
+      action: "batch_update_products",
+      entityType: "product",
+      performedBy: userId || "admin",
+      details: `Batch updated ${args.ids.length} products`,
+      timestamp: Date.now(),
+    });
+
+    return { updated: args.ids.length };
+  },
+});
+
+// ============================================
+// PRODUCT DUPLICATION
+// ============================================
+
+export const duplicateProduct = mutation({
+  args: {
+    id: v.id("products"),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const userId = await getAuthUserId(ctx);
+
+    const product = await ctx.db.get(args.id);
+    if (!product) throw new Error("Product not found");
+
+    const { _id, _creationTime, ...productData } = product;
+
+    const duplicatedProduct = {
+      ...productData,
+      name: `${product.name} (Copy)`,
+      stock: 0, // Reset stock for duplicated product
+    };
+
+    const newId = await ctx.db.insert("products", duplicatedProduct);
+
+    await ctx.db.insert("auditLogs", {
+      action: "duplicate_product",
+      entityId: newId,
+      entityType: "product",
+      performedBy: userId || "admin",
+      details: `Duplicated product: ${product.name}`,
+      timestamp: Date.now(),
+    });
+
+    return newId;
+  },
+});
+
+// ============================================
+// PRICE SCHEDULING
+// ============================================
+
+export const addScheduledPrice = mutation({
+  args: {
+    productId: v.id("products"),
+    price: v.number(),
+    startDate: v.number(),
+    endDate: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const userId = await getAuthUserId(ctx);
+
+    const product = await ctx.db.get(args.productId);
+    if (!product) throw new Error("Product not found");
+
+    const scheduledPrices = product.scheduledPrices || [];
+
+    scheduledPrices.push({
+      price: args.price,
+      startDate: args.startDate,
+      endDate: args.endDate,
+      isActive: true,
+    });
+
+    await ctx.db.patch(args.productId, { scheduledPrices });
+
+    await ctx.db.insert("auditLogs", {
+      action: "add_scheduled_price",
+      entityId: args.productId,
+      entityType: "product",
+      performedBy: userId || "admin",
+      details: `Added scheduled price: ₹${args.price} starting ${new Date(args.startDate).toLocaleDateString()}`,
+      timestamp: Date.now(),
+    });
+  },
+});
+
+export const removeScheduledPrice = mutation({
+  args: {
+    productId: v.id("products"),
+    index: v.number(),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const userId = await getAuthUserId(ctx);
+
+    const product = await ctx.db.get(args.productId);
+    if (!product) throw new Error("Product not found");
+
+    const scheduledPrices = product.scheduledPrices || [];
+    scheduledPrices.splice(args.index, 1);
+
+    await ctx.db.patch(args.productId, { scheduledPrices });
+
+    await ctx.db.insert("auditLogs", {
+      action: "remove_scheduled_price",
+      entityId: args.productId,
+      entityType: "product",
+      performedBy: userId || "admin",
+      details: `Removed scheduled price`,
+      timestamp: Date.now(),
+    });
+  },
+});
+
+// ============================================
+// STOCK HISTORY TRACKING
+// ============================================
+
+export const updateStock = mutation({
+  args: {
+    productId: v.id("products"),
+    newStock: v.number(),
+    changeType: v.union(
+      v.literal("manual_adjustment"),
+      v.literal("sale"),
+      v.literal("restock"),
+      v.literal("return"),
+      v.literal("damage"),
+      v.literal("initial")
+    ),
+    reason: v.optional(v.string()),
+    orderId: v.optional(v.id("orders")),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const userId = await getAuthUserId(ctx);
+
+    const product = await ctx.db.get(args.productId);
+    if (!product) throw new Error("Product not found");
+
+    const previousStock = product.stock;
+    const quantity = args.newStock - previousStock;
+
+    await ctx.db.patch(args.productId, { stock: args.newStock });
+
+    await ctx.db.insert("productStockHistory", {
+      productId: args.productId,
+      productName: product.name,
+      changeType: args.changeType,
+      previousStock,
+      newStock: args.newStock,
+      quantity,
+      reason: args.reason,
+      performedBy: userId || "admin",
+      timestamp: Date.now(),
+      orderId: args.orderId,
+    });
+
+    await ctx.db.insert("auditLogs", {
+      action: "update_stock",
+      entityId: args.productId,
+      entityType: "product",
+      performedBy: userId || "admin",
+      details: `Stock updated from ${previousStock} to ${args.newStock}`,
+      timestamp: Date.now(),
+    });
+  },
+});

@@ -1,15 +1,22 @@
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Printer } from "lucide-react";
+import { Calendar, Printer, FileText, DollarSign, Truck, Package, Trash2 } from "lucide-react";
 import { OrderItems } from "./order-details/OrderItems";
 import { OrderShipping } from "./order-details/OrderShipping";
 import { OrderPayment } from "./order-details/OrderPayment";
 import { OrderCustomer } from "./order-details/OrderCustomer";
 import { OrderStatus } from "./order-details/OrderStatus";
 import { OrderTimeline } from "./order-details/OrderTimeline";
+import { InvoiceDialog } from "./InvoiceDialog";
+import { RefundDialog } from "./RefundDialog";
+import { ShipmentDialog } from "./ShipmentDialog";
+import { ReturnDialog } from "./ReturnDialog";
 import { generateInvoiceHtml } from "../utils/orderUtils";
 import { toast } from "sonner";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 interface OrderDetailsDialogProps {
   order: any;
@@ -18,6 +25,18 @@ interface OrderDetailsDialogProps {
 }
 
 export function OrderDetailsDialog({ order, open, onOpenChange }: OrderDetailsDialogProps) {
+  const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
+  const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
+  const [isShipmentDialogOpen, setIsShipmentDialogOpen] = useState(false);
+  const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const deleteOrder = useMutation(api.orders.deleteOrder);
+  const requestRefund = useMutation(api.orders.requestRefund);
+  const processRefund = useMutation(api.orders.processRefund);
+  const updateShipment = useMutation(api.orders.updateShipment);
+  const processReturn = useMutation(api.orders.processReturn);
+
   if (!order) return null;
 
   const handlePrintInvoice = () => {
@@ -29,20 +48,94 @@ export function OrderDetailsDialog({ order, open, onOpenChange }: OrderDetailsDi
       }
 
       const html = generateInvoiceHtml(order);
-      
+
       printWindow.document.write(html);
       printWindow.document.close();
-      
+
       // Wait for content to load before printing (especially images/fonts if any)
       // For now, simple focus and print
       setTimeout(() => {
         printWindow.focus();
         // printWindow.print(); // Auto-print is handled in the HTML script
       }, 250);
-      
+
     } catch (error) {
       console.error("Print error:", error);
       toast.error("Failed to generate invoice");
+    }
+  };
+
+  const handleOpenInvoiceDialog = () => {
+    setIsInvoiceDialogOpen(true);
+  };
+
+  const handleDeleteOrder = async () => {
+    if (!confirm("Are you sure you want to delete this order? This action cannot be undone.")) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      await deleteOrder({ orderId: order._id });
+      toast.success("Order deleted successfully");
+      onOpenChange(false);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete order");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleRefundSubmit = async (data: any) => {
+    try {
+      if (data.status) {
+        // Processing existing refund
+        await processRefund({
+          orderId: order._id,
+          status: data.status,
+          refundId: data.refundId || `REF-${Date.now()}`,
+        });
+        toast.success(`Refund ${data.status}`);
+      } else {
+        // Requesting new refund
+        await requestRefund({
+          orderId: order._id,
+          refundAmount: data.refundAmount,
+          refundReason: data.refundReason,
+        });
+        toast.success("Refund requested");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to process refund");
+      throw error;
+    }
+  };
+
+  const handleShipmentSubmit = async (data: any) => {
+    try {
+      await updateShipment({
+        orderId: order._id,
+        ...data,
+      });
+      toast.success("Shipment updated");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update shipment");
+      throw error;
+    }
+  };
+
+  const handleReturnSubmit = async (data: any) => {
+    try {
+      await processReturn({
+        orderId: order._id,
+        returnReason: data.returnReason,
+        status: data.status,
+        exchangeRequested: data.exchangeRequested,
+      });
+      toast.success(`Return ${data.status}`);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to process return");
+      throw error;
     }
   };
 
@@ -79,10 +172,31 @@ export function OrderDetailsDialog({ order, open, onOpenChange }: OrderDetailsDi
                 Placed on {dateStr}
               </p>
             </div>
-            <div className="flex items-center gap-2">
-               <Button variant="outline" onClick={handlePrintInvoice}>
-                 <Printer className="w-4 h-4 mr-2" /> Print Invoice
-               </Button>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button variant="outline" size="sm" onClick={handleOpenInvoiceDialog}>
+                <FileText className="w-4 h-4 mr-2" /> Invoice
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setIsShipmentDialogOpen(true)}>
+                <Truck className="w-4 h-4 mr-2" /> Shipment
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setIsRefundDialogOpen(true)}>
+                <DollarSign className="w-4 h-4 mr-2" /> Refund
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setIsReturnDialogOpen(true)}>
+                <Package className="w-4 h-4 mr-2" /> Return
+              </Button>
+              <Button variant="outline" size="sm" onClick={handlePrintInvoice}>
+                <Printer className="w-4 h-4 mr-2" /> Print
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleDeleteOrder}
+                disabled={isDeleting}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                {isDeleting ? "Deleting..." : "Delete"}
+              </Button>
             </div>
           </div>
         </DialogHeader>
@@ -116,6 +230,33 @@ export function OrderDetailsDialog({ order, open, onOpenChange }: OrderDetailsDi
           </div>
         </div>
       </DialogContent>
+
+      <InvoiceDialog
+        order={order}
+        open={isInvoiceDialogOpen}
+        onOpenChange={setIsInvoiceDialogOpen}
+      />
+
+      <RefundDialog
+        order={order}
+        open={isRefundDialogOpen}
+        onOpenChange={setIsRefundDialogOpen}
+        onSubmit={handleRefundSubmit}
+      />
+
+      <ShipmentDialog
+        order={order}
+        open={isShipmentDialogOpen}
+        onOpenChange={setIsShipmentDialogOpen}
+        onSubmit={handleShipmentSubmit}
+      />
+
+      <ReturnDialog
+        order={order}
+        open={isReturnDialogOpen}
+        onOpenChange={setIsReturnDialogOpen}
+        onSubmit={handleReturnSubmit}
+      />
     </Dialog>
   );
 }

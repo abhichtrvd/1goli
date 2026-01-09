@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Loader2, Download, Upload, Trash2, FileSpreadsheet, Search, Filter } from "lucide-react";
+import { Loader2, Download, Upload, Trash2, FileSpreadsheet, Search, Filter, Tag as TagIcon, Mail, MessageSquare } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   AlertDialog,
@@ -22,6 +22,10 @@ import { UserTable } from "./components/UserTable";
 import { downloadCSV } from "./utils/csvHelpers";
 import { UserDetailsDialog } from "./components/UserDetailsDialog";
 import { GenericBulkUpdateDialog } from "./components/GenericBulkUpdateDialog";
+import { PasswordResetDialog } from "./components/PasswordResetDialog";
+import { SuspendUserDialog } from "./components/SuspendUserDialog";
+import { TagManagementDialog } from "./components/TagManagementDialog";
+import { BulkMessageDialog } from "./components/BulkMessageDialog";
 
 export default function AdminUsers() {
   const [search, setSearch] = useState("");
@@ -43,16 +47,24 @@ export default function AdminUsers() {
   const deleteUser = useMutation(api.users.deleteUser);
   const bulkDeleteUsers = useMutation(api.users.bulkDeleteUsers);
   const importUsers = useMutation(api.users.importUsers);
+  const markEmailAsVerified = useMutation(api.users.markEmailAsVerified);
+  const bulkAddTag = useMutation(api.users.bulkAddTag);
 
   // Bulk actions state
   const [selectedIds, setSelectedIds] = useState<Id<"users">[]>([]);
   const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
   const [isBulkDeleteAlertOpen, setIsBulkDeleteAlertOpen] = useState(false);
   const [bulkRole, setBulkRole] = useState<string>("");
+  const [isBulkTagDialogOpen, setIsBulkTagDialogOpen] = useState(false);
+  const [bulkTag, setBulkTag] = useState<string>("");
+  const [isBulkMessageDialogOpen, setIsBulkMessageDialogOpen] = useState(false);
 
   // Single User Action State
   const [userToDelete, setUserToDelete] = useState<Id<"users"> | null>(null);
   const [userToView, setUserToView] = useState<any | null>(null);
+  const [userToResetPassword, setUserToResetPassword] = useState<any | null>(null);
+  const [userToSuspend, setUserToSuspend] = useState<any | null>(null);
+  const [userToManageTags, setUserToManageTags] = useState<any | null>(null);
 
   // File Upload State
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -138,6 +150,34 @@ export default function AdminUsers() {
     } catch (error) {
       toast.error("Failed to delete users");
     }
+  };
+
+  const handleBulkTag = async () => {
+    if (selectedIds.length === 0 || !bulkTag) return;
+
+    try {
+      const result = await bulkAddTag({ userIds: selectedIds, tag: bulkTag });
+      toast.success(`Tag "${bulkTag}" added to ${result.updated} users`);
+      setIsBulkTagDialogOpen(false);
+      setSelectedIds([]);
+      setBulkTag("");
+    } catch (error) {
+      toast.error("Failed to add tag to users");
+    }
+  };
+
+  const handleVerifyEmail = async (userId: Id<"users">) => {
+    try {
+      await markEmailAsVerified({ userId });
+      toast.success("Email verified successfully");
+    } catch (error) {
+      toast.error("Failed to verify email");
+    }
+  };
+
+  const handleRefreshAfterAction = () => {
+    // Trigger a refresh by clearing and resetting state if needed
+    // The query will automatically update
   };
 
   const handleExportCSV = () => {
@@ -323,17 +363,35 @@ export default function AdminUsers() {
             <CardTitle>All Users</CardTitle>
             {selectedIds.length > 0 && (
               <div className="flex items-center gap-2">
-                <Button 
-                  variant="destructive" 
+                <Button
+                  variant="outline"
                   size="sm"
-                  onClick={() => setIsBulkDeleteAlertOpen(true)}
+                  onClick={() => setIsBulkMessageDialogOpen(true)}
                 >
-                  <Trash2 className="mr-2 h-4 w-4" /> Delete Selected ({selectedIds.length})
+                  <MessageSquare className="mr-2 h-4 w-4" /> Message ({selectedIds.length})
                 </Button>
-                <GenericBulkUpdateDialog 
+                <GenericBulkUpdateDialog
+                  open={isBulkTagDialogOpen}
+                  onOpenChange={setIsBulkTagDialogOpen}
+                  triggerLabel={`Tag (${selectedIds.length})`}
+                  title="Add Tag to Users"
+                  label="Tag Name"
+                  value={bulkTag}
+                  onValueChange={setBulkTag}
+                  options={[
+                    { label: "VIP", value: "VIP" },
+                    { label: "New", value: "New" },
+                    { label: "Inactive", value: "Inactive" },
+                    { label: "Premium", value: "Premium" },
+                    { label: "Verified", value: "Verified" },
+                  ]}
+                  onSubmit={handleBulkTag}
+                  submitLabel={`Add Tag to ${selectedIds.length} Users`}
+                />
+                <GenericBulkUpdateDialog
                   open={isBulkDialogOpen}
                   onOpenChange={setIsBulkDialogOpen}
-                  triggerLabel={`Update Selected (${selectedIds.length})`}
+                  triggerLabel={`Update Role (${selectedIds.length})`}
                   title="Bulk Update Role"
                   label="New Role"
                   value={bulkRole}
@@ -346,12 +404,19 @@ export default function AdminUsers() {
                   onSubmit={handleBulkUpdate}
                   submitLabel={`Update ${selectedIds.length} Users`}
                 />
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setIsBulkDeleteAlertOpen(true)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete ({selectedIds.length})
+                </Button>
               </div>
             )}
           </div>
         </CardHeader>
         <CardContent>
-          <UserTable 
+          <UserTable
             users={users || []}
             selectedIds={selectedIds}
             currentUser={currentUser}
@@ -360,6 +425,10 @@ export default function AdminUsers() {
             onRoleChange={handleRoleChange}
             onViewDetails={setUserToView}
             onDeleteUser={handleDeleteUser}
+            onResetPassword={setUserToResetPassword}
+            onSuspendUser={setUserToSuspend}
+            onManageTags={setUserToManageTags}
+            onVerifyEmail={handleVerifyEmail}
             status={status}
             loadMore={loadMore}
             isLoading={isLoading}
@@ -403,10 +472,36 @@ export default function AdminUsers() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <UserDetailsDialog 
+      <UserDetailsDialog
         user={userToView}
         open={!!userToView}
         onOpenChange={(open) => !open && setUserToView(null)}
+      />
+
+      <PasswordResetDialog
+        user={userToResetPassword}
+        open={!!userToResetPassword}
+        onOpenChange={(open) => !open && setUserToResetPassword(null)}
+      />
+
+      <SuspendUserDialog
+        user={userToSuspend}
+        open={!!userToSuspend}
+        onOpenChange={(open) => !open && setUserToSuspend(null)}
+        onSuccess={handleRefreshAfterAction}
+      />
+
+      <TagManagementDialog
+        user={userToManageTags}
+        open={!!userToManageTags}
+        onOpenChange={(open) => !open && setUserToManageTags(null)}
+        onSuccess={handleRefreshAfterAction}
+      />
+
+      <BulkMessageDialog
+        users={users?.filter(u => selectedIds.includes(u._id)) || []}
+        open={isBulkMessageDialogOpen}
+        onOpenChange={setIsBulkMessageDialogOpen}
       />
     </div>
   );

@@ -51,6 +51,39 @@ export type SettingsFormState = {
   // Currency settings
   currency?: string;
   currencySymbol?: string;
+
+  // Logo/Branding
+  logoUrl?: string;
+  logoStorageId?: string;
+
+  // Email Server Configuration
+  smtpHost?: string;
+  smtpPort?: number;
+  smtpUsername?: string;
+  smtpPassword?: string;
+  smtpFromAddress?: string;
+  smtpFromName?: string;
+
+  // API Key Management
+  apiKeys?: Array<{
+    label: string;
+    key: string;
+    createdAt: number;
+  }>;
+
+  // Webhook Configuration
+  webhooks?: {
+    orderCreated?: string;
+    orderShipped?: string;
+    orderDelivered?: string;
+    userRegistered?: string;
+  };
+
+  // Security Settings
+  enable2FA?: boolean;
+  ipWhitelist?: string[]; // Will be displayed as newline-separated text
+  sessionTimeout?: number;
+  passwordChangeInterval?: number;
 };
 
 export type UrlErrorMap = Record<string, string>;
@@ -134,6 +167,20 @@ export function useAdminSettings() {
       taxNumber: settings.taxNumber,
       currency: settings.currency,
       currencySymbol: settings.currencySymbol,
+      logoUrl: settings.logoUrl,
+      logoStorageId: settings.logoStorageId,
+      smtpHost: settings.smtpHost,
+      smtpPort: settings.smtpPort,
+      smtpUsername: settings.smtpUsername,
+      smtpPassword: settings.smtpPassword,
+      smtpFromAddress: settings.smtpFromAddress,
+      smtpFromName: settings.smtpFromName,
+      apiKeys: settings.apiKeys,
+      webhooks: settings.webhooks,
+      enable2FA: settings.enable2FA,
+      ipWhitelist: settings.ipWhitelist,
+      sessionTimeout: settings.sessionTimeout,
+      passwordChangeInterval: settings.passwordChangeInterval,
     });
   }, [settings]);
 
@@ -242,6 +289,20 @@ export function useAdminSettings() {
         taxNumber: formData.taxNumber || undefined,
         currency: formData.currency || undefined,
         currencySymbol: formData.currencySymbol || undefined,
+        logoUrl: formData.logoUrl || undefined,
+        logoStorageId: formData.logoStorageId as any,
+        smtpHost: formData.smtpHost || undefined,
+        smtpPort: formData.smtpPort ? Number(formData.smtpPort) : undefined,
+        smtpUsername: formData.smtpUsername || undefined,
+        smtpPassword: formData.smtpPassword || undefined,
+        smtpFromAddress: formData.smtpFromAddress || undefined,
+        smtpFromName: formData.smtpFromName || undefined,
+        apiKeys: formData.apiKeys || undefined,
+        webhooks: formData.webhooks || undefined,
+        enable2FA: formData.enable2FA,
+        ipWhitelist: formData.ipWhitelist || undefined,
+        sessionTimeout: formData.sessionTimeout ? Number(formData.sessionTimeout) : undefined,
+        passwordChangeInterval: formData.passwordChangeInterval ? Number(formData.passwordChangeInterval) : undefined,
       });
       toast.success("Settings updated successfully");
     } catch (error) {

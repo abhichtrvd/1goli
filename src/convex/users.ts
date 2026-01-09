@@ -368,3 +368,308 @@ export const backfillUserSearchText = mutation({
     return `Backfilled ${users.length} users`;
   },
 });
+
+// ============ PASSWORD RESET ============
+
+export const generateResetToken = mutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const adminId = await getAuthUserId(ctx);
+
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+
+    // Generate secure random token
+    const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
+    const expiry = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+
+    await ctx.db.patch(args.userId, {
+      resetToken: token,
+      resetTokenExpiry: expiry,
+    });
+
+    await ctx.db.insert("auditLogs", {
+      action: "generate_password_reset_token",
+      entityId: args.userId,
+      entityType: "user",
+      performedBy: adminId || "admin",
+      details: `Generated password reset token for ${user.name || user.email}`,
+      timestamp: Date.now(),
+    });
+
+    return { token, expiry, email: user.email };
+  },
+});
+
+export const clearResetToken = mutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    await ctx.db.patch(args.userId, {
+      resetToken: undefined,
+      resetTokenExpiry: undefined,
+    });
+
+    return { success: true };
+  },
+});
+
+// ============ EMAIL VERIFICATION ============
+
+export const markEmailAsVerified = mutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const adminId = await getAuthUserId(ctx);
+
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+
+    await ctx.db.patch(args.userId, {
+      emailVerified: true,
+      emailVerificationTime: Date.now(),
+    });
+
+    await ctx.db.insert("auditLogs", {
+      action: "mark_email_verified",
+      entityId: args.userId,
+      entityType: "user",
+      performedBy: adminId || "admin",
+      details: `Manually verified email for ${user.name || user.email}`,
+      timestamp: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+export const sendVerificationEmail = mutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const adminId = await getAuthUserId(ctx);
+
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+    if (!user.email) throw new Error("User has no email address");
+
+    // In a real implementation, this would send an email
+    // For now, we just log it
+    await ctx.db.insert("auditLogs", {
+      action: "send_verification_email",
+      entityId: args.userId,
+      entityType: "user",
+      performedBy: adminId || "admin",
+      details: `Sent verification email to ${user.email}`,
+      timestamp: Date.now(),
+    });
+
+    return { success: true, email: user.email };
+  },
+});
+
+// ============ USER SUSPENSION ============
+
+export const suspendUser = mutation({
+  args: {
+    userId: v.id("users"),
+    reason: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const adminId = await getAuthUserId(ctx);
+
+    if (args.userId === adminId) {
+      throw new Error("You cannot suspend yourself");
+    }
+
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+
+    await ctx.db.patch(args.userId, {
+      suspended: true,
+      suspensionReason: args.reason,
+      suspendedAt: Date.now(),
+      suspendedBy: adminId || "admin",
+    });
+
+    await ctx.db.insert("auditLogs", {
+      action: "suspend_user",
+      entityId: args.userId,
+      entityType: "user",
+      performedBy: adminId || "admin",
+      details: `Suspended user ${user.name || user.email}. Reason: ${args.reason}`,
+      timestamp: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+export const activateUser = mutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const adminId = await getAuthUserId(ctx);
+
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+
+    await ctx.db.patch(args.userId, {
+      suspended: false,
+      suspensionReason: undefined,
+      suspendedAt: undefined,
+      suspendedBy: undefined,
+    });
+
+    await ctx.db.insert("auditLogs", {
+      action: "activate_user",
+      entityId: args.userId,
+      entityType: "user",
+      performedBy: adminId || "admin",
+      details: `Activated user ${user.name || user.email}`,
+      timestamp: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+// ============ USER TAGS/SEGMENTS ============
+
+export const addUserTag = mutation({
+  args: {
+    userId: v.id("users"),
+    tag: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+
+    const currentTags = user.tags || [];
+    if (currentTags.includes(args.tag)) {
+      throw new Error("User already has this tag");
+    }
+
+    await ctx.db.patch(args.userId, {
+      tags: [...currentTags, args.tag],
+    });
+
+    return { success: true };
+  },
+});
+
+export const removeUserTag = mutation({
+  args: {
+    userId: v.id("users"),
+    tag: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+
+    const currentTags = user.tags || [];
+    await ctx.db.patch(args.userId, {
+      tags: currentTags.filter(t => t !== args.tag),
+    });
+
+    return { success: true };
+  },
+});
+
+export const bulkAddTag = mutation({
+  args: {
+    userIds: v.array(v.id("users")),
+    tag: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const adminId = await getAuthUserId(ctx);
+
+    let updated = 0;
+    for (const userId of args.userIds) {
+      const user = await ctx.db.get(userId);
+      if (user) {
+        const currentTags = user.tags || [];
+        if (!currentTags.includes(args.tag)) {
+          await ctx.db.patch(userId, {
+            tags: [...currentTags, args.tag],
+          });
+          updated++;
+        }
+      }
+    }
+
+    await ctx.db.insert("auditLogs", {
+      action: "bulk_add_tag",
+      entityType: "user",
+      performedBy: adminId || "admin",
+      details: `Added tag "${args.tag}" to ${updated} users`,
+      timestamp: Date.now(),
+    });
+
+    return { updated };
+  },
+});
+
+export const bulkRemoveTag = mutation({
+  args: {
+    userIds: v.array(v.id("users")),
+    tag: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const adminId = await getAuthUserId(ctx);
+
+    let updated = 0;
+    for (const userId of args.userIds) {
+      const user = await ctx.db.get(userId);
+      if (user && user.tags?.includes(args.tag)) {
+        await ctx.db.patch(userId, {
+          tags: user.tags.filter(t => t !== args.tag),
+        });
+        updated++;
+      }
+    }
+
+    await ctx.db.insert("auditLogs", {
+      action: "bulk_remove_tag",
+      entityType: "user",
+      performedBy: adminId || "admin",
+      details: `Removed tag "${args.tag}" from ${updated} users`,
+      timestamp: Date.now(),
+    });
+
+    return { updated };
+  },
+});
+
+// ============ USER QUERIES WITH FILTERS ============
+
+export const getUsersByTag = query({
+  args: { tag: v.string() },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const allUsers = await ctx.db.query("users").collect();
+    return allUsers.filter(user => user.tags?.includes(args.tag));
+  },
+});
+
+export const getSuspendedUsers = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+
+    return await ctx.db
+      .query("users")
+      .withIndex("by_suspended", (q) => q.eq("suspended", true))
+      .collect();
+  },
+});

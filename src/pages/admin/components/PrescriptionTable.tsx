@@ -14,10 +14,18 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, FileText, Eye, User, Clock, CheckCircle, XCircle } from "lucide-react";
+import { MoreHorizontal, FileText, Eye, User, Clock, CheckCircle, XCircle, Trash2, AlertTriangle, Pill } from "lucide-react";
 import { Id } from "@/convex/_generated/dataModel";
+import { getExpiryStatus } from "../utils/prescriptionUtils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface PrescriptionTableProps {
   results: any[];
@@ -26,6 +34,7 @@ interface PrescriptionTableProps {
   onSelectAll: (checked: boolean) => void;
   onViewImage: (url: string) => void;
   onReview: (prescription: any) => void;
+  onDelete: (id: Id<"prescriptions">) => void;
 }
 
 export function PrescriptionTable({
@@ -34,7 +43,8 @@ export function PrescriptionTable({
   onSelect,
   onSelectAll,
   onViewImage,
-  onReview
+  onReview,
+  onDelete
 }: PrescriptionTableProps) {
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -47,23 +57,24 @@ export function PrescriptionTable({
   };
 
   return (
-    <div className="rounded-md border bg-card">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[50px]">
-              <Checkbox 
-                checked={results && results.length > 0 && results.every(p => selectedIds.includes(p._id))}
-                onCheckedChange={(checked) => onSelectAll(checked as boolean)}
-              />
-            </TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead>Patient</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Notes</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
+    <TooltipProvider>
+      <div className="rounded-md border bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[50px]">
+                <Checkbox
+                  checked={results && results.length > 0 && results.every(p => selectedIds.includes(p._id))}
+                  onCheckedChange={(checked) => onSelectAll(checked as boolean)}
+                />
+              </TableHead>
+              <TableHead>Date</TableHead>
+              <TableHead>Patient</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Details</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
         <TableBody>
           {results?.length === 0 ? (
             <TableRow>
@@ -109,8 +120,44 @@ export function PrescriptionTable({
                   </div>
                 </TableCell>
                 <TableCell>{getStatusBadge(prescription.status)}</TableCell>
-                <TableCell className="max-w-[200px] truncate">
-                  {prescription.notes || "-"}
+                <TableCell className="max-w-[250px]">
+                  <div className="space-y-1">
+                    {prescription.notes && (
+                      <div className="text-sm truncate">{prescription.notes}</div>
+                    )}
+                    {prescription.medicines && prescription.medicines.length > 0 && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground cursor-help">
+                            <Pill className="h-3 w-3" />
+                            <span>{prescription.medicines.length} medicine{prescription.medicines.length > 1 ? 's' : ''}</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <div className="space-y-1">
+                            {prescription.medicines.map((med: any, idx: number) => (
+                              <div key={idx} className="text-sm">
+                                <strong>{med.name}</strong> - {med.dosage}, {med.frequency}
+                              </div>
+                            ))}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                    {prescription.expiryDate && (() => {
+                      const expiryStatus = getExpiryStatus(prescription.expiryDate);
+                      return (
+                        <div className={`flex items-center gap-1 text-xs ${
+                          expiryStatus.status === 'expired' ? 'text-red-600' :
+                          expiryStatus.status === 'warning' ? 'text-yellow-600' :
+                          'text-green-600'
+                        }`}>
+                          {expiryStatus.status !== 'valid' && <AlertTriangle className="h-3 w-3" />}
+                          <span>{expiryStatus.message}</span>
+                        </div>
+                      );
+                    })()}
+                  </div>
                 </TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
@@ -127,6 +174,13 @@ export function PrescriptionTable({
                       <DropdownMenuItem onClick={() => onReview(prescription)}>
                         <Eye className="mr-2 h-4 w-4" /> View Details & Update
                       </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => onDelete(prescription._id)}
+                        className="text-red-600 focus:text-red-600"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" /> Delete
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
@@ -136,5 +190,6 @@ export function PrescriptionTable({
         </TableBody>
       </Table>
     </div>
+    </TooltipProvider>
   );
 }

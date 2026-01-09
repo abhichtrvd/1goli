@@ -4,8 +4,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Eye, Trash2, Loader2 } from "lucide-react";
+import { MoreHorizontal, Eye, Trash2, Loader2, CheckCircle2, XCircle, Ban, Key, Mail, Tag as TagIcon, ShieldAlert } from "lucide-react";
 import { Id } from "@/convex/_generated/dataModel";
+import { Badge } from "@/components/ui/badge";
 
 interface UserTableProps {
   users: any[];
@@ -16,6 +17,10 @@ interface UserTableProps {
   onRoleChange: (userId: Id<"users">, newRole: "admin" | "user" | "member") => void;
   onViewDetails: (user: any) => void;
   onDeleteUser: (userId: Id<"users">) => void;
+  onResetPassword?: (user: any) => void;
+  onSuspendUser?: (user: any) => void;
+  onManageTags?: (user: any) => void;
+  onVerifyEmail?: (userId: Id<"users">) => void;
   status: string;
   loadMore: (numItems: number) => void;
   isLoading: boolean;
@@ -30,6 +35,10 @@ export function UserTable({
   onRoleChange,
   onViewDetails,
   onDeleteUser,
+  onResetPassword,
+  onSuspendUser,
+  onManageTags,
+  onVerifyEmail,
   status,
   loadMore,
   isLoading
@@ -42,14 +51,16 @@ export function UserTable({
         <TableHeader>
           <TableRow>
             <TableHead className="w-[50px]">
-              <Checkbox 
+              <Checkbox
                 checked={allSelected}
                 onCheckedChange={(checked) => onSelectAll(checked as boolean)}
               />
             </TableHead>
             <TableHead>User</TableHead>
             <TableHead>Email / Phone</TableHead>
+            <TableHead>Status</TableHead>
             <TableHead>Role</TableHead>
+            <TableHead>Tags</TableHead>
             <TableHead>Joined</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
@@ -65,11 +76,15 @@ export function UserTable({
               onRoleChange={onRoleChange}
               onViewDetails={onViewDetails}
               onDeleteUser={onDeleteUser}
+              onResetPassword={onResetPassword}
+              onSuspendUser={onSuspendUser}
+              onManageTags={onManageTags}
+              onVerifyEmail={onVerifyEmail}
             />
           ))}
           {users?.length === 0 && (
             <TableRow>
-              <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                 No users found.
               </TableCell>
             </TableRow>
@@ -104,6 +119,10 @@ interface UserRowProps {
   onRoleChange: (userId: Id<"users">, newRole: "admin" | "user" | "member") => void;
   onViewDetails: (user: any) => void;
   onDeleteUser: (userId: Id<"users">) => void;
+  onResetPassword?: (user: any) => void;
+  onSuspendUser?: (user: any) => void;
+  onManageTags?: (user: any) => void;
+  onVerifyEmail?: (userId: Id<"users">) => void;
 }
 
 function UserRow({
@@ -113,12 +132,16 @@ function UserRow({
   onSelect,
   onRoleChange,
   onViewDetails,
-  onDeleteUser
+  onDeleteUser,
+  onResetPassword,
+  onSuspendUser,
+  onManageTags,
+  onVerifyEmail,
 }: UserRowProps) {
   return (
-    <TableRow>
+    <TableRow className={user.suspended ? "bg-red-50/30 dark:bg-red-900/10" : ""}>
       <TableCell>
-        <Checkbox 
+        <Checkbox
           checked={isSelected}
           onCheckedChange={(checked) => onSelect(user._id, checked as boolean)}
         />
@@ -136,8 +159,28 @@ function UserRow({
         {user.email || user.phone || "N/A"}
       </TableCell>
       <TableCell>
-        <Select 
-          defaultValue={user.role || "user"} 
+        <div className="flex gap-1">
+          {user.suspended ? (
+            <Badge variant="destructive" className="gap-1 text-xs">
+              <Ban className="h-3 w-3" />
+              Suspended
+            </Badge>
+          ) : user.emailVerified ? (
+            <Badge variant="outline" className="gap-1 text-xs bg-green-50 text-green-700 border-green-200">
+              <CheckCircle2 className="h-3 w-3" />
+              Verified
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="gap-1 text-xs">
+              <XCircle className="h-3 w-3" />
+              Unverified
+            </Badge>
+          )}
+        </div>
+      </TableCell>
+      <TableCell>
+        <Select
+          defaultValue={user.role || "user"}
           onValueChange={(val: any) => onRoleChange(user._id, val)}
           disabled={currentUser?._id === user._id}
         >
@@ -150,6 +193,24 @@ function UserRow({
             <SelectItem value="admin">Admin</SelectItem>
           </SelectContent>
         </Select>
+      </TableCell>
+      <TableCell>
+        <div className="flex flex-wrap gap-1 max-w-[150px]">
+          {user.tags && user.tags.length > 0 ? (
+            user.tags.slice(0, 2).map((tag: string) => (
+              <Badge key={tag} variant="secondary" className="text-xs">
+                {tag}
+              </Badge>
+            ))
+          ) : (
+            <span className="text-xs text-muted-foreground">No tags</span>
+          )}
+          {user.tags && user.tags.length > 2 && (
+            <Badge variant="outline" className="text-xs">
+              +{user.tags.length - 2}
+            </Badge>
+          )}
+        </div>
       </TableCell>
       <TableCell className="text-muted-foreground text-sm">
         {new Date(user._creationTime).toLocaleDateString()}
@@ -168,7 +229,36 @@ function UserRow({
               <Eye className="mr-2 h-4 w-4" /> View Details
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem 
+            {onResetPassword && (
+              <DropdownMenuItem onClick={() => onResetPassword(user)}>
+                <Key className="mr-2 h-4 w-4" /> Reset Password
+              </DropdownMenuItem>
+            )}
+            {onVerifyEmail && !user.emailVerified && user.email && (
+              <DropdownMenuItem onClick={() => onVerifyEmail(user._id)}>
+                <Mail className="mr-2 h-4 w-4" /> Verify Email
+              </DropdownMenuItem>
+            )}
+            {onSuspendUser && (
+              <DropdownMenuItem onClick={() => onSuspendUser(user)}>
+                {user.suspended ? (
+                  <>
+                    <CheckCircle2 className="mr-2 h-4 w-4" /> Activate User
+                  </>
+                ) : (
+                  <>
+                    <ShieldAlert className="mr-2 h-4 w-4" /> Suspend User
+                  </>
+                )}
+              </DropdownMenuItem>
+            )}
+            {onManageTags && (
+              <DropdownMenuItem onClick={() => onManageTags(user)}>
+                <TagIcon className="mr-2 h-4 w-4" /> Manage Tags
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
               className="text-red-600 focus:text-red-600"
               onClick={() => onDeleteUser(user._id)}
               disabled={currentUser?._id === user._id}

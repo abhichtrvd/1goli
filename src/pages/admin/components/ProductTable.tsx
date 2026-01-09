@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, Eye, MoreHorizontal, ChevronLeft, ChevronRight, RefreshCw, AlertCircle } from "lucide-react";
+import { Edit, Trash2, Eye, MoreHorizontal, ChevronLeft, ChevronRight, RefreshCw, AlertCircle, Copy, History, AlertTriangle } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,6 +31,8 @@ interface ProductTableProps {
   onView: (product: any) => void;
   onEdit: (product: any) => void;
   onDelete: (id: Id<"products">) => void;
+  onDuplicate: (id: Id<"products">) => void;
+  onViewStockHistory: (product: any) => void;
   selectedIds: Id<"products">[];
   onSelect: (id: Id<"products">, checked: boolean) => void;
   onSelectAll: (checked: boolean) => void;
@@ -44,6 +46,8 @@ export function ProductTable({
   onView,
   onEdit,
   onDelete,
+  onDuplicate,
+  onViewStockHistory,
   selectedIds,
   onSelect,
   onSelectAll
@@ -133,7 +137,23 @@ export function ProductTable({
                   <TableCell>{product.category}</TableCell>
                   <TableCell>{product.brand || "-"}</TableCell>
                   <TableCell>₹{product.basePrice}</TableCell>
-                  <TableCell>{product.stock}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <span>{product.stock}</span>
+                      {product.stock <= (product.minStock || 10) && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <AlertTriangle className="h-4 w-4 text-orange-500" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Low stock warning (threshold: {product.minStock || 10})</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <Badge 
                       variant={
@@ -163,13 +183,19 @@ export function ProductTable({
                         <DropdownMenuItem onClick={() => onEdit(product)}>
                           <Edit className="mr-2 h-4 w-4" /> Edit
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onDuplicate(product._id)}>
+                          <Copy className="mr-2 h-4 w-4" /> Duplicate
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onViewStockHistory(product)}>
+                          <History className="mr-2 h-4 w-4" /> Stock History
+                        </DropdownMenuItem>
                         {needsSync && (
                           <DropdownMenuItem onClick={() => handleSyncImage(product)} disabled={syncingId === product._id}>
-                            <RefreshCw className={`mr-2 h-4 w-4 ${syncingId === product._id ? "animate-spin" : ""}`} /> 
+                            <RefreshCw className={`mr-2 h-4 w-4 ${syncingId === product._id ? "animate-spin" : ""}`} />
                             {syncingId === product._id ? "Syncing..." : "Sync Image"}
                           </DropdownMenuItem>
                         )}
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           onClick={() => onDelete(product._id)}
                           className="text-destructive focus:text-destructive"
                         >

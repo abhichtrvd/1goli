@@ -34,17 +34,38 @@ const schema = defineSchema(
       searchText: v.optional(v.string()), // Added for comprehensive search
 
       role: v.optional(roleValidator), // role of the user. do not remove
+
+      // Email Verification
+      emailVerified: v.optional(v.boolean()),
+
+      // User Suspension
+      suspended: v.optional(v.boolean()),
+      suspensionReason: v.optional(v.string()),
+      suspendedAt: v.optional(v.number()),
+      suspendedBy: v.optional(v.string()),
+
+      // Password Reset
+      resetToken: v.optional(v.string()),
+      resetTokenExpiry: v.optional(v.number()),
+
+      // User Tags/Segments
+      tags: v.optional(v.array(v.string())),
+
+      // Last Activity
+      lastActiveAt: v.optional(v.number()),
     })
       .index("email", ["email"])
       .index("phone", ["phone"])
       .index("by_role", ["role"])
+      .index("by_suspended", ["suspended"])
+      .index("by_reset_token", ["resetToken"])
       .searchIndex("search_name", {
         searchField: "name",
         filterFields: ["role"],
       })
       .searchIndex("search_all", {
         searchField: "searchText",
-        filterFields: ["role"],
+        filterFields: ["role", "suspended"],
       }),
 
     products: defineTable({
@@ -81,6 +102,21 @@ const schema = defineSchema(
 
       // Search Field
       searchText: v.optional(v.string()),
+
+      // Inventory Alerts
+      reorderPoint: v.optional(v.number()), // Trigger reorder when stock reaches this level
+      minStock: v.optional(v.number()), // Minimum stock threshold for warnings
+
+      // Price Scheduling
+      scheduledPrices: v.optional(v.array(v.object({
+        price: v.number(),
+        startDate: v.number(), // timestamp
+        endDate: v.optional(v.number()), // timestamp, optional for permanent changes
+        isActive: v.boolean(),
+      }))),
+
+      // Discount field for batch operations
+      discount: v.optional(v.number()), // Percentage discount
     })
       .searchIndex("search_body", {
         searchField: "description",
@@ -96,7 +132,8 @@ const schema = defineSchema(
       .index("by_name", ["name"])
       .index("by_rating", ["averageRating"])
       .index("by_rating_count", ["ratingCount"])
-      .index("by_category", ["category"]),
+      .index("by_category", ["category"])
+      .index("by_stock", ["stock"]), // Added for low stock filtering
 
     cartItems: defineTable({
       userId: v.string(),
@@ -148,6 +185,45 @@ const schema = defineSchema(
           })
         )
       ),
+      // Refund management
+      refundStatus: v.optional(v.union(
+        v.literal("none"),
+        v.literal("requested"),
+        v.literal("approved"),
+        v.literal("processed"),
+        v.literal("rejected")
+      )),
+      refundAmount: v.optional(v.number()),
+      refundReason: v.optional(v.string()),
+      refundRequestedAt: v.optional(v.number()),
+      refundProcessedAt: v.optional(v.number()),
+      refundId: v.optional(v.string()),
+      // Shipment tracking
+      trackingNumber: v.optional(v.string()),
+      trackingUrl: v.optional(v.string()),
+      carrier: v.optional(v.string()),
+      shippedAt: v.optional(v.number()),
+      deliveredAt: v.optional(v.number()),
+      estimatedDelivery: v.optional(v.number()),
+      // Return/Exchange management
+      returnStatus: v.optional(v.union(
+        v.literal("none"),
+        v.literal("requested"),
+        v.literal("approved"),
+        v.literal("received"),
+        v.literal("processed"),
+        v.literal("rejected")
+      )),
+      returnReason: v.optional(v.string()),
+      returnRequestedAt: v.optional(v.number()),
+      exchangeRequested: v.optional(v.boolean()),
+      // Invoice
+      invoiceNumber: v.optional(v.string()),
+      invoiceGeneratedAt: v.optional(v.number()),
+      // Soft delete
+      isDeleted: v.optional(v.boolean()),
+      deletedAt: v.optional(v.number()),
+      deletedBy: v.optional(v.string()),
     })
       .index("by_user", ["userId"])
       .index("by_external_id", ["externalId"])
@@ -175,11 +251,24 @@ const schema = defineSchema(
       adminRepliedAt: v.optional(v.number()),
       // Status for approval workflow
       status: v.optional(v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected"))),
+      // Spam Detection
+      suspiciousScore: v.optional(v.number()), // 0-100, higher = more suspicious
+      spamFlags: v.optional(v.array(v.string())), // e.g., ["repeated_words", "excessive_caps", "contains_links"]
+      // Sentiment Analysis
+      sentiment: v.optional(v.union(v.literal("positive"), v.literal("neutral"), v.literal("negative"))),
+      // Duplicate Detection
+      isDuplicate: v.optional(v.boolean()),
+      duplicateOf: v.optional(v.id("reviews")),
+      similarityScore: v.optional(v.number()), // 0-100, similarity to other reviews from same user
     })
       .index("by_product", ["productId"])
       .index("by_user", ["userId"])
       .index("by_status", ["status"])
-      .index("by_product_status", ["productId", "status"]),
+      .index("by_product_status", ["productId", "status"])
+      .index("by_sentiment", ["sentiment"])
+      .index("by_verified", ["verifiedPurchase"])
+      .index("by_suspicious", ["suspiciousScore"])
+      .index("by_duplicate", ["isDuplicate"]),
 
     reviewInteractions: defineTable({
       userId: v.string(),
@@ -198,7 +287,7 @@ const schema = defineSchema(
       })),
       patientName: v.optional(v.string()), // Added for search
       patientPhone: v.optional(v.string()), // Added for search
-      imageStorageId: v.id("_storage"),
+      imageStorageId: v.optional(v.id("_storage")), // Made optional for admin-created prescriptions
       notes: v.optional(v.string()),
       status: v.union(
         v.literal("pending"),
@@ -208,9 +297,28 @@ const schema = defineSchema(
       ),
       pharmacistNotes: v.optional(v.string()),
       searchText: v.optional(v.string()), // Added for comprehensive search
+      // Medicine tracking
+      medicines: v.optional(v.array(v.object({
+        name: v.string(),
+        dosage: v.string(),
+        frequency: v.string(),
+        duration: v.optional(v.string()), // e.g., "7 days", "2 weeks", "1 month"
+      }))),
+      // Doctor information
+      doctorId: v.optional(v.id("consultationDoctors")),
+      doctorName: v.optional(v.string()), // Cached for display
+      diagnosis: v.optional(v.string()), // Medical diagnosis
+      expiryDate: v.optional(v.number()), // Prescription expiry date in milliseconds
+      // Soft delete
+      isDeleted: v.optional(v.boolean()),
+      deletedAt: v.optional(v.number()),
+      deletedBy: v.optional(v.string()),
     })
       .index("by_user", ["userId"])
       .index("by_status", ["status"])
+      .index("by_deleted", ["isDeleted"])
+      .index("by_doctor", ["doctorId"])
+      .index("by_expiry", ["expiryDate"])
       .searchIndex("search_patient_name", {
         searchField: "patientName",
         filterFields: ["status"],
@@ -244,9 +352,11 @@ const schema = defineSchema(
       ),
       services: v.array(v.string()),
       imageUrl: v.string(),
+      imageStorageId: v.optional(v.id("_storage")),
     })
       .index("by_specialization", ["specialization"])
       .index("by_city", ["clinicCity"])
+      .index("by_experience", ["experienceYears"])
       .searchIndex("search_city", {
         searchField: "clinicCity",
       })
@@ -288,20 +398,20 @@ const schema = defineSchema(
       freeShippingThreshold: v.number(),
       maintenanceMode: v.boolean(),
       bannerMessage: v.optional(v.string()),
-      
+
       // Hero Section
       heroHeadline: v.optional(v.string()),
       heroDescription: v.optional(v.string()),
-      
+
       // Contact Information
       address: v.optional(v.string()),
-      
+
       // Social Media
       facebookUrl: v.optional(v.string()),
       twitterUrl: v.optional(v.string()),
       instagramUrl: v.optional(v.string()),
       linkedinUrl: v.optional(v.string()),
-      
+
       // Featured Brands
       featuredBrands: v.optional(v.array(v.string())),
       quickActions: v.optional(
@@ -355,17 +465,155 @@ const schema = defineSchema(
       // Currency Settings
       currency: v.optional(v.string()), // "INR", "USD", "EUR", etc.
       currencySymbol: v.optional(v.string()), // "₹", "$", "€", etc.
+
+      // Logo/Branding
+      logoUrl: v.optional(v.string()),
+      logoStorageId: v.optional(v.id("_storage")),
+
+      // Email Server Configuration
+      smtpHost: v.optional(v.string()),
+      smtpPort: v.optional(v.number()),
+      smtpUsername: v.optional(v.string()),
+      smtpPassword: v.optional(v.string()),
+      smtpFromAddress: v.optional(v.string()),
+      smtpFromName: v.optional(v.string()),
+
+      // API Key Management
+      apiKeys: v.optional(v.array(v.object({
+        label: v.string(),
+        key: v.string(),
+        createdAt: v.number(),
+      }))),
+
+      // Webhook Configuration
+      webhooks: v.optional(v.object({
+        orderCreated: v.optional(v.string()),
+        orderShipped: v.optional(v.string()),
+        orderDelivered: v.optional(v.string()),
+        userRegistered: v.optional(v.string()),
+      })),
+
+      // Security Settings
+      enable2FA: v.optional(v.boolean()),
+      ipWhitelist: v.optional(v.array(v.string())),
+      sessionTimeout: v.optional(v.number()), // in minutes
+      passwordChangeInterval: v.optional(v.number()), // in days
     }),
+
+    productStockHistory: defineTable({
+      productId: v.id("products"),
+      productName: v.string(), // Cached for display
+      changeType: v.union(
+        v.literal("manual_adjustment"),
+        v.literal("sale"),
+        v.literal("restock"),
+        v.literal("return"),
+        v.literal("damage"),
+        v.literal("initial")
+      ),
+      previousStock: v.number(),
+      newStock: v.number(),
+      quantity: v.number(), // Amount changed (positive or negative)
+      reason: v.optional(v.string()),
+      performedBy: v.string(), // User ID who made the change
+      timestamp: v.number(),
+      orderId: v.optional(v.id("orders")), // Link to order if stock changed due to sale/return
+    })
+      .index("by_product", ["productId"])
+      .index("by_timestamp", ["timestamp"])
+      .index("by_product_timestamp", ["productId", "timestamp"])
+      .index("by_performed_by", ["performedBy"]),
+
 
     auditLogs: defineTable({
       action: v.string(),
       entityId: v.optional(v.string()),
       entityType: v.string(),
       performedBy: v.string(),
+      performedByName: v.optional(v.string()), // Cached performer name for display
       details: v.optional(v.string()),
       timestamp: v.number(),
+      metadata: v.optional(v.object({
+        before: v.optional(v.any()), // State before the action
+        after: v.optional(v.any()), // State after the action
+        ipAddress: v.optional(v.string()),
+        userAgent: v.optional(v.string()),
+        changes: v.optional(v.array(v.object({
+          field: v.string(),
+          oldValue: v.optional(v.any()),
+          newValue: v.optional(v.any()),
+        }))),
+        reversible: v.optional(v.boolean()), // Can this action be undone
+        reversed: v.optional(v.boolean()), // Has this action been reversed
+        reversedBy: v.optional(v.string()),
+        reversedAt: v.optional(v.number()),
+      })),
+      isCritical: v.optional(v.boolean()), // Flag for critical actions
+      searchText: v.optional(v.string()), // Combined text for search
     })
-      .index("by_timestamp", ["timestamp"]),
+      .index("by_timestamp", ["timestamp"])
+      .index("by_entity", ["entityId"])
+      .index("by_entity_type", ["entityType"])
+      .index("by_action", ["action"])
+      .index("by_performer", ["performedBy"])
+      .index("by_critical", ["isCritical"])
+      .searchIndex("search_all", {
+        searchField: "searchText",
+        filterFields: ["action", "entityType", "isCritical"],
+      }),
+
+    userActivity: defineTable({
+      userId: v.id("users"),
+      action: v.string(), // login, logout, order_placed, profile_updated, password_changed, etc.
+      details: v.optional(v.string()),
+      metadata: v.optional(v.object({
+        ipAddress: v.optional(v.string()),
+        userAgent: v.optional(v.string()),
+        orderId: v.optional(v.string()),
+      })),
+      timestamp: v.number(),
+    })
+      .index("by_user", ["userId"])
+      .index("by_timestamp", ["timestamp"])
+      .index("by_user_timestamp", ["userId", "timestamp"])
+      .index("by_action", ["action"]),
+
+    loginHistory: defineTable({
+      userId: v.id("users"),
+      timestamp: v.number(),
+      ipAddress: v.optional(v.string()),
+      userAgent: v.optional(v.string()),
+      success: v.boolean(),
+      failureReason: v.optional(v.string()), // invalid_password, account_suspended, etc.
+      location: v.optional(v.string()), // Geo location if available
+    })
+      .index("by_user", ["userId"])
+      .index("by_timestamp", ["timestamp"])
+      .index("by_user_timestamp", ["userId", "timestamp"])
+      .index("by_success", ["success"]),
+
+    dashboardGoals: defineTable({
+      goalType: v.union(
+        v.literal("revenue"),
+        v.literal("orders"),
+        v.literal("users"),
+        v.literal("conversion_rate")
+      ),
+      targetValue: v.number(),
+      period: v.union(
+        v.literal("daily"),
+        v.literal("weekly"),
+        v.literal("monthly"),
+        v.literal("yearly")
+      ),
+      startDate: v.number(), // timestamp
+      endDate: v.optional(v.number()), // timestamp, optional for recurring goals
+      isActive: v.boolean(),
+      createdBy: v.string(),
+    })
+      .index("by_type", ["goalType"])
+      .index("by_active", ["isActive"])
+      .index("by_period", ["period"]),
   },
   {
     schemaValidation: false,

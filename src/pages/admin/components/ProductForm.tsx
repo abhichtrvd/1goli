@@ -9,6 +9,7 @@ import { ProductBasicInfo } from "./product-form/ProductBasicInfo";
 import { ProductMedia, GalleryItem } from "./product-form/ProductMedia";
 import { ProductVariants } from "./product-form/ProductVariants";
 import { ProductAttributes } from "./product-form/ProductAttributes";
+import { ScheduledPricesSection } from "./ScheduledPricesSection";
 import { compressImage, isValidUrl } from "@/lib/utils";
 
 interface ProductFormProps {
@@ -221,13 +222,20 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
         setForms={setForms}
       />
 
-      <ProductAttributes 
+      <ProductAttributes
         tags={tags}
         setTags={setTags}
         keyBenefits={keyBenefits}
         setKeyBenefits={setKeyBenefits}
         initialData={initialData}
       />
+
+      {initialData && (
+        <ScheduledPricesSection
+          productId={initialData._id}
+          scheduledPrices={initialData.scheduledPrices || []}
+        />
+      )}
 
       <Button type="submit" className="w-full" disabled={isSubmitting}>
         {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
