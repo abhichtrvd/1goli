@@ -31,6 +31,26 @@ export type SettingsFormState = {
   quickActions: QuickActionSetting[];
   healthConcerns: HealthConcernSetting[];
   featureCards: FeatureCardSetting[];
+
+  // Payment settings
+  paymentGateway?: string;
+  razorpayKeyId?: string;
+  razorpayKeySecret?: string;
+  stripePublishableKey?: string;
+  stripeSecretKey?: string;
+  enableCOD?: boolean;
+  enableUPI?: boolean;
+  enableCard?: boolean;
+
+  // Tax settings
+  taxEnabled?: boolean;
+  taxName?: string;
+  taxRate?: number;
+  taxNumber?: string;
+
+  // Currency settings
+  currency?: string;
+  currencySymbol?: string;
 };
 
 export type UrlErrorMap = Record<string, string>;
@@ -100,6 +120,20 @@ export function useAdminSettings() {
         ((settings.healthConcerns ?? defaults.healthConcerns).map((concern) => ({ ...concern })) as HealthConcernSetting[]),
       featureCards:
         ((settings.featureCards ?? defaults.featureCards).map((card) => ({ ...card })) as FeatureCardSetting[]),
+      paymentGateway: settings.paymentGateway,
+      razorpayKeyId: settings.razorpayKeyId,
+      razorpayKeySecret: settings.razorpayKeySecret,
+      stripePublishableKey: settings.stripePublishableKey,
+      stripeSecretKey: settings.stripeSecretKey,
+      enableCOD: settings.enableCOD,
+      enableUPI: settings.enableUPI,
+      enableCard: settings.enableCard,
+      taxEnabled: settings.taxEnabled,
+      taxName: settings.taxName,
+      taxRate: settings.taxRate,
+      taxNumber: settings.taxNumber,
+      currency: settings.currency,
+      currencySymbol: settings.currencySymbol,
     });
   }, [settings]);
 
@@ -194,6 +228,20 @@ export function useAdminSettings() {
         quickActions: formData.quickActions,
         healthConcerns: formData.healthConcerns,
         featureCards: formData.featureCards,
+        paymentGateway: formData.paymentGateway || undefined,
+        razorpayKeyId: formData.razorpayKeyId || undefined,
+        razorpayKeySecret: formData.razorpayKeySecret || undefined,
+        stripePublishableKey: formData.stripePublishableKey || undefined,
+        stripeSecretKey: formData.stripeSecretKey || undefined,
+        enableCOD: formData.enableCOD,
+        enableUPI: formData.enableUPI,
+        enableCard: formData.enableCard,
+        taxEnabled: formData.taxEnabled,
+        taxName: formData.taxName || undefined,
+        taxRate: formData.taxRate ? Number(formData.taxRate) : undefined,
+        taxNumber: formData.taxNumber || undefined,
+        currency: formData.currency || undefined,
+        currencySymbol: formData.currencySymbol || undefined,
       });
       toast.success("Settings updated successfully");
     } catch (error) {
@@ -206,6 +254,7 @@ export function useAdminSettings() {
 
   return {
     formData,
+    setFormData,
     isSubmitting,
     urlErrors,
     isLoading: settings === undefined,

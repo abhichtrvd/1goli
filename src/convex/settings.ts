@@ -60,6 +60,26 @@ export const updateSettings = mutation({
         })
       )
     ),
+
+    // Payment settings
+    paymentGateway: v.optional(v.string()),
+    razorpayKeyId: v.optional(v.string()),
+    razorpayKeySecret: v.optional(v.string()),
+    stripePublishableKey: v.optional(v.string()),
+    stripeSecretKey: v.optional(v.string()),
+    enableCOD: v.optional(v.boolean()),
+    enableUPI: v.optional(v.boolean()),
+    enableCard: v.optional(v.boolean()),
+
+    // Tax settings
+    taxEnabled: v.optional(v.boolean()),
+    taxName: v.optional(v.string()),
+    taxRate: v.optional(v.number()),
+    taxNumber: v.optional(v.string()),
+
+    // Currency settings
+    currency: v.optional(v.string()),
+    currencySymbol: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);

@@ -560,3 +560,63 @@ export const backfillOrderSearchText = mutation({
     return `Backfilled ${orders.length} orders`;
   },
 });
+
+export const adminCreateOrder = mutation({
+  args: {
+    userId: v.string(),
+    items: v.array(
+      v.object({
+        productId: v.id("products"),
+        name: v.string(),
+        potency: v.string(),
+        form: v.string(),
+        quantity: v.number(),
+        price: v.number(),
+      })
+    ),
+    total: v.number(),
+    status: v.string(),
+    shippingAddress: v.string(),
+    paymentMethod: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const adminId = await getAuthUserId(ctx);
+
+    const searchText = generateOrderSearchText({
+      status: args.status,
+      shippingAddress: args.shippingAddress,
+      paymentMethod: args.paymentMethod,
+      items: args.items,
+    });
+
+    const orderId = await ctx.db.insert("orders", {
+      userId: args.userId as Id<"users">,
+      items: args.items,
+      total: args.total,
+      status: args.status,
+      shippingAddress: args.shippingAddress,
+      paymentMethod: args.paymentMethod,
+      paymentStatus: args.paymentMethod === "COD" ? "pending" : "pending",
+      searchText,
+      statusHistory: [
+        {
+          status: args.status,
+          timestamp: Date.now(),
+          note: "Order created by admin",
+        },
+      ],
+    });
+
+    await ctx.db.insert("auditLogs", {
+      action: "admin_create_order",
+      entityId: orderId,
+      entityType: "order",
+      performedBy: adminId || "admin",
+      details: `Created order ${orderId} for user ${args.userId}`,
+      timestamp: Date.now(),
+    });
+
+    return orderId;
+  },
+});

@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { SettingsQuickActionsSection } from "./components/SettingsQuickActionsSection";
 import { SettingsHealthConcernsSection } from "./components/SettingsHealthConcernsSection";
 import { SettingsFeatureCardsSection } from "./components/SettingsFeatureCardsSection";
@@ -14,6 +15,7 @@ import { useAdminSettings } from "./hooks/useAdminSettings";
 export default function AdminSettings() {
   const {
     formData,
+    setFormData,
     isSubmitting,
     urlErrors,
     isLoading,
@@ -254,6 +256,184 @@ export default function AdminSettings() {
                     value={formData.freeShippingThreshold} 
                     onChange={handleChange} 
                     required 
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Payment Settings</CardTitle>
+              <CardDescription>Configure payment gateways and payment methods.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="paymentGateway">Payment Gateway</Label>
+                <Input
+                  id="paymentGateway"
+                  name="paymentGateway"
+                  value={formData.paymentGateway || ""}
+                  onChange={handleChange}
+                  placeholder="razorpay, stripe, paypal"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="razorpayKeyId">Razorpay Key ID</Label>
+                  <Input
+                    id="razorpayKeyId"
+                    name="razorpayKeyId"
+                    value={formData.razorpayKeyId || ""}
+                    onChange={handleChange}
+                    placeholder="rzp_test_..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="razorpayKeySecret">Razorpay Key Secret</Label>
+                  <Input
+                    id="razorpayKeySecret"
+                    name="razorpayKeySecret"
+                    type="password"
+                    value={formData.razorpayKeySecret || ""}
+                    onChange={handleChange}
+                    placeholder="••••••••"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="stripePublishableKey">Stripe Publishable Key</Label>
+                  <Input
+                    id="stripePublishableKey"
+                    name="stripePublishableKey"
+                    value={formData.stripePublishableKey || ""}
+                    onChange={handleChange}
+                    placeholder="pk_test_..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="stripeSecretKey">Stripe Secret Key</Label>
+                  <Input
+                    id="stripeSecretKey"
+                    name="stripeSecretKey"
+                    type="password"
+                    value={formData.stripeSecretKey || ""}
+                    onChange={handleChange}
+                    placeholder="••••••••"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <Label>Enabled Payment Methods</Label>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="enableCOD"
+                      checked={formData.enableCOD || false}
+                      onCheckedChange={(checked) => setFormData({...formData, enableCOD: checked === true})}
+                    />
+                    <Label htmlFor="enableCOD" className="font-normal">Cash on Delivery (COD)</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="enableUPI"
+                      checked={formData.enableUPI || false}
+                      onCheckedChange={(checked) => setFormData({...formData, enableUPI: checked === true})}
+                    />
+                    <Label htmlFor="enableUPI" className="font-normal">UPI Payment</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="enableCard"
+                      checked={formData.enableCard || false}
+                      onCheckedChange={(checked) => setFormData({...formData, enableCard: checked === true})}
+                    />
+                    <Label htmlFor="enableCard" className="font-normal">Card Payment</Label>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Tax & Currency Settings</CardTitle>
+              <CardDescription>Configure tax rates and currency preferences.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="taxEnabled"
+                  checked={formData.taxEnabled || false}
+                  onCheckedChange={(checked) => setFormData({...formData, taxEnabled: checked === true})}
+                />
+                <Label htmlFor="taxEnabled">Enable Tax Calculation</Label>
+              </div>
+
+              {formData.taxEnabled && (
+                <div className="space-y-4 pl-6 border-l-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="taxName">Tax Name</Label>
+                      <Input
+                        id="taxName"
+                        name="taxName"
+                        value={formData.taxName || ""}
+                        onChange={handleChange}
+                        placeholder="GST, VAT, Sales Tax"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="taxRate">Tax Rate (%)</Label>
+                      <Input
+                        id="taxRate"
+                        name="taxRate"
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        value={formData.taxRate || ""}
+                        onChange={handleChange}
+                        placeholder="18"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="taxNumber">Tax Registration Number</Label>
+                    <Input
+                      id="taxNumber"
+                      name="taxNumber"
+                      value={formData.taxNumber || ""}
+                      onChange={handleChange}
+                      placeholder="GSTIN or Tax ID"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="currency">Currency Code</Label>
+                  <Input
+                    id="currency"
+                    name="currency"
+                    value={formData.currency || "INR"}
+                    onChange={handleChange}
+                    placeholder="INR, USD, EUR"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="currencySymbol">Currency Symbol</Label>
+                  <Input
+                    id="currencySymbol"
+                    name="currencySymbol"
+                    value={formData.currencySymbol || "₹"}
+                    onChange={handleChange}
+                    placeholder="₹, $, €"
                   />
                 </div>
               </div>

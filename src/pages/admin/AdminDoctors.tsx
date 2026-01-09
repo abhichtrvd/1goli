@@ -7,10 +7,12 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Plus, Trash2, Edit, Loader2, Search, Download } from "lucide-react";
-import { useState } from "react";
+import { Plus, Trash2, Edit, Loader2, Search, Download, Upload, FileSpreadsheet } from "lucide-react";
+import { useState, useRef } from "react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
+import { parseDoctorCSV } from "./utils/doctorUtils";
+import { ImportResultsDialog } from "./components/ImportResultsDialog";
 
 export default function AdminDoctors() {
   const [search, setSearch] = useState("");
@@ -24,17 +26,44 @@ export default function AdminDoctors() {
   const updateDoctor = useMutation(api.consultations.updateDoctor);
   const deleteDoctor = useMutation(api.consultations.deleteDoctor);
   const bulkDeleteDoctors = useMutation(api.consultations.bulkDeleteDoctors);
+  const importDoctors = useMutation(api.consultations.importDoctors);
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingDoctor, setEditingDoctor] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Id<"consultationDoctors">[]>([]);
 
+  // Import state
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importResults, setImportResults] = useState<{ imported: number; updated: number; failed: number; errors: { row: number; error: string }[] } | null>(null);
+  const [isResultDialogOpen, setIsResultDialogOpen] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
     const formData = new FormData(e.currentTarget);
-    
+
+    // Parse comma-separated values
+    const availability = (formData.get("availability") as string)
+      .split(';')
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    const languages = (formData.get("languages") as string)
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    const services = (formData.get("services") as string)
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    // Parse consultation modes
+    const videoPrice = Number(formData.get("videoPrice")) || 500;
+    const clinicPrice = Number(formData.get("clinicPrice")) || 800;
+
     const doctorData = {
       name: formData.get("name") as string,
       specialization: formData.get("specialization") as string,
@@ -44,15 +73,14 @@ export default function AdminDoctors() {
       credentials: formData.get("credentials") as string,
       clinicPhone: formData.get("clinicPhone") as string,
       bio: formData.get("bio") as string,
-      // Defaults for complex fields for now
-      availability: ["Mon-Sat 10AM-8PM"],
-      languages: ["English", "Hindi"],
-      services: ["General Consultation"],
+      availability: availability.length > 0 ? availability : ["Mon-Sat 10AM-8PM"],
+      languages: languages.length > 0 ? languages : ["English", "Hindi"],
+      services: services.length > 0 ? services : ["General Consultation"],
       consultationModes: [
-          { mode: "Video", price: 500, durationMinutes: 20, description: "Online Video Consultation" },
-          { mode: "Clinic", price: 800, durationMinutes: 30, description: "In-person Visit" }
+          { mode: "Video", price: videoPrice, durationMinutes: 20, description: "Online Video Consultation" },
+          { mode: "Clinic", price: clinicPrice, durationMinutes: 30, description: "In-person Visit" }
       ],
-      imageUrl: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=500&auto=format&fit=crop" // Placeholder
+      imageUrl: (formData.get("imageUrl") as string) || "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=500&auto=format&fit=crop"
     };
 
     try {
@@ -120,16 +148,22 @@ export default function AdminDoctors() {
       return;
     }
 
-    const headers = ["Name", "Specialization", "City", "Experience", "Clinic Address", "Phone"];
+    const headers = ["Name", "Specialization", "Credentials", "Experience", "City", "Clinic Address", "Phone", "Bio", "Availability", "Languages", "Services", "Image URL"];
     const csvContent = [
       headers.join(","),
       ...doctors.map(d => [
         `"${d.name.replace(/"/g, '""')}"`,
         `"${d.specialization.replace(/"/g, '""')}"`,
-        `"${d.clinicCity.replace(/"/g, '""')}"`,
+        `"${d.credentials.replace(/"/g, '""')}"`,
         d.experienceYears,
+        `"${d.clinicCity.replace(/"/g, '""')}"`,
         `"${d.clinicAddress.replace(/"/g, '""')}"`,
-        `"${d.clinicPhone.replace(/"/g, '""')}"`
+        `"${d.clinicPhone.replace(/"/g, '""')}"`,
+        `"${d.bio.replace(/"/g, '""')}"`,
+        `"${(d.availability || []).join(';').replace(/"/g, '""')}"`,
+        `"${(d.languages || []).join(',').replace(/"/g, '""')}"`,
+        `"${(d.services || []).join(',').replace(/"/g, '""')}"`,
+        `"${d.imageUrl || ''}"`
       ].join(","))
     ].join("\n");
 
@@ -143,6 +177,88 @@ export default function AdminDoctors() {
     document.body.removeChild(link);
   };
 
+  const handleDownloadTemplate = () => {
+    const headers = ["Name", "Specialization", "Credentials", "Experience", "City", "Clinic Address", "Phone", "Bio", "Availability (Optional)", "Languages (Optional)", "Services (Optional)", "Image URL (Optional)"];
+    const sampleRow = [
+      "Dr. John Smith",
+      "General Medicine",
+      "MBBS, MD",
+      "10",
+      "Mumbai",
+      "123 Health Street, Mumbai",
+      "+91 9876543210",
+      "Experienced doctor specializing in general medicine",
+      "Mon-Sat 9AM-6PM",
+      "English,Hindi,Marathi",
+      "General Consultation,Health Checkup",
+      "https://example.com/doctor.jpg"
+    ];
+    const csvContent = [
+      headers.join(","),
+      sampleRow.join(",")
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "doctors_import_template.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("File size too large. Please upload a file smaller than 2MB.");
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    setIsImporting(true);
+    const reader = new FileReader();
+
+    reader.onload = async (e) => {
+      try {
+        const text = e.target?.result as string;
+        const doctorsToImport = parseDoctorCSV(text);
+
+        if (doctorsToImport.length === 0) {
+          toast.error("No valid doctors found in CSV");
+          return;
+        }
+
+        const result = await importDoctors({ doctors: doctorsToImport });
+        setImportResults(result);
+        setIsResultDialogOpen(true);
+
+        if (result.failed === 0) {
+          toast.success(`Import completed successfully: ${result.imported} created, ${result.updated} updated`);
+        } else {
+          toast.warning(`Import completed with ${result.failed} errors`);
+        }
+
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      } catch (error) {
+        console.error(error);
+        toast.error("Failed to import doctors. Check CSV format.");
+      } finally {
+        setIsImporting(false);
+      }
+    };
+
+    reader.readAsText(file);
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -151,6 +267,20 @@ export default function AdminDoctors() {
           <p className="text-muted-foreground">Manage your panel of homeopaths.</p>
         </div>
         <div className="flex items-center gap-2">
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            accept=".csv"
+            onChange={handleFileUpload}
+          />
+          <Button variant="outline" onClick={handleDownloadTemplate} title="Download Template">
+            <FileSpreadsheet className="mr-2 h-4 w-4" /> Template
+          </Button>
+          <Button variant="outline" onClick={handleImportClick} disabled={isImporting}>
+            {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+            Import CSV
+          </Button>
           <Button variant="outline" onClick={handleExportCSV}>
             <Download className="mr-2 h-4 w-4" /> Export CSV
           </Button>
@@ -160,7 +290,7 @@ export default function AdminDoctors() {
                 <Plus className="mr-2 h-4 w-4" /> Add Doctor
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingDoctor ? "Edit Doctor" : "Add New Doctor"}</DialogTitle>
               </DialogHeader>
@@ -201,7 +331,70 @@ export default function AdminDoctors() {
                     <Label htmlFor="bio">Bio</Label>
                     <Input id="bio" name="bio" required defaultValue={editingDoctor?.bio} />
                 </div>
-                
+
+                <div className="space-y-2">
+                    <Label htmlFor="availability">Availability (Separate with semicolons)</Label>
+                    <Input
+                      id="availability"
+                      name="availability"
+                      defaultValue={editingDoctor?.availability?.join('; ')}
+                      placeholder="Mon-Sat 10AM-8PM; Sun 10AM-2PM"
+                    />
+                </div>
+
+                <div className="space-y-2">
+                    <Label htmlFor="languages">Languages (Comma-separated)</Label>
+                    <Input
+                      id="languages"
+                      name="languages"
+                      defaultValue={editingDoctor?.languages?.join(', ')}
+                      placeholder="English, Hindi, Marathi"
+                    />
+                </div>
+
+                <div className="space-y-2">
+                    <Label htmlFor="services">Services (Comma-separated)</Label>
+                    <Input
+                      id="services"
+                      name="services"
+                      defaultValue={editingDoctor?.services?.join(', ')}
+                      placeholder="General Consultation, Health Checkup"
+                    />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="videoPrice">Video Consultation Price (₹)</Label>
+                    <Input
+                      id="videoPrice"
+                      name="videoPrice"
+                      type="number"
+                      defaultValue={editingDoctor?.consultationModes?.find((m: any) => m.mode === "Video")?.price || 500}
+                      placeholder="500"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="clinicPrice">Clinic Visit Price (₹)</Label>
+                    <Input
+                      id="clinicPrice"
+                      name="clinicPrice"
+                      type="number"
+                      defaultValue={editingDoctor?.consultationModes?.find((m: any) => m.mode === "Clinic")?.price || 800}
+                      placeholder="800"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                    <Label htmlFor="imageUrl">Image URL (Optional)</Label>
+                    <Input
+                      id="imageUrl"
+                      name="imageUrl"
+                      defaultValue={editingDoctor?.imageUrl}
+                      placeholder="https://example.com/doctor-image.jpg"
+                    />
+                </div>
+
                 <Button type="submit" className="w-full" disabled={isSubmitting}>
                   {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                   {editingDoctor ? "Update Doctor" : "Create Doctor"}
@@ -307,6 +500,13 @@ export default function AdminDoctors() {
           </div>
         </CardContent>
       </Card>
+
+      <ImportResultsDialog
+        open={isResultDialogOpen}
+        onOpenChange={setIsResultDialogOpen}
+        results={importResults}
+        isDryRun={false}
+      />
     </div>
   );
 }

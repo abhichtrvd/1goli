@@ -295,3 +295,96 @@ export const bulkDeleteDoctors = mutation({
     }
   }
 });
+
+export const importDoctors = mutation({
+  args: {
+    doctors: v.array(
+      v.object({
+        name: v.string(),
+        specialization: v.string(),
+        credentials: v.string(),
+        experienceYears: v.number(),
+        clinicCity: v.string(),
+        clinicAddress: v.string(),
+        clinicPhone: v.string(),
+        bio: v.string(),
+        availability: v.optional(v.string()),
+        languages: v.optional(v.string()),
+        services: v.optional(v.string()),
+        imageUrl: v.optional(v.string()),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    const results = { imported: 0, updated: 0, failed: 0, errors: [] as { row: number; error: string }[] };
+
+    let rowIndex = 0;
+    for (const doctorData of args.doctors) {
+      rowIndex++;
+      try {
+        // Check if doctor already exists by name and city
+        const existing = await ctx.db
+          .query("consultationDoctors")
+          .filter((q) =>
+            q.and(
+              q.eq(q.field("name"), doctorData.name),
+              q.eq(q.field("clinicCity"), doctorData.clinicCity)
+            )
+          )
+          .first();
+
+        // Parse array fields from comma-separated strings
+        const availability = doctorData.availability
+          ? doctorData.availability.split(';').map(s => s.trim()).filter(Boolean)
+          : ["Mon-Sat 10AM-8PM"];
+
+        const languages = doctorData.languages
+          ? doctorData.languages.split(',').map(s => s.trim()).filter(Boolean)
+          : ["English", "Hindi"];
+
+        const services = doctorData.services
+          ? doctorData.services.split(',').map(s => s.trim()).filter(Boolean)
+          : ["General Consultation"];
+
+        // Default consultation modes
+        const consultationModes = [
+          { mode: "Video", price: 500, durationMinutes: 20, description: "Online Video Consultation" },
+          { mode: "Clinic", price: 800, durationMinutes: 30, description: "In-person Visit" }
+        ];
+
+        const doctorRecord = {
+          name: doctorData.name,
+          specialization: doctorData.specialization,
+          credentials: doctorData.credentials,
+          experienceYears: doctorData.experienceYears,
+          clinicCity: doctorData.clinicCity,
+          clinicAddress: doctorData.clinicAddress,
+          clinicPhone: doctorData.clinicPhone,
+          bio: doctorData.bio,
+          availability,
+          languages,
+          services,
+          consultationModes,
+          imageUrl: doctorData.imageUrl || "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=500&auto=format&fit=crop",
+          rating: 0,
+          totalConsultations: 0,
+        };
+
+        if (existing) {
+          // Update existing doctor
+          await ctx.db.patch(existing._id, doctorRecord);
+          results.updated++;
+        } else {
+          // Create new doctor
+          await ctx.db.insert("consultationDoctors", doctorRecord);
+          results.imported++;
+        }
+      } catch (err: any) {
+        results.failed++;
+        results.errors.push({ row: rowIndex, error: err.message });
+      }
+    }
+
+    return results;
+  },
+});

@@ -335,6 +335,26 @@ const schema = defineSchema(
           })
         )
       ),
+
+      // Payment Settings
+      paymentGateway: v.optional(v.string()), // "razorpay", "stripe", "paypal", etc.
+      razorpayKeyId: v.optional(v.string()),
+      razorpayKeySecret: v.optional(v.string()),
+      stripePublishableKey: v.optional(v.string()),
+      stripeSecretKey: v.optional(v.string()),
+      enableCOD: v.optional(v.boolean()),
+      enableUPI: v.optional(v.boolean()),
+      enableCard: v.optional(v.boolean()),
+
+      // Tax Settings
+      taxEnabled: v.optional(v.boolean()),
+      taxName: v.optional(v.string()), // e.g., "GST", "VAT", "Sales Tax"
+      taxRate: v.optional(v.number()), // Percentage
+      taxNumber: v.optional(v.string()), // Tax registration number
+
+      // Currency Settings
+      currency: v.optional(v.string()), // "INR", "USD", "EUR", etc.
+      currencySymbol: v.optional(v.string()), // "₹", "$", "€", etc.
     }),
 
     auditLogs: defineTable({

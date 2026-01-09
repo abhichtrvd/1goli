@@ -4,7 +4,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Filter, Search, Loader2, Download, Upload, FileSpreadsheet } from "lucide-react";
+import { Filter, Search, Loader2, Download, Upload, FileSpreadsheet, Plus } from "lucide-react";
 import { useState, useRef } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ import { ImportResultsDialog } from "./components/ImportResultsDialog";
 import { OrderStatusDialog } from "./components/OrderStatusDialog";
 import { GenericBulkUpdateDialog } from "./components/GenericBulkUpdateDialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { CreateOrderDialog } from "./components/CreateOrderDialog";
 
 export default function AdminOrders() {
   const currentUser = useQuery(api.users.currentUser);
@@ -89,6 +90,9 @@ function OrdersContent() {
   const [importResults, setImportResults] = useState<{ imported: number; failed: number; errors: { row: number; error: string }[] } | null>(null);
   const [isResultDialogOpen, setIsResultDialogOpen] = useState(false);
   const [isDryRun, setIsDryRun] = useState(false);
+
+  // Create order dialog state
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   const handleStatusUpdateSubmit = async () => {
     if (!orderToUpdate || !newStatus) return;
@@ -290,6 +294,9 @@ function OrdersContent() {
           <Button variant="outline" onClick={handleExportCSV}>
             <Download className="mr-2 h-4 w-4" /> Export CSV
           </Button>
+          <Button onClick={() => setIsCreateDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" /> Create Order
+          </Button>
           <div className="relative w-64">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input 
@@ -371,7 +378,7 @@ function OrdersContent() {
         onOpenChange={setIsDetailsOpen}
       />
 
-      <OrderStatusDialog 
+      <OrderStatusDialog
         open={isStatusDialogOpen}
         onOpenChange={setIsStatusDialogOpen}
         status={newStatus}
@@ -379,6 +386,11 @@ function OrdersContent() {
         note={statusNote}
         onNoteChange={setStatusNote}
         onSubmit={handleStatusUpdateSubmit}
+      />
+
+      <CreateOrderDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
       />
     </div>
   );
