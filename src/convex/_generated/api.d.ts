@@ -32,6 +32,7 @@ import type * as dashboards from "../dashboards.js";
 import type * as delivery from "../delivery.js";
 import type * as funnels from "../funnels.js";
 import type * as http from "../http.js";
+import type * as initialize from "../initialize.js";
 import type * as integrations from "../integrations.js";
 import type * as loginHistory from "../loginHistory.js";
 import type * as messages from "../messages.js";
@@ -94,6 +95,7 @@ declare const fullApi: ApiFromModules<{
   delivery: typeof delivery;
   funnels: typeof funnels;
   http: typeof http;
+  initialize: typeof initialize;
   integrations: typeof integrations;
   loginHistory: typeof loginHistory;
   messages: typeof messages;
