@@ -90,8 +90,8 @@ export const createBackup = action({
           const records = await ctx.runQuery(api.backup.exportTable, {
             tableName,
           });
-          backupData[tableName] = records;
-          totalRecords += records.length;
+          backupData[tableName] = records as any[];
+          totalRecords += (records as any[]).length;
         } catch (error) {
           console.error(`Error backing up table ${tableName}:`, error);
           // Continue with other tables

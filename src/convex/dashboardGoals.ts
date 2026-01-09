@@ -37,7 +37,7 @@ export const createGoal = mutation({
     const goalId = await ctx.db.insert("dashboardGoals", {
       ...args,
       isActive: true,
-      createdBy: identity.subject,
+      createdBy: identity?.subject || "admin",
     });
 
     return goalId;

@@ -30,7 +30,7 @@ export function StockHistoryDialog({ open, onOpenChange, productId, productName 
 
     const csvContent = [
       headers.join(","),
-      ...history.map((entry) => [
+      ...history.map((entry: any) => [
         `"${new Date(entry.timestamp).toLocaleString()}"`,
         `"${entry.changeType}"`,
         entry.previousStock,
@@ -94,7 +94,7 @@ export function StockHistoryDialog({ open, onOpenChange, productId, productName 
             <div className="text-center py-8 text-muted-foreground">No stock history found</div>
           ) : (
             <div className="space-y-2">
-              {history.map((entry, index) => (
+              {history.map((entry: any, index: any) => (
                 <div
                   key={index}
                   className="border rounded-lg p-4 hover:bg-accent/50 transition-colors"

@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { query, mutation, action } from "./_generated/server";
 import { requireAdmin } from "./users";
 import { Id } from "./_generated/dataModel";
+import { api } from "./_generated/api";
 
 // ============ QUERIES ============
 
@@ -263,7 +264,7 @@ export const assignVariant = action({
   handler: async (ctx, args) => {
     // Check if user already assigned
     const existing = await ctx.runQuery(
-      (api) => api.abTests.getUserAssignment,
+      api.abTests.getUserAssignment,
       {
         testId: args.testId,
         userId: args.userId,
@@ -275,7 +276,7 @@ export const assignVariant = action({
     }
 
     // Get test details
-    const test = await ctx.runQuery((api) => api.abTests.getABTest, {
+    const test = await ctx.runQuery(api.abTests.getABTest, {
       id: args.testId,
     });
 
@@ -288,7 +289,7 @@ export const assignVariant = action({
     const variant = random < test.trafficSplit ? "A" : "B";
 
     // Save assignment
-    await ctx.runMutation((api) => api.abTests.saveAssignment, {
+    await ctx.runMutation(api.abTests.saveAssignment, {
       testId: args.testId,
       userId: args.userId,
       variant,

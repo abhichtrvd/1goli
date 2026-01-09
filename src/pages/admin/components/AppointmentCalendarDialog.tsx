@@ -52,7 +52,7 @@ export function AppointmentCalendarDialog({
   const appointmentsByDate = useMemo(() => {
     if (!appointments) return new Map();
     const map = new Map<string, any[]>();
-    appointments.forEach((apt) => {
+    appointments.forEach((apt: any) => {
       const dateKey = apt.preferredDate;
       if (!map.has(dateKey)) {
         map.set(dateKey, []);

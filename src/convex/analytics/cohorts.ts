@@ -121,7 +121,7 @@ export const getCohortRetention = query({
       );
 
       const retainedCount = activeUsers.size;
-      const percentage = cohort.userCount > 0 ? (retainedCount / cohort.userCount) * 100 : 0;
+      const percentage = (cohort.userCount || 0) > 0 ? (retainedCount / (cohort.userCount || 1)) * 100 : 0;
 
       retentionData.push({
         interval: `Week ${i}`,

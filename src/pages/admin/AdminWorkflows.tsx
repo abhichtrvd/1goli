@@ -7,8 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
+import { Zap, Play, Edit, Trash2, AlertCircle, Plus, Activity, CheckCircle2, XCircle } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { WorkflowBuilder } from "./components/WorkflowBuilder";
-import { Plus, Play, Edit, Trash2, Activity, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 
@@ -173,7 +175,7 @@ export default function AdminWorkflows() {
                 <Label>Action Config (JSON)</Label>
                 <Textarea
                   value={actionConfig}
-                  onChange={(e) => setActionConfig(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setActionConfig(e.target.value)}
                   placeholder='{"email": "admin@example.com", "subject": "New Order"}'
                   className="font-mono text-sm"
                 />
@@ -195,7 +197,7 @@ export default function AdminWorkflows() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {workflows?.map((workflow) => (
+              {workflows?.map((workflow: any) => (
                 <div key={workflow._id} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">

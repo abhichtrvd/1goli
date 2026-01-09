@@ -291,11 +291,11 @@ export const updateRuleStats = mutation({
 });
 
 // Helper function to evaluate conditions
-function evaluateConditions(conditions: any[], data: any): boolean {
+function evaluateConditions(conditions: any[] | undefined, data: any): boolean {
   if (!conditions || conditions.length === 0) return true;
 
   let result = true;
-  let currentLogicalOp = "AND";
+  let currentLogicalOp: "AND" | "OR" = "AND";
 
   for (const condition of conditions) {
     const fieldValue = getNestedValue(data, condition.field);
@@ -409,10 +409,10 @@ async function executeRuleActions(actions: any[], entityData: any): Promise<any[
 }
 
 // Action handlers (simulated - can be implemented to actually perform actions)
-function applyDiscountAction(config: any, data: any): any {
+function applyDiscountAction(config: any, data: any): { success: boolean; data?: any; error?: string } {
   console.log("Apply discount action:", config, data);
-  const originalPrice = data.price || data.total || 0;
-  const discountPercent = config.discountPercent || 0;
+  const originalPrice = data?.price || data?.total || 0;
+  const discountPercent = config?.discountPercent || 0;
   const discountedPrice = originalPrice * (1 - discountPercent / 100);
 
   return {
@@ -427,78 +427,78 @@ function applyDiscountAction(config: any, data: any): any {
   };
 }
 
-function reorderStockAction(config: any, data: any): any {
+function reorderStockAction(config: any, data: any): { success: boolean; data?: any; error?: string } {
   console.log("Reorder stock action:", config, data);
   return {
     success: true,
     data: {
-      productId: data.productId,
-      currentStock: data.stock,
-      reorderQuantity: config.reorderQuantity,
-      message: `Reorder initiated for ${config.reorderQuantity} units`,
+      productId: data?.productId,
+      currentStock: data?.stock,
+      reorderQuantity: config?.reorderQuantity,
+      message: `Reorder initiated for ${config?.reorderQuantity} units`,
     },
   };
 }
 
-function assignSegmentAction(config: any, data: any): any {
+function assignSegmentAction(config: any, data: any): { success: boolean; data?: any; error?: string } {
   console.log("Assign segment action:", config, data);
   return {
     success: true,
     data: {
-      userId: data.userId,
-      segment: config.segment,
-      message: `User assigned to segment: ${config.segment}`,
+      userId: data?.userId,
+      segment: config?.segment,
+      message: `User assigned to segment: ${config?.segment}`,
     },
   };
 }
 
-function blockOrderAction(config: any, data: any): any {
+function blockOrderAction(config: any, data: any): { success: boolean; data?: any; error?: string } {
   console.log("Block order action:", config, data);
   return {
     success: true,
     data: {
-      orderId: data.orderId,
+      orderId: data?.orderId,
       blocked: true,
-      reason: config.reason,
-      message: `Order blocked: ${config.reason}`,
+      reason: config?.reason,
+      message: `Order blocked: ${config?.reason}`,
     },
   };
 }
 
-function sendAlertAction(config: any, data: any): any {
+function sendAlertAction(config: any, data: any): { success: boolean; data?: any; error?: string } {
   console.log("Send alert action:", config, data);
   return {
     success: true,
     data: {
-      alertType: config.alertType,
-      message: config.message,
-      recipients: config.recipients,
+      alertType: config?.alertType,
+      message: config?.message,
+      recipients: config?.recipients,
       status: "Alert sent",
     },
   };
 }
 
-function routeToWarehouseAction(config: any, data: any): any {
+function routeToWarehouseAction(config: any, data: any): { success: boolean; data?: any; error?: string } {
   console.log("Route to warehouse action:", config, data);
   return {
     success: true,
     data: {
-      orderId: data.orderId,
-      warehouse: config.warehouse,
-      location: config.location,
-      message: `Order routed to warehouse: ${config.warehouse}`,
+      orderId: data?.orderId,
+      warehouse: config?.warehouse,
+      location: config?.location,
+      message: `Order routed to warehouse: ${config?.warehouse}`,
     },
   };
 }
 
-function assignUserAction(config: any, data: any): any {
+function assignUserAction(config: any, data: any): { success: boolean; data?: any; error?: string } {
   console.log("Assign user action:", config, data);
   return {
     success: true,
     data: {
-      entityId: data.id || data._id,
-      assignedTo: config.userId,
-      message: `Assigned to user: ${config.userId}`,
+      entityId: data?.id || data?._id,
+      assignedTo: config?.userId,
+      message: `Assigned to user: ${config?.userId}`,
     },
   };
 }

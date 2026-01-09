@@ -146,7 +146,7 @@ export function UserDetailsDialog({ user, open, onOpenChange }: UserDetailsDialo
               <ScrollArea className="h-[400px] pr-4">
                 {userActivity && userActivity.length > 0 ? (
                   <div className="space-y-2">
-                    {userActivity.map((activity) => (
+                    {userActivity.map((activity: any) => (
                       <div key={activity._id} className="flex gap-3 p-3 border rounded-lg hover:bg-muted/50">
                         <div className="shrink-0 mt-0.5">
                           <div className="h-2 w-2 rounded-full bg-primary" />
@@ -200,7 +200,7 @@ export function UserDetailsDialog({ user, open, onOpenChange }: UserDetailsDialo
               <ScrollArea className="h-[400px] pr-4">
                 {loginHistory && loginHistory.length > 0 ? (
                   <div className="space-y-2">
-                    {loginHistory.map((login) => (
+                    {loginHistory.map((login: any) => (
                       <div
                         key={login._id}
                         className={`flex gap-3 p-3 border rounded-lg ${

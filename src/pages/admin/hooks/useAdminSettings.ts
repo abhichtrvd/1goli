@@ -148,11 +148,11 @@ export function useAdminSettings() {
       featuredBrands:
         settings.featuredBrands?.join(", ") ?? defaults.featuredBrands,
       quickActions:
-        ((settings.quickActions ?? defaults.quickActions).map((action) => ({ ...action })) as QuickActionSetting[]),
+        ((settings.quickActions ?? defaults.quickActions).map((action: any) => ({ ...action })) as QuickActionSetting[]),
       healthConcerns:
-        ((settings.healthConcerns ?? defaults.healthConcerns).map((concern) => ({ ...concern })) as HealthConcernSetting[]),
+        ((settings.healthConcerns ?? defaults.healthConcerns).map((concern: any) => ({ ...concern })) as HealthConcernSetting[]),
       featureCards:
-        ((settings.featureCards ?? defaults.featureCards).map((card) => ({ ...card })) as FeatureCardSetting[]),
+        ((settings.featureCards ?? defaults.featureCards).map((card: any) => ({ ...card })) as FeatureCardSetting[]),
       paymentGateway: settings.paymentGateway,
       razorpayKeyId: settings.razorpayKeyId,
       razorpayKeySecret: settings.razorpayKeySecret,

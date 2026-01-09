@@ -80,7 +80,8 @@ export const getInvitationByToken = query({
     // Check if expired
     if (invitation.expiresAt < Date.now()) {
       if (invitation.status === "pending") {
-        await ctx.db.patch(invitation._id, { status: "expired" });
+        const mutationCtx = ctx as any;
+        await mutationCtx.db.patch(invitation._id, { status: "expired" });
       }
       throw new Error("Invitation has expired");
     }

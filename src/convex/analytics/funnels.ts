@@ -94,8 +94,8 @@ export const getFunnelData = action({
     // Get all events for this funnel
     const events = await ctx.runQuery(api.analytics.funnels.getFunnelEvents, {
       funnelId: args.funnelId,
-      startDate: args.startDate,
-      endDate: args.endDate,
+      startDate: args.startDate ?? undefined,
+      endDate: args.endDate ?? undefined,
     });
 
     // Group by session
@@ -167,12 +167,12 @@ export const getFunnelEvents = query({
       .withIndex("by_funnel", (q) => q.eq("funnelId", args.funnelId))
       .collect();
 
-    if (args.startDate) {
-      events = events.filter((e) => e.timestamp >= args.startDate);
+    if (args.startDate !== undefined) {
+      events = events.filter((e) => e.timestamp >= args.startDate!);
     }
 
-    if (args.endDate) {
-      events = events.filter((e) => e.timestamp <= args.endDate);
+    if (args.endDate !== undefined) {
+      events = events.filter((e) => e.timestamp <= args.endDate!);
     }
 
     return events;
@@ -204,7 +204,7 @@ export const getFunnelConversions = query({
       if (!sessionSteps[event.sessionId]) {
         sessionSteps[event.sessionId] = {
           steps: new Set(),
-          userId: event.userId ? event.userId.toString() : undefined,
+          userId: event.userId !== undefined ? event.userId.toString() : undefined,
           firstEvent: event.timestamp,
           lastEvent: event.timestamp,
         };

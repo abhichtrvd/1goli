@@ -384,7 +384,7 @@ export const checkPermission = query({
     if (user.role === "admin") return true;
 
     // Check role-based permissions
-    if (user.roleId) {
+    if ("roleId" in user && user.roleId) {
       const role = await ctx.db.get(user.roleId);
       if (role) {
         return role.permissions.includes(args.permissionKey);

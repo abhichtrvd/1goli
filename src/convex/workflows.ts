@@ -229,7 +229,7 @@ export const triggerWorkflows = action({
         }
 
         // Sort actions by order
-        const sortedActions = [...workflow.actions].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+        const sortedActions = [...workflow.actions].sort((a, b) => ((a.order !== undefined ? a.order : 0) - (b.order !== undefined ? b.order : 0)));
 
         // Execute actions
         const executedActions = [];
@@ -360,7 +360,7 @@ export const executeWorkflow = action({
     }
 
     // Sort actions by order
-    const sortedActions = [...workflow.actions].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    const sortedActions = [...workflow.actions].sort((a, b) => ((a.order !== undefined ? a.order : 0) - (b.order !== undefined ? b.order : 0)));
 
     // Execute actions
     let overallStatus: "success" | "failed" | "partial" = "success";
@@ -493,15 +493,25 @@ export const getWorkflowExecutions = query({
     let query = ctx.db.query("workflowExecutions");
 
     // Filter by workflow if specified
+    let executions;
     if (args.workflowId) {
-      query = query.withIndex("by_workflow", (q) => q.eq("workflowId", args.workflowId));
+      executions = await ctx.db
+        .query("workflowExecutions")
+        .withIndex("by_workflow", (q) => q.eq("workflowId", args.workflowId))
+        .order("desc")
+        .take(limit);
     } else if (args.triggerEvent) {
-      query = query.withIndex("by_trigger_event", (q) => q.eq("triggerEvent", args.triggerEvent));
+      executions = await ctx.db
+        .query("workflowExecutions")
+        .withIndex("by_trigger_event", (q) => q.eq("triggerEvent", args.triggerEvent))
+        .order("desc")
+        .take(limit);
     } else {
-      query = query.withIndex("by_executed_at");
+      executions = await ctx.db
+        .query("workflowExecutions")
+        .order("desc")
+        .take(limit);
     }
-
-    const executions = await query.order("desc").take(limit);
 
     return executions;
   },
@@ -559,7 +569,7 @@ function evaluateConditions(data: any, conditions?: Array<any>): boolean {
       result = result || conditionResult;
     }
 
-    currentLogicalOp = condition.logicalOperator ?? "AND";
+    currentLogicalOp = condition.logicalOperator !== undefined ? condition.logicalOperator : "AND";
   }
 
   return result;
@@ -662,7 +672,7 @@ async function executeAction(
         // Simulate webhook call (could be implemented for real)
         console.log("Call webhook action:", action.config, data);
         try {
-          if (action.config.url) {
+          if (action.config?.url) {
             // In production, you would actually make the fetch call
             // const response = await fetch(action.config.url, {
             //   method: action.config.method || "POST",
@@ -676,7 +686,7 @@ async function executeAction(
               success: true,
               output: {
                 url: action.config.url,
-                method: action.config.method || "POST",
+                method: action.config?.method || "POST",
                 message: "Webhook would be called (simulation)",
               },
             };

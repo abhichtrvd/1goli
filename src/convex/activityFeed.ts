@@ -41,13 +41,17 @@ export const getActivityFeed = query({
     const enriched = await Promise.all(
       activities.map(async (activity) => {
         let performerName = "System";
-        let performerEmail = undefined;
+        let performerEmail: string | undefined = undefined;
 
         if (activity.performedBy !== "system") {
-          const user = await ctx.db.get(activity.performedBy as any);
-          if (user) {
-            performerName = user.name || "Unknown User";
-            performerEmail = user.email;
+          try {
+            const user = await ctx.db.get(activity.performedBy as any);
+            if (user && "name" in user && "email" in user) {
+              performerName = (user.name as string) || "Unknown User";
+              performerEmail = user.email as string | undefined;
+            }
+          } catch {
+            performerName = "Unknown User";
           }
         }
 
@@ -83,13 +87,17 @@ export const getEntityActivity = query({
     const enriched = await Promise.all(
       activities.map(async (activity) => {
         let performerName = "System";
-        let performerEmail = undefined;
+        let performerEmail: string | undefined = undefined;
 
         if (activity.performedBy !== "system") {
-          const user = await ctx.db.get(activity.performedBy as any);
-          if (user) {
-            performerName = user.name || "Unknown User";
-            performerEmail = user.email;
+          try {
+            const user = await ctx.db.get(activity.performedBy as any);
+            if (user && "name" in user && "email" in user) {
+              performerName = (user.name as string) || "Unknown User";
+              performerEmail = user.email as string | undefined;
+            }
+          } catch {
+            performerName = "Unknown User";
           }
         }
 

@@ -198,7 +198,7 @@ export function ProductReviews({ productId, averageRating, ratingCount }: Produc
               No reviews yet. Be the first to review!
             </div>
           ) : (
-            reviews.map((review) => (
+            reviews.map((review: any) => (
               <div key={review._id} className="space-y-2 pb-6 border-b last:border-0">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2">

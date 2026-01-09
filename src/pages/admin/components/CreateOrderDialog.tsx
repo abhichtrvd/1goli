@@ -47,13 +47,13 @@ export function CreateOrderDialog({ open, onOpenChange }: CreateOrderDialogProps
   };
 
   const removeItem = (index: number) => {
-    setItems(items.filter((_, i) => i !== index));
+    setItems(items.filter((_: any, i) => i !== index));
   };
 
   const updateItem = (index: number, field: string, value: any) => {
     const newItems = [...items];
     if (field === "productId") {
-      const product = products?.find(p => p._id === value);
+      const product = products?.find((p: any) => p._id === value);
       if (product) {
         newItems[index] = {
           ...newItems[index],
@@ -93,8 +93,8 @@ export function CreateOrderDialog({ open, onOpenChange }: CreateOrderDialogProps
     setIsSubmitting(true);
 
     try {
-      const orderItems = items.map(item => {
-        const product = products?.find(p => p._id === item.productId);
+      const orderItems = items.map((item: any) => {
+        const product = products?.find((p: any) => p._id === item.productId);
         return {
           productId: item.productId,
           name: product?.name || item.productName,
@@ -146,7 +146,7 @@ export function CreateOrderDialog({ open, onOpenChange }: CreateOrderDialogProps
                 <SelectValue placeholder="Select customer" />
               </SelectTrigger>
               <SelectContent>
-                {users?.map((user) => (
+                {users?.map((user: any) => (
                   <SelectItem key={user._id} value={user._id}>
                     {user.name || user.email || user.phone}
                   </SelectItem>
@@ -176,7 +176,7 @@ export function CreateOrderDialog({ open, onOpenChange }: CreateOrderDialogProps
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {products?.map((product) => (
+                      {products?.map((product: any) => (
                         <SelectItem key={product._id} value={product._id}>
                           {product.name}
                         </SelectItem>

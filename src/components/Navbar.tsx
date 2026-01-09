@@ -35,7 +35,7 @@ export function Navbar() {
   const { isAuthenticated, signOut, user } = useAuth();
   const navigate = useNavigate();
   const cartItems = useQuery(api.cart.getCart);
-  const cartCount = cartItems?.reduce((acc, item) => acc + item.quantity, 0) || 0;
+  const cartCount = cartItems?.reduce((acc: number, item: any) => acc + item.quantity, 0) || 0;
   
   // Profile state removed in favor of /account page
   const promoteToAdmin = useMutation(api.users.promoteCurrentUserToAdmin);

@@ -58,7 +58,7 @@ export function CreatePrescriptionDialog({ open, onOpenChange }: CreatePrescript
   // Update patient details when user is selected
   useEffect(() => {
     if (selectedUserId && users) {
-      const user = users.find((u) => u._id === selectedUserId);
+      const user = users.find((u: any) => u._id === selectedUserId);
       if (user) {
         setPatientName(user.name || "");
         setPatientPhone(user.phone || "");
@@ -192,7 +192,7 @@ export function CreatePrescriptionDialog({ open, onOpenChange }: CreatePrescript
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="manual">Enter Manually</SelectItem>
-                {users?.map((user) => (
+                {users?.map((user: any) => (
                   <SelectItem key={user._id} value={user._id}>
                     {user.name} - {user.email || user.phone}
                   </SelectItem>
@@ -389,7 +389,7 @@ export function CreatePrescriptionDialog({ open, onOpenChange }: CreatePrescript
                 <SelectValue placeholder="Select a doctor" />
               </SelectTrigger>
               <SelectContent>
-                {doctors?.map((doctor) => (
+                {doctors?.map((doctor: any) => (
                   <SelectItem key={doctor._id} value={doctor._id}>
                     {doctor.name} - {doctor.specialization}
                   </SelectItem>

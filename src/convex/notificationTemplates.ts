@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { query, mutation, action } from "./_generated/server";
 import { requireAdmin } from "./users";
 import { Id } from "./_generated/dataModel";
+import { api } from "./_generated/api";
 
 // ============ QUERIES ============
 
@@ -216,7 +217,7 @@ export const renderTemplate = action({
     if (!identity) throw new Error("Not authenticated");
 
     const template = await ctx.runQuery(
-      (api) => api.notificationTemplates.getTemplate,
+      api.notificationTemplates.getTemplate,
       { id: args.templateId }
     );
 
@@ -231,7 +232,7 @@ export const renderTemplate = action({
         const value = args.data[variable] || "";
         const regex = new RegExp(`\\{${variable}\\}`, "g");
         renderedContent = renderedContent.replace(regex, value);
-        if (renderedSubject) {
+        if (renderedSubject !== undefined) {
           renderedSubject = renderedSubject.replace(regex, value);
         }
       }

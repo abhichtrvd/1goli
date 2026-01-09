@@ -232,7 +232,7 @@ export const listReports = query({
     if (args.type) {
       reports = await ctx.db
         .query("reports")
-        .withIndex("by_type", (q) => q.eq("type", args.type))
+        .withIndex("by_type", (q) => q.eq("type", args.type!))
         .order("desc")
         .collect();
     } else {
