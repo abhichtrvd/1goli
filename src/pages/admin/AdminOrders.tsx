@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -50,17 +50,17 @@ export default function AdminOrders() {
 function OrdersContent() {
   const [search, setSearch] = useState("");
   const normalizedSearch = search.trim();
-  const paginatedResult = usePaginatedQuery(
+  const orders = useQuery(
     api.orders.getPaginatedOrders,
-    normalizedSearch ? { search: normalizedSearch } : {},
-    { initialNumItems: 10 },
+    normalizedSearch ? { search: normalizedSearch } : {}
   );
-  
-  const { results, status, loadMore, isLoading } = paginatedResult;
-  const orders = results || [];
-  
+
   // Debug logging
-  console.log("Paginated result:", { results, status, ordersCount: orders.length });
+  console.log("Orders query result:", {
+    orders,
+    ordersCount: orders?.length,
+    normalizedSearch
+  });
   
   const updateStatus = useMutation(api.orders.updateOrderStatus);
   const bulkUpdateStatus = useMutation(api.orders.bulkUpdateOrderStatus);
@@ -137,11 +137,11 @@ function OrdersContent() {
     setIsDetailsOpen(true);
   };
 
-  const filteredOrders = orders.filter((order: any) => 
-    order && 
-    order._id && 
+  const filteredOrders = orders ? orders.filter((order: any) =>
+    order &&
+    order._id &&
     (statusFilter === "all" ? true : order.status === statusFilter)
-  );
+  ) : [];
 
   const handleSelect = (id: Id<"orders">, checked: boolean) => {
     if (checked) {
@@ -339,26 +339,19 @@ function OrdersContent() {
           </div>
         </CardHeader>
         <CardContent>
-          <OrderTable 
-            orders={filteredOrders}
-            selectedIds={selectedIds}
-            onSelect={handleSelect}
-            onSelectAll={handleSelectAll}
-            onViewDetails={openDetailsDialog}
-            onQuickStatusUpdate={openStatusDialog}
-          />
-
-          {status === "CanLoadMore" && (
-            <div className="flex items-center justify-center py-4">
-              <Button
-                variant="outline"
-                onClick={() => loadMore(10)}
-                disabled={isLoading}
-              >
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Load More
-              </Button>
+          {orders === undefined ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
+          ) : (
+            <OrderTable
+              orders={filteredOrders}
+              selectedIds={selectedIds}
+              onSelect={handleSelect}
+              onSelectAll={handleSelectAll}
+              onViewDetails={openDetailsDialog}
+              onQuickStatusUpdate={openStatusDialog}
+            />
           )}
         </CardContent>
       </Card>

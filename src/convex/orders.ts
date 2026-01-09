@@ -194,28 +194,27 @@ export const getAllOrders = query({
 });
 
 export const getPaginatedOrders = query({
-  args: { 
-    paginationOpts: paginationOptsValidator,
+  args: {
     search: v.optional(v.string())
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
-    
-    let result;
+
+    let orders;
     if (args.search) {
-        result = await ctx.db
+        orders = await ctx.db
             .query("orders")
             .withSearchIndex("search_all", (q) => q.search("searchText", args.search!))
-            .paginate(args.paginationOpts);
+            .take(100);
     } else {
-        result = await ctx.db
+        orders = await ctx.db
             .query("orders")
             .order("desc")
-            .paginate(args.paginationOpts);
+            .take(100);
     }
 
-    const pageWithUsers = await Promise.all(
-      result.page.map(async (order) => {
+    const ordersWithUsers = await Promise.all(
+      orders.map(async (order) => {
         const user = await ctx.db.get(order.userId as Id<"users">);
         return {
           ...order,
@@ -225,7 +224,7 @@ export const getPaginatedOrders = query({
       })
     );
 
-    return { ...result, page: pageWithUsers };
+    return ordersWithUsers;
   },
 });
 
