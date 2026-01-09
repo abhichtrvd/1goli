@@ -4,6 +4,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { requireAdmin } from "./users";
 import { Id } from "./_generated/dataModel";
 import { paginationOptsValidator } from "convex/server";
+import { ROLES } from "./schema";
 
 // Helper to generate search text
 export function generateOrderSearchText(order: { 
@@ -198,7 +199,18 @@ export const getPaginatedOrders = query({
     search: v.optional(v.string())
   },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+    // Check admin access - return empty array instead of throwing
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      console.warn("Unauthenticated user attempted to access orders");
+      return [];
+    }
+
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== ROLES.ADMIN) {
+      console.warn("Non-admin user attempted to access orders:", userId);
+      return [];
+    }
 
     let orders;
     if (args.search) {

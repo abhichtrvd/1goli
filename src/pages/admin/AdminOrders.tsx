@@ -59,7 +59,9 @@ function OrdersContent() {
   console.log("Orders query result:", {
     orders,
     ordersCount: orders?.length,
-    normalizedSearch
+    normalizedSearch,
+    ordersIsArray: Array.isArray(orders),
+    ordersType: typeof orders
   });
   
   const updateStatus = useMutation(api.orders.updateOrderStatus);
