@@ -1120,6 +1120,24 @@ const schema = defineSchema(
       .index("by_entity_type_timestamp", ["entityType", "timestamp"]),
 
     // Analytics Features
+    pageInteractions: defineTable({
+      userId: v.optional(v.id("users")),
+      sessionId: v.string(),
+      page: v.string(),
+      element: v.optional(v.string()),
+      action: v.union(v.literal("click"), v.literal("hover"), v.literal("scroll")),
+      xPosition: v.optional(v.number()),
+      yPosition: v.optional(v.number()),
+      timestamp: v.number(),
+      device: v.optional(v.string()),
+      userAgent: v.optional(v.string()),
+    })
+      .index("by_page", ["page"])
+      .index("by_action", ["action"])
+      .index("by_timestamp", ["timestamp"])
+      .index("by_session", ["sessionId"])
+      .index("by_page_action", ["page", "action"]),
+
     clickEvents: defineTable({
       userId: v.optional(v.id("users")),
       sessionId: v.string(),

@@ -263,11 +263,11 @@ export default function AdminCampaigns() {
                   </Button>
                 )}
 
-                {campaign.status === "scheduled" && campaign.scheduledFor && (
+                {campaign.status === "scheduled" && campaign.scheduledAt && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Calendar className="h-4 w-4" />
                     <span>
-                      Scheduled for {new Date(campaign.scheduledFor).toLocaleString()}
+                      Scheduled for {new Date(campaign.scheduledAt).toLocaleString()}
                     </span>
                   </div>
                 )}

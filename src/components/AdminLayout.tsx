@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router";
-import { LayoutDashboard, Package, ShoppingCart, LogOut, Home, Loader2, Users, Stethoscope, FileText, Settings, ShieldAlert, MessageSquare, Shield, UserCog, Database, Zap, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Package, ShoppingCart, LogOut, Home, Loader2, Users, Stethoscope, FileText, Settings, ShieldAlert, MessageSquare, Shield, UserCog, Database, Zap, BarChart3, Plug, Mail, MailOpen, MessagesSquare, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useEffect } from "react";
@@ -201,8 +201,50 @@ export default function AdminLayout() {
               variant={isActive("/admin/integrations") ? "secondary" : "ghost"}
               className="w-full justify-start"
             >
-              <Zap className="mr-2 h-4 w-4" />
+              <Plug className="mr-2 h-4 w-4" />
               Integrations
+            </Button>
+          </Link>
+
+          <div className="border-t border-border/50 my-2"></div>
+
+          <Link to="/admin/campaigns">
+            <Button
+              variant={isActive("/admin/campaigns") ? "secondary" : "ghost"}
+              className="w-full justify-start"
+            >
+              <Mail className="mr-2 h-4 w-4" />
+              Campaigns
+            </Button>
+          </Link>
+
+          <Link to="/admin/templates">
+            <Button
+              variant={isActive("/admin/templates") ? "secondary" : "ghost"}
+              className="w-full justify-start"
+            >
+              <MailOpen className="mr-2 h-4 w-4" />
+              Templates
+            </Button>
+          </Link>
+
+          <Link to="/admin/messages">
+            <Button
+              variant={isActive("/admin/messages") ? "secondary" : "ghost"}
+              className="w-full justify-start"
+            >
+              <MessagesSquare className="mr-2 h-4 w-4" />
+              Messages
+            </Button>
+          </Link>
+
+          <Link to="/admin/activity-feed">
+            <Button
+              variant={isActive("/admin/activity-feed") ? "secondary" : "ghost"}
+              className="w-full justify-start"
+            >
+              <Activity className="mr-2 h-4 w-4" />
+              Activity Feed
             </Button>
           </Link>
 

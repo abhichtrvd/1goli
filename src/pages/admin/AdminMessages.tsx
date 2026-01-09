@@ -10,19 +10,19 @@ import { toast } from "sonner";
 import { MessageSquare, Send, User } from "lucide-react";
 
 export default function AdminMessages() {
-  const conversations = useQuery(api.messages.getConversations, {});
-  const sendMessage = useMutation(api.messages.sendMessage);
-  const markAsRead = useMutation(api.messages.markAsRead);
+  const conversations = useQuery(api.messaging.getConversations, {});
+  const sendMessage = useMutation(api.messaging.sendMessage);
+  const markAsRead = useMutation(api.messaging.markAsRead);
 
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [messageText, setMessageText] = useState("");
 
   const selectedConvData = conversations?.find(c =>
-    `conv_${c.userId}_${c.createdAt}` === selectedConversation
+    c._id === selectedConversation
   );
 
   const messages = useQuery(
-    api.messages.getMessages,
+    api.messaging.getMessages,
     selectedConversation ? { conversationId: selectedConversation } : "skip"
   );
 
@@ -32,7 +32,6 @@ export default function AdminMessages() {
     try {
       await sendMessage({
         conversationId: selectedConversation!,
-        userId: selectedConvData.userId,
         content: messageText,
         senderType: "admin",
       });
@@ -63,19 +62,18 @@ export default function AdminMessages() {
           <CardContent className="p-0">
             <ScrollArea className="h-[calc(100vh-280px)]">
               {conversations?.map((conv) => {
-                const convId = `conv_${conv.userId}_${conv.createdAt}`;
                 return (
                   <div
                     key={conv._id}
                     className={`p-4 border-b cursor-pointer hover:bg-accent transition-colors ${
-                      selectedConversation === convId ? "bg-accent" : ""
+                      selectedConversation === conv._id ? "bg-accent" : ""
                     }`}
-                    onClick={() => handleSelectConversation(convId)}
+                    onClick={() => handleSelectConversation(conv._id)}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4" />
-                        <span className="font-medium">{conv.userName}</span>
+                        <span className="font-medium">{conv.user?.name || "Unknown User"}</span>
                       </div>
                       {(conv.unreadCount || 0) > 0 && (
                         <Badge variant="default" className="text-xs">
@@ -83,7 +81,10 @@ export default function AdminMessages() {
                         </Badge>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground">{conv.userEmail}</p>
+                    {conv.subject && (
+                      <p className="text-sm font-medium truncate mb-1">{conv.subject}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">{conv.user?.email || "No email"}</p>
                     <p className="text-xs text-muted-foreground mt-1">
                       {new Date(conv.lastMessageAt).toLocaleDateString()}
                     </p>
@@ -100,8 +101,11 @@ export default function AdminMessages() {
               <CardHeader className="border-b">
                 <CardTitle className="flex items-center gap-2">
                   <User className="h-5 w-5" />
-                  {selectedConvData.userName}
+                  {selectedConvData.user?.name || "Unknown User"}
                 </CardTitle>
+                {selectedConvData.subject && (
+                  <p className="text-sm text-muted-foreground">{selectedConvData.subject}</p>
+                )}
               </CardHeader>
               <ScrollArea className="flex-1 p-4">
                 <div className="space-y-4">
@@ -117,7 +121,23 @@ export default function AdminMessages() {
                             : "bg-muted"
                         }`}
                       >
+                        <p className="text-xs font-medium mb-1">{msg.senderName}</p>
                         <p className="text-sm">{msg.content}</p>
+                        {msg.attachments && msg.attachments.length > 0 && (
+                          <div className="mt-2 space-y-1">
+                            {msg.attachments.map((att, idx) => (
+                              <a
+                                key={idx}
+                                href={att.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs underline block"
+                              >
+                                {att.name}
+                              </a>
+                            ))}
+                          </div>
+                        )}
                         <p className="text-xs opacity-70 mt-1">
                           {new Date(msg.sentAt).toLocaleTimeString()}
                         </p>

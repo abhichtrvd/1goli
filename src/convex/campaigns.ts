@@ -103,7 +103,7 @@ export const createCampaign = mutation({
     type: campaignTypeValidator,
     segment: segmentValidator,
     customRecipients: v.optional(v.array(v.string())), // User IDs or emails
-    scheduledFor: v.optional(v.number()),
+    scheduledAt: v.optional(v.number()),
     abTestEnabled: v.optional(v.boolean()),
     abTestVariantB: v.optional(
       v.object({
@@ -125,8 +125,8 @@ export const createCampaign = mutation({
       type: args.type,
       segment: args.segment,
       customRecipients: args.customRecipients,
-      scheduledFor: args.scheduledFor,
-      status: args.scheduledFor ? "scheduled" : "draft",
+      scheduledAt: args.scheduledAt,
+      status: args.scheduledAt ? "scheduled" : "draft",
       abTestEnabled: args.abTestEnabled || false,
       abTestVariantB: args.abTestVariantB,
       abTestSplitPercent: args.abTestSplitPercent || 50,
@@ -152,7 +152,7 @@ export const updateCampaign = mutation({
     previewText: v.optional(v.string()),
     segment: v.optional(segmentValidator),
     customRecipients: v.optional(v.array(v.string())),
-    scheduledFor: v.optional(v.number()),
+    scheduledAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
@@ -173,8 +173,8 @@ export const updateCampaign = mutation({
     if (args.segment !== undefined) updates.segment = args.segment;
     if (args.customRecipients !== undefined)
       updates.customRecipients = args.customRecipients;
-    if (args.scheduledFor !== undefined) {
-      updates.scheduledFor = args.scheduledFor;
+    if (args.scheduledAt !== undefined) {
+      updates.scheduledAt = args.scheduledAt;
       updates.status = "scheduled";
     }
 
@@ -204,7 +204,7 @@ export const deleteCampaign = mutation({
 export const scheduleCampaign = mutation({
   args: {
     id: v.id("campaigns"),
-    scheduledFor: v.number(),
+    scheduledAt: v.number(),
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
@@ -212,12 +212,12 @@ export const scheduleCampaign = mutation({
     const campaign = await ctx.db.get(args.id);
     if (!campaign) throw new Error("Campaign not found");
 
-    if (args.scheduledFor <= Date.now()) {
+    if (args.scheduledAt <= Date.now()) {
       throw new Error("Scheduled time must be in the future");
     }
 
     await ctx.db.patch(args.id, {
-      scheduledFor: args.scheduledFor,
+      scheduledAt: args.scheduledAt,
       status: "scheduled",
     });
 
@@ -345,7 +345,7 @@ export const trackCampaignClick = mutation({
 
 // ============ INTERNAL FUNCTIONS ============
 
-export const getCampaignInternal = internalMutation({
+export const getCampaignInternal = query({
   args: { id: v.id("campaigns") },
   handler: async (ctx, args) => {
     return await ctx.db.get(args.id);
