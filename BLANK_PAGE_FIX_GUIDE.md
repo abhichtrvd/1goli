@@ -4,8 +4,9 @@
 
 ### ✅ Fixed Pages
 
-1. **AdminWorkflows** - Fixed missing imports (DialogTrigger, Input, Select)
-2. **AdminIntegrations** - Likely needs data initialization
+1. **AdminWorkflows** - ✅ Fixed missing imports (DialogTrigger, Input, Select, Label, Textarea, icons)
+2. **AdminIntegrations** - ✅ Fixed with proper empty state UI and prominent initialization button
+3. **AdminDoctors** - ✅ Fixed Radix UI SelectItem error (empty string values changed to "all")
 
 ### Common Causes of Blank Pages
 
@@ -52,9 +53,26 @@ Common errors you might see:
 
 ### AdminIntegrations Blank Page
 
-**Cause:** Empty integrations table
+**Status:** ✅ **FIXED** - Added proper empty state UI
 
-**Fix Option 1: Via Convex Dashboard**
+**What was fixed:**
+- Added prominent loading state when data is undefined
+- Added beautiful empty state card with large "Initialize Marketplace Now" button
+- Removed confusing conditional rendering that caused blank screen
+- Now shows clear instructions when no data exists
+
+**To initialize marketplace:**
+
+**Option 1: Click the button in the UI** ⭐ (Recommended)
+```
+1. Navigate to /admin/integrations
+2. You'll see a large card with "Initialize Integration Marketplace"
+3. Click "Initialize Marketplace Now" button
+4. Wait for success toast
+5. Page will automatically show 20+ integrations
+```
+
+**Option 2: Via Convex Dashboard**
 ```
 1. Go to https://dashboard.convex.dev
 2. Select your deployment
@@ -64,18 +82,12 @@ Common errors you might see:
 6. Refresh /admin/integrations page
 ```
 
-**Fix Option 2: Via CLI**
+**Option 3: Via CLI** (requires being logged in as admin)
 ```bash
 npx convex run integrations:initializeMarketplace
 ```
 
-**Fix Option 3: Check Console**
-```
-1. Open /admin/integrations
-2. Press F12
-3. Check console for actual error
-4. Share error message
-```
+**Note:** All methods require admin authentication. Make sure you're logged in as an admin user.
 
 ### AdminWorkflows Blank Page
 
@@ -305,7 +317,48 @@ Page is working when you see:
 
 **Current Status:**
 - AdminWorkflows: ✅ Fixed (missing imports added)
-- AdminIntegrations: ⚠️ Needs data initialization
-- Other pages: ✅ Should work (test each one)
+- AdminIntegrations: ✅ Fixed (proper empty state UI with init button)
+- AdminDoctors: ✅ Fixed (SelectItem value error and filter logic)
+- All fixes deployed: ✅ Ready to test
 
-Your admin panel is ready once these blanks are resolved!
+## Recent Fixes Summary (Latest Session)
+
+### 1. AdminWorkflows - Missing Imports
+**Error:** Blank white page
+**Root Cause:** Missing component imports
+**Fix Applied:**
+- Added `DialogTrigger` to Dialog imports
+- Added `Input` import from ui/input
+- Added `Select`, `SelectContent`, `SelectItem`, `SelectTrigger`, `SelectValue` imports
+- Added `Label` import from ui/label
+- Added `Textarea` import from ui/textarea
+- Added missing icon imports: `Zap`, `Activity`
+
+### 2. AdminIntegrations - Poor Empty State
+**Error:** Blank white page when no data
+**Root Cause:** Confusing conditional rendering, button hidden in header
+**Fix Applied:**
+- Added explicit loading state check returning centered loader
+- Added beautiful empty state card with:
+  - Large icon with colored background
+  - Clear heading and description
+  - Prominent "Initialize Marketplace Now" button
+  - Helpful instructions
+- Moved empty state logic to early return pattern
+- Better user experience for first-time setup
+
+### 3. AdminDoctors - Radix UI Error
+**Error:** `Uncaught Error: A <Select.Item /> must have a value prop that is not an empty string`
+**Root Cause:** Three SelectItem components had `value=""` which Radix UI doesn't allow
+**Fix Applied:**
+- Changed line 579: `<SelectItem value="all">All Specializations</SelectItem>`
+- Changed line 593: `<SelectItem value="all">All Cities</SelectItem>`
+- Changed line 607: `<SelectItem value="all">All Experience</SelectItem>`
+- Updated filter logic to handle "all" value:
+  - `specializationFilter && specializationFilter !== "all" ? specializationFilter : undefined`
+  - Same pattern for city and experience filters
+- Now "all" option properly shows all items instead of trying to filter by "all"
+
+**All fixes deployed successfully!**
+
+Your admin panel is now ready for testing and initialization!

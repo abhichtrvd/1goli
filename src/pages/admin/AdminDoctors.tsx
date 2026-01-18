@@ -26,9 +26,9 @@ export default function AdminDoctors() {
     api.consultations.getPaginatedDoctors,
     {
       search: search || undefined,
-      specialization: specializationFilter || undefined,
-      city: cityFilter || undefined,
-      experienceRange: experienceFilter || undefined,
+      specialization: specializationFilter && specializationFilter !== "all" ? specializationFilter : undefined,
+      city: cityFilter && cityFilter !== "all" ? cityFilter : undefined,
+      experienceRange: experienceFilter && experienceFilter !== "all" ? experienceFilter : undefined,
     },
     { initialNumItems: 10 }
   );
@@ -576,7 +576,7 @@ export default function AdminDoctors() {
             <SelectValue placeholder="All Specializations" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Specializations</SelectItem>
+            <SelectItem value="all">All Specializations</SelectItem>
             {specializations?.map((spec) => (
               <SelectItem key={spec} value={spec}>
                 {spec}
@@ -590,7 +590,7 @@ export default function AdminDoctors() {
             <SelectValue placeholder="All Cities" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Cities</SelectItem>
+            <SelectItem value="all">All Cities</SelectItem>
             {cities?.map((city) => (
               <SelectItem key={city} value={city}>
                 {city}
@@ -604,7 +604,7 @@ export default function AdminDoctors() {
             <SelectValue placeholder="All Experience" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Experience</SelectItem>
+            <SelectItem value="all">All Experience</SelectItem>
             <SelectItem value="0-5">Less than 5 years</SelectItem>
             <SelectItem value="5-10">5-10 years</SelectItem>
             <SelectItem value="10+">More than 10 years</SelectItem>

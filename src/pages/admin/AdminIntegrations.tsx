@@ -227,6 +227,54 @@ export default function AdminIntegrations() {
     active: installedIntegrations?.filter((i) => i.status === "active").length || 0,
   };
 
+  // Show loading state
+  if (integrations === undefined) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-12 w-12 animate-spin text-muted-foreground mx-auto" />
+          <p className="text-muted-foreground">Loading integrations...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show empty state with prominent initialize button
+  if (integrations.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Integration Marketplace</h1>
+          <p className="text-muted-foreground mt-1">
+            Connect your store with 20+ powerful integrations across 7 categories
+          </p>
+        </div>
+
+        <Card className="p-12">
+          <div className="text-center space-y-6">
+            <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+              <Plug className="h-8 w-8 text-primary" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-semibold">Initialize Integration Marketplace</h2>
+              <p className="text-muted-foreground max-w-md mx-auto">
+                Get started by initializing the marketplace with 20+ pre-configured integrations
+                including Stripe, Razorpay, SendGrid, Twilio, and more.
+              </p>
+            </div>
+            <Button onClick={handleInitializeMarketplace} size="lg" className="mt-4">
+              <Plug className="w-4 h-4 mr-2" />
+              Initialize Marketplace Now
+            </Button>
+            <p className="text-sm text-muted-foreground">
+              This will create the integration catalog. You can configure each integration later.
+            </p>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -237,12 +285,6 @@ export default function AdminIntegrations() {
             Connect your store with 20+ powerful integrations across 7 categories
           </p>
         </div>
-        {(!integrations || integrations.length === 0) && (
-          <Button onClick={handleInitializeMarketplace} size="lg">
-            <Plug className="w-4 h-4 mr-2" />
-            Initialize Marketplace
-          </Button>
-        )}
       </div>
 
       {/* Stats Cards */}
